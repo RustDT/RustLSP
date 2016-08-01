@@ -1,0 +1,17 @@
+[package]
+name = "RustLSP"
+version = "0.1.0"
+authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
+
+[dependencies]
+serde_json = "0.7.4"
+
+[lib]
+name = "rust_lsp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rust_lsp_app"
+path = "src/main_lsp.rs"
+test = false
+
