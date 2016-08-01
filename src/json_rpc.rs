@@ -1,3 +1,6 @@
+// Note: Rust newbie code ahead (-_-)'
+
+
 #![allow(non_upper_case_globals)]
 
 extern crate serde_json;
@@ -6,6 +9,76 @@ use self::serde_json::Map;
 use self::serde_json::Value;
 
 //use ::util::core::*;
+
+
+/* ----------------- deserialize helpers ----------------- */
+
+fn unwrap_object(ob: ObjectBuilder) -> Map<String, Value> {
+    match ob.unwrap() {
+    	Value::Object(o) => o ,
+    	_ => { panic!() },
+    }
+}
+
+
+trait JsonDeserializerHelper {
+	
+	fn new_request_deserialization_error(&self) -> JsonRpcError;
+	
+	fn obtain_Value(&mut self, mut json_map : &mut Map<String, Value>, key: & str) -> result::Result<Value, JsonRpcError> {
+		let value = json_map.remove(key);
+		match value {
+			Some(value) => { Ok(value) }, 
+			None => { return Err(self.new_request_deserialization_error()) }
+		}
+	}
+	
+	fn obtain_String(&mut self, json_map : &mut Map<String, Value>, key: &str) -> result::Result<String, JsonRpcError> {
+		let value = try!(self.obtain_Value(json_map, key));
+		match value {
+			Value::String(string) => Ok(string),
+			_ => { return Err(self.new_request_deserialization_error()) },
+		}
+	}
+	
+	fn obtain_Map(&mut self, json_map : &mut Map<String, Value>, key: &str) -> result::Result<Map<String, Value>, JsonRpcError> {
+		let value = try!(self.obtain_Value(json_map, key));
+		match value {
+			Value::Object(map) => Ok(map),
+			_ => { return Err(self.new_request_deserialization_error()) },
+		}
+	}
+	
+	fn obtain_u32(&mut self, json_map: &mut Map<String, Value>, key: &str) -> result::Result<u32, JsonRpcError> {
+		let value = try!(self.obtain_Value(json_map, key));
+		match value {
+			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
+			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
+			_ => { return Err(self.new_request_deserialization_error()) },
+		}
+	}
+
+}
+
+struct JsonRequestDeserializerHelper {
+	
+}
+
+//impl<JsonRpcError> JsonDeserializerHelper<JsonRpcError> for JsonRequestDeserializerHelper {
+//	
+//}
+
+impl JsonDeserializerHelper for JsonRequestDeserializerHelper {
+	
+	fn new_request_deserialization_error(&self) -> JsonRpcError {
+		return JSON_RPC_InvalidRequest;
+	}
+	
+}
+
+
+/* ----------------- JSON RPC ----------------- */
+
 
 #[derive(Debug, PartialEq)]
 pub struct JsonRpcRequest {
@@ -36,7 +109,7 @@ pub type JsonRpcResult<T> = result::Result<T, JsonRpcError>;
 
 
 pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
-	let json_result = match 
+	let mut json_result : Value = match 
 		serde_json::from_str(message) 
 	{
 		Ok(ok) => { ok } 
@@ -45,97 +118,41 @@ pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
 		}
 	};
 	
-    parse_jsonrpc_request_json(json_result)
+    parse_jsonrpc_request_json(&mut json_result)
 }
 
-pub fn parse_jsonrpc_request_json(request_json: Value) -> JsonRpcResult<JsonRpcRequest> {    
+pub fn parse_jsonrpc_request_json(request_json: &mut Value) -> JsonRpcResult<JsonRpcRequest> {    
     
-    
-    let mut jsonMessage_map : Map<String, Value> =
+    let mut json_request_map : &mut Map<String, Value> =
     match request_json {
-    	Value::Object(map) => map ,
+    	&mut Value::Object(ref mut map) => map ,
     	_ => { return Err(JSON_RPC_InvalidRequest) },
     };
+    parse_jsonrpc_request_jsonObject(&mut json_request_map)
+}
+
+pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut Map<String, Value>) -> JsonRpcResult<JsonRpcRequest> {
+	    
+    let mut helper = JsonRequestDeserializerHelper { };
     
-    let jsonrpc = try!(obtain_String(&mut jsonMessage_map, "jsonrpc"));
-    let id = try!(obtain_u32(&mut jsonMessage_map, "id"));
-    let method = try!(obtain_String(&mut jsonMessage_map, "method"));
-    let params = try!(obtain_Map(&mut jsonMessage_map, "params"));
+    let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
+    let id = try!(helper.obtain_u32(&mut request_map, "id"));
+    let method = try!(helper.obtain_String(&mut request_map, "method"));
+    let params = helper.obtain_Map(&mut request_map, "params");
+//    let params = match params {
+//    	Ok(ok) => { ok } 
+//    	Err(error) => { 
+//    		
+//    	}
+//    }
+    
+    let params = try!(params);
     
     let jsonrpc_request = JsonRpcRequest { jsonrpc : jsonrpc, id : id, method : method, params : params}; 
     
     Ok(jsonrpc_request)
 }
 
-
-fn obtain_Value(mut json_map : &mut Map<String, Value>, key: & str) -> JsonRpcResult<Value> {
-	let value = json_map.remove(key);
-	match value {
-		Some(value) => { Ok(value) }, 
-		None => { return Err(JSON_RPC_InvalidRequest) }
-	}
-	
-}
-
-fn obtain_String(json_map : &mut Map<String, Value>, key: &str) -> JsonRpcResult<String> {
-	let value = try!(obtain_Value(json_map, key));
-	match value {
-		Value::String(string) => Ok(string),
-		_ => { return Err(JSON_RPC_InvalidRequest) },
-	}
-}
-
-fn obtain_Map(json_map : &mut Map<String, Value>, key: &str) -> JsonRpcResult<Map<String, Value>> {
-	let value = try!(obtain_Value(json_map, key));
-	match value {
-		Value::Object(map) => Ok(map),
-		_ => { return Err(JSON_RPC_InvalidRequest) },
-	}
-}
-
-fn obtain_u32(json_map: &mut Map<String, Value>, key: &str) -> JsonRpcResult<u32> {
-	let value = try!(obtain_Value(json_map, key));
-	match value {
-		Value::I64(num) => Ok(num as u32), // TODO: check for truncation
-		Value::U64(num) => Ok(num as u32), // TODO: check for truncation
-		_ => { return Err(JSON_RPC_InvalidRequest) },
-	}
-}
-
-/* ----------------- test ----------------- */
-
-#[test]
-fn parse_jsonrpc_request_json_Test() {
-	
-	assert_eq!(parse_jsonrpc_request("{" ).unwrap_err(), JSON_RPC_ParseError);
-	
-	use self::serde_json::builder::ObjectBuilder;
-	
-	let sample_params = ObjectBuilder::new()
-	    .insert("param", "2.0")
-        .insert("foo", 123)
-        .unwrap();
-    let sample_params : Map<String, Value> = match sample_params {
-    	Value::Object(o) => o,
-    	_ => panic!(),
-    };
-	
-    let request = ObjectBuilder::new()
-	    .insert("jsonrpc", "2.0")
-        .insert("id", 1)
-        .insert("method", "myMethod")
-        .insert("params", sample_params.clone())
-        .unwrap();
-    
-    let result = parse_jsonrpc_request_json(request).unwrap();    
-	assert_eq!(result, JsonRpcRequest { 
-			jsonrpc : "2.0".to_string(), 
-			id : 1, 
-			method : "myMethod".to_string(), 
-			params : sample_params}
-	);
-	
-}
 
 
 use std::io;
@@ -195,5 +212,66 @@ impl JsonRpcDispatcher {
 			}
 		}
 	}
+	
+}
+
+/* ----------------- Test ----------------- */
+
+#[test]
+fn parse_jsonrpc_request_json_Test() {
+	
+	use self::serde_json::builder::ObjectBuilder;
+	
+	let sample_params = unwrap_object(ObjectBuilder::new()
+	    .insert("param", "2.0")
+        .insert("foo", 123)
+    );
+	
+	// Test invalid JSON
+	assert_eq!(parse_jsonrpc_request("{" ).unwrap_err(), JSON_RPC_ParseError);
+	
+	// Test invalid JsonRpcRequest
+    let mut invalid_request = ObjectBuilder::new()
+	    .insert("jsonrpc", "2.0")
+        .insert("id", 1)
+        .insert("params", sample_params.clone())
+        .unwrap();
+	
+    let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();    
+	assert_eq!(result, JSON_RPC_InvalidRequest);
+	
+    // Test basic JsonRpcRequest
+    let mut request = ObjectBuilder::new()
+	    .insert("jsonrpc", "2.0")
+        .insert("id", 1)
+        .insert("method", "myMethod")
+        .insert("params", sample_params.clone())
+        .unwrap();
+    
+    let result = parse_jsonrpc_request_json(&mut request).unwrap();
+    
+	assert_eq!(result, JsonRpcRequest { 
+			jsonrpc : "2.0".to_string(), 
+			id : 1, 
+			method : "myMethod".to_string(), 
+			params : sample_params.clone(),
+	});
+	
+	
+	// Test basic JsonRpcRequest, no params
+    let mut request = ObjectBuilder::new()
+	    .insert("jsonrpc", "2.0")
+        .insert("id", 1)
+        .insert("method", "myMethod")
+//       .insert("params", sample_params.clone())
+        .unwrap();
+        
+	let result = parse_jsonrpc_request_json(&mut request).unwrap();
+    assert_eq!(result, JsonRpcRequest { 
+			jsonrpc : "2.0".to_string(), 
+			id : 1, 
+			method : "myMethod".to_string(), 
+			params : unwrap_object(ObjectBuilder::new())
+	});
 	
 }

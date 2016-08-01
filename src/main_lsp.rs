@@ -8,3 +8,4 @@ fn main() {
 	
     rust_lsp::rust_lsp_server::RustLSPServer::new().handle_streams(&mut stdin.lock(), &mut stdout.lock());
 }
+
