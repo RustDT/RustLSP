@@ -41,29 +41,61 @@ trait JsonDeserializerHelper {
 		}
 	}
 	
-	fn obtain_String(&mut self, json_map : &mut Map<String, Value>, key: &str) -> result::Result<String, JsonRpcError> {
-		let value = try!(self.obtain_Value(json_map, key));
+	fn obtain_Value_or(&mut self, mut json_map : &mut Map<String, Value>, key: & str, default: & Fn() -> Value) 
+		-> Value 
+	{
+		if let Some(value) = json_map.remove(key) {
+			value
+		} else {
+			default()
+		}
+	}
+	
+	fn as_String(&mut self, value: Value) -> result::Result<String, JsonRpcError> {
 		match value {
 			Value::String(string) => Ok(string),
-			_ => { return Err(self.new_request_deserialization_error()) },
+			_ => Err(self.new_request_deserialization_error()),
 		}
+	}
+	
+	fn as_Map(&mut self, value: Value) -> result::Result<Map<String, Value>, JsonRpcError> {
+		match value {
+			Value::Object(map) => Ok(map),
+			_ => Err(self.new_request_deserialization_error()),
+		}
+	}
+	
+	fn as_u32(&mut self, value: Value) -> result::Result<u32, JsonRpcError> {
+		match value {
+			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
+			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
+			_ => Err(self.new_request_deserialization_error()) ,
+		}
+	}
+	
+	
+	fn obtain_String(&mut self, json_map : &mut Map<String, Value>, key: &str) 
+		-> result::Result<String, JsonRpcError> 
+	{
+		let value = try!(self.obtain_Value(json_map, key));
+		self.as_String(value)
 	}
 	
 	fn obtain_Map(&mut self, json_map : &mut Map<String, Value>, key: &str) -> result::Result<Map<String, Value>, JsonRpcError> {
 		let value = try!(self.obtain_Value(json_map, key));
-		match value {
-			Value::Object(map) => Ok(map),
-			_ => { return Err(self.new_request_deserialization_error()) },
-		}
+		self.as_Map(value)
+	}
+	
+	fn obtain_Map_or(&mut self, json_map : &mut Map<String, Value>, key: &str, default: & Fn() -> Map<String, Value>) 
+		-> result::Result<Map<String, Value>, JsonRpcError> 
+	{
+		let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
+		self.as_Map(value)
 	}
 	
 	fn obtain_u32(&mut self, json_map: &mut Map<String, Value>, key: &str) -> result::Result<u32, JsonRpcError> {
 		let value = try!(self.obtain_Value(json_map, key));
-		match value {
-			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
-			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
-			_ => { return Err(self.new_request_deserialization_error()) },
-		}
+		self.as_u32(value)
 	}
 
 }
@@ -146,15 +178,7 @@ pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut Map<String, Value>
     let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
     let id = try!(helper.obtain_u32(&mut request_map, "id"));
     let method = try!(helper.obtain_String(&mut request_map, "method"));
-    let params = helper.obtain_Map(&mut request_map, "params");
-//    let params = match params {
-//    	Ok(ok) => { ok } 
-//    	Err(error) => { 
-//    		
-//    	}
-//    }
-    
-    let params = try!(params);
+    let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| unwrap_object(ObjectBuilder::new())));
     
     let jsonrpc_request = JsonRpcRequest { jsonrpc : jsonrpc, id : id, method : method, params : params}; 
     
