@@ -50,31 +50,31 @@ impl RustLSPServer {
 		loop {
 			let message = try!(parse_transport_message(&mut input));
 			
-		    match self.process_message(&message) {
-		    	Ok(_) => {  } 
-		    	Err(error) => {
-		    		try!(error.write_out(&mut output));
-		    		// TODO log 
-//		    		try!(output.write_fmt(format_args!("Error parsing message: "))); 
-		    	}
-		    };
+			match self.process_message(&message) {
+				Ok(_) => {  } 
+				Err(error) => {
+					try!(error.write_out(&mut output));
+					// TODO log 
+//					try!(output.write_fmt(format_args!("Error parsing message: "))); 
+				}
+			};
 		}
 	}
 	
 	pub fn process_message(&mut self, message: &str) -> JsonRpcResult<()> {
-	    
-	    let rpc_request = try!(json_rpc::parse_jsonrpc_request(message));
-	    
-	    try!(self.rpc_dispatcher.dispatch(&rpc_request));
-	    
-	    Ok(())
+		
+		let rpc_request = try!(json_rpc::parse_jsonrpc_request(message));
+		
+		try!(self.rpc_dispatcher.dispatch(&rpc_request));
+		
+		Ok(())
 	}
 }
 
 const CONTENT_LENGTH: &'static str = "Content-Length:";
 	
 pub fn parse_transport_message<R>(mut reader: R) -> GResult<String>
-    where R: io::BufRead,
+	where R: io::BufRead,
 {
 	let reader : &mut io::BufRead = &mut reader;
 	
@@ -118,6 +118,4 @@ fn dispatch__initialize(params: &Map<String, Value>) {
 	let processId = params.get("processId");
 	let capabilities = params.get("capabilities");
 //	InitializeParams
-
 }
-

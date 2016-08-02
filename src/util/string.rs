@@ -17,13 +17,13 @@ use std::io::Write;
 
 impl CharOutput<fmt::Error> for StdoutWrite {
 	
-    fn write_str(&mut self, string: &str) -> fmt::Result {
-    	fmt::Write::write_str(self, string)
-    }
+	fn write_str(&mut self, string: &str) -> fmt::Result {
+		fmt::Write::write_str(self, string)
+	}
 	
-    fn write_char(&mut self, c: char) -> fmt::Result {
-    	fmt::Write::write_char(self, c)
-    }
+	fn write_char(&mut self, c: char) -> fmt::Result {
+		fmt::Write::write_char(self, c)
+	}
 	
 }
 

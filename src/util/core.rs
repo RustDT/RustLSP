@@ -22,19 +22,19 @@ pub type Void = GResult<()>;
 
 pub trait CharOutput<ERR> {
 	
-    fn write_str(&mut self, s: &str) -> result::Result<(), ERR>;
+	fn write_str(&mut self, s: &str) -> result::Result<(), ERR>;
 	
-    fn write_char(&mut self, c: char) -> result::Result<(), ERR>;
+	fn write_char(&mut self, c: char) -> result::Result<(), ERR>;
 	
 }
 
 
 pub trait BasicCharOutput {
 	
-    fn put_str(&mut self, s: &str) ;
-
-    fn put_char(&mut self, c: char) ;
-
+	fn put_str(&mut self, s: &str) ;
+	
+	fn put_char(&mut self, c: char) ;
+	
 }
 
 //impl fmt::Write for BasicCharOutput {
@@ -52,28 +52,28 @@ pub trait BasicCharOutput {
 
 impl<ERR> CharOutput<ERR> for BasicCharOutput {
 	
-    fn write_str(&mut self, s: &str) -> result::Result<(), ERR> {
-    	BasicCharOutput::put_str(self, s);
-    	Ok(())
-    }
+	fn write_str(&mut self, s: &str) -> result::Result<(), ERR> {
+		BasicCharOutput::put_str(self, s);
+		Ok(())
+	}
 	
-    fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
-    	BasicCharOutput::put_char(self, c);
-    	Ok(())
-    }
+	fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
+		BasicCharOutput::put_char(self, c);
+		Ok(())
+	}
 	
 }
 
 //// TODO: might have to remove this, if it's polluting namespace?
 impl BasicCharOutput for String {
 	
-    fn put_str(&mut self, str: &str) {
-    	self.push_str(str);
-    }
+	fn put_str(&mut self, str: &str) {
+		self.push_str(str);
+	}
 	
-    fn put_char(&mut self, ch: char) {
-    	self.push(ch);
-    }
+	fn put_char(&mut self, ch: char) {
+		self.push(ch);
+	}
 	
 }
 
@@ -82,12 +82,12 @@ impl<ERR> CharOutput<ERR> for String {
 	fn write_str(&mut self, s: &str) -> result::Result<(), ERR> {
 		self.put_str(s);
 		Ok(())
-    }
+	}
 	
-    fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
-    	self.put_char(c);
-    	Ok(())
-    }
+	fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
+		self.put_char(c);
+		Ok(())
+	}
 }
 
 /* ----------------- CommonCharOutput ----------------- */
@@ -162,15 +162,15 @@ fn write_display_to_BasicCharOut(display : &fmt::Display, out: &mut BasicCharOut
 	
 	impl<'a> fmt::Write for _BasicWrite<'a> {
 		fn write_str(&mut self, str: &str) -> fmt::Result {
-	    	self.0.put_str(str);
-	    	Ok(())
-	    }
+			self.0.put_str(str);
+			Ok(())
+		}
 		
-	    fn write_char(&mut self, ch: char) -> fmt::Result {
-	    	self.0.put_char(ch);
-	    	Ok(())
-	    }
-	    
+		fn write_char(&mut self, ch: char) -> fmt::Result {
+			self.0.put_char(ch);
+			Ok(())
+		}
+		
 	}
 	
 	fmt::write(&mut _BasicWrite(out), format_args!("{}", display))

@@ -23,10 +23,10 @@ use std::result::Result;
 /* ----------------- deserialize helpers ----------------- */
 
 fn unwrap_object(ob: ObjectBuilder) -> Map<String, Value> {
-    match ob.unwrap() {
-    	Value::Object(o) => o ,
-    	_ => { panic!() },
-    }
+	match ob.unwrap() {
+		Value::Object(o) => o ,
+		_ => { panic!() },
+	}
 }
 
 
@@ -163,31 +163,31 @@ pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
 		}
 	};
 	
-    parse_jsonrpc_request_json(&mut json_result)
+	parse_jsonrpc_request_json(&mut json_result)
 }
 
 pub fn parse_jsonrpc_request_json(request_json: &mut Value) -> JsonRpcResult<JsonRpcRequest> {    
-    
-    let mut json_request_map : &mut Map<String, Value> =
-    match request_json {
-    	&mut Value::Object(ref mut map) => map ,
-    	_ => { return Err(JSON_RPC_InvalidRequest) },
-    };
-    parse_jsonrpc_request_jsonObject(&mut json_request_map)
+	
+	let mut json_request_map : &mut Map<String, Value> =
+	match request_json {
+		&mut Value::Object(ref mut map) => map ,
+		_ => { return Err(JSON_RPC_InvalidRequest) },
+	};
+	parse_jsonrpc_request_jsonObject(&mut json_request_map)
 }
 
 pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut Map<String, Value>) -> JsonRpcResult<JsonRpcRequest> {
-	    
-    let mut helper = JsonRequestDeserializerHelper { };
-    
-    let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
-    let id = try!(helper.obtain_u32(&mut request_map, "id"));
-    let method = try!(helper.obtain_String(&mut request_map, "method"));
-    let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| unwrap_object(ObjectBuilder::new())));
-    
-    let jsonrpc_request = JsonRpcRequest { jsonrpc : jsonrpc, id : id, method : method, params : params}; 
-    
-    Ok(jsonrpc_request)
+	
+	let mut helper = JsonRequestDeserializerHelper { };
+	
+	let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
+	let id = try!(helper.obtain_u32(&mut request_map, "id"));
+	let method = try!(helper.obtain_String(&mut request_map, "method"));
+	let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| unwrap_object(ObjectBuilder::new())));
+	
+	let jsonrpc_request = JsonRpcRequest { jsonrpc : jsonrpc, id : id, method : method, params : params}; 
+	
+	Ok(jsonrpc_request)
 }
 
 
@@ -205,13 +205,13 @@ pub struct JsonRpcError {
 impl JsonRpcError {
 	
 	pub fn to_string(&self) -> String {
-	    let value = ObjectBuilder::new()
-	        .insert("code", self.code)
-	        .insert("message", self.message)
-	        .unwrap()
-        ;
-        // TODO: test
-        return serde_json::to_string(&value).unwrap();
+		let value = ObjectBuilder::new()
+			.insert("code", self.code)
+			.insert("message", self.message)
+			.unwrap()
+		;
+		// TODO: test
+		return serde_json::to_string(&value).unwrap();
 	}
 	
 	pub fn write_out(&self, out: &mut io::Write) -> io::Result<()> {
@@ -260,33 +260,33 @@ fn parse_jsonrpc_request_json_Test() {
 	use self::serde_json::builder::ObjectBuilder;
 	
 	let sample_params = unwrap_object(ObjectBuilder::new()
-	    .insert("param", "2.0")
-        .insert("foo", 123)
-    );
+		.insert("param", "2.0")
+		.insert("foo", 123)
+	);
 	
 	// Test invalid JSON
 	assert_eq!(parse_jsonrpc_request("{" ).unwrap_err(), JSON_RPC_ParseError);
 	
 	// Test invalid JsonRpcRequest
-    let mut invalid_request = ObjectBuilder::new()
-	    .insert("jsonrpc", "2.0")
-        .insert("id", 1)
-        .insert("params", sample_params.clone())
-        .unwrap();
+	let mut invalid_request = ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("id", 1)
+		.insert("params", sample_params.clone())
+		.unwrap();
 	
-    let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();    
+	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();    
 	assert_eq!(result, JSON_RPC_InvalidRequest);
 	
-    // Test basic JsonRpcRequest
-    let mut request = ObjectBuilder::new()
-	    .insert("jsonrpc", "2.0")
-        .insert("id", 1)
-        .insert("method", "myMethod")
-        .insert("params", sample_params.clone())
-        .unwrap();
-    
-    let result = parse_jsonrpc_request_json(&mut request).unwrap();
-    
+	// Test basic JsonRpcRequest
+	let mut request = ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("id", 1)
+		.insert("method", "myMethod")
+		.insert("params", sample_params.clone())
+		.unwrap();
+	
+	let result = parse_jsonrpc_request_json(&mut request).unwrap();
+	
 	assert_eq!(result, JsonRpcRequest { 
 			jsonrpc : "2.0".to_string(), 
 			id : 1, 
@@ -296,15 +296,15 @@ fn parse_jsonrpc_request_json_Test() {
 	
 	
 	// Test basic JsonRpcRequest, no params
-    let mut request = ObjectBuilder::new()
-	    .insert("jsonrpc", "2.0")
-        .insert("id", 1)
-        .insert("method", "myMethod")
-//       .insert("params", sample_params.clone())
-        .unwrap();
-        
+	let mut request = ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("id", 1)
+		.insert("method", "myMethod")
+//		.insert("params", sample_params.clone())
+		.unwrap();
+		
 	let result = parse_jsonrpc_request_json(&mut request).unwrap();
-    assert_eq!(result, JsonRpcRequest { 
+	assert_eq!(result, JsonRpcRequest { 
 			jsonrpc : "2.0".to_string(), 
 			id : 1, 
 			method : "myMethod".to_string(), 

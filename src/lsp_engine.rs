@@ -11,21 +11,21 @@ use self::serde_json::Value;
 pub type ClientCapabilities = Map<String, Value>;
 
 pub struct InitializeParams {
-    /**
-     * The process Id of the parent process that started
-     * the server.
-     */
-    pub processId: u64,
+	/**
+	 * The process Id of the parent process that started
+	 * the server.
+	 */
+	pub processId: u64,
 
-    /**
-     * The rootPath of the workspace. Is null
-     * if no folder is open.
-     */
-    pub rootPath: String,
+	/**
+	 * The rootPath of the workspace. Is null
+	 * if no folder is open.
+	 */
+	pub rootPath: String,
 
-    /**
-     * The capabilities provided by the client (editor)
-     */
-    pub capabilities: ClientCapabilities,
-    
+	/**
+	 * The capabilities provided by the client (editor)
+	 */
+	pub capabilities: ClientCapabilities,
+	
 }
