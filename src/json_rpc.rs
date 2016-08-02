@@ -23,7 +23,7 @@ use std::result::Result;
 /* ----------------- deserialize helpers ----------------- */
 
 fn unwrap_object(ob: ObjectBuilder) -> Map<String, Value> {
-	match ob.unwrap() {
+	match ob.build() {
 		Value::Object(o) => o ,
 		_ => { panic!() },
 	}
@@ -208,7 +208,7 @@ impl JsonRpcError {
 		let value = ObjectBuilder::new()
 			.insert("code", self.code)
 			.insert("message", self.message)
-			.unwrap()
+			.build()
 		;
 		// TODO: test
 		return serde_json::to_string(&value).unwrap();
@@ -227,7 +227,7 @@ impl JsonRpcError {
 use std::collections::HashMap;
 
 pub struct JsonRpcDispatcher {
-	pub dispatcher_map : HashMap<String, Box<Fn(&Map<String, Value>)>>, 
+	pub dispatcher_map : HashMap<String, Box<Fn(Map<String, Value>)>>, 
 }
 
 impl JsonRpcDispatcher {
@@ -236,12 +236,12 @@ impl JsonRpcDispatcher {
 		JsonRpcDispatcher { dispatcher_map : HashMap::new() }
 	}
 	
-	pub fn dispatch(&self, request: &JsonRpcRequest) -> JsonRpcResult<()> {
+	pub fn dispatch(&self, request: JsonRpcRequest) -> JsonRpcResult<()> {
 		match 
 			self.dispatcher_map.get(&request.method) 
 		{
 			Some(dispatcher_fn) => { 
-				dispatcher_fn(& request.params);
+				dispatcher_fn(request.params);
 				Ok(())
 			}
 			None => { 
@@ -272,7 +272,7 @@ fn parse_jsonrpc_request_json_Test() {
 		.insert("jsonrpc", "2.0")
 		.insert("id", 1)
 		.insert("params", sample_params.clone())
-		.unwrap();
+		.build();
 	
 	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();    
 	assert_eq!(result, JSON_RPC_InvalidRequest);
@@ -283,7 +283,7 @@ fn parse_jsonrpc_request_json_Test() {
 		.insert("id", 1)
 		.insert("method", "myMethod")
 		.insert("params", sample_params.clone())
-		.unwrap();
+		.build();
 	
 	let result = parse_jsonrpc_request_json(&mut request).unwrap();
 	
@@ -301,7 +301,7 @@ fn parse_jsonrpc_request_json_Test() {
 		.insert("id", 1)
 		.insert("method", "myMethod")
 //		.insert("params", sample_params.clone())
-		.unwrap();
+		.build();
 		
 	let result = parse_jsonrpc_request_json(&mut request).unwrap();
 	assert_eq!(result, JsonRpcRequest { 

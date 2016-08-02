@@ -2,6 +2,7 @@
 
 extern crate rust_lsp;
 
+pub use rust_lsp::*;
 use rust_lsp::rust_lsp_server::*;
 use rust_lsp::util::core::*;
 

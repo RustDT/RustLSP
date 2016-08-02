@@ -1,10 +1,16 @@
 [package]
 name = "rust_lsp"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
+build = "build.rs"
+
+
+[build-dependencies]
+serde_codegen = "0.8"
 
 [dependencies]
-serde_json = "0.7.4"
+serde = "0.8"
+serde_json = "0.8"
 
 [lib]
 name = "rust_lsp"
@@ -14,4 +20,3 @@ path = "src/lib.rs"
 name = "rust_lsp_app"
 path = "src/main_lsp.rs"
 test = false
-

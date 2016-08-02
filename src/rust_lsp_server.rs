@@ -65,7 +65,7 @@ impl RustLSPServer {
 		
 		let rpc_request = try!(json_rpc::parse_jsonrpc_request(message));
 		
-		try!(self.rpc_dispatcher.dispatch(&rpc_request));
+		try!(self.rpc_dispatcher.dispatch(rpc_request));
 		
 		Ok(())
 	}
@@ -108,14 +108,13 @@ pub fn parse_transport_message<R>(mut reader: R) -> GResult<String>
 /* -----------------  ----------------- */
 
 use self::serde_json::Value;
+use lsp;
 
 fn init_rust_lsp_procedures(rcp_dispactcher: &mut JsonRpcDispatcher) {
 	rcp_dispactcher.dispatcher_map.insert("initialize".to_string(), Box::new(dispatch__initialize));
 }
 
-fn dispatch__initialize(params: &Map<String, Value>) {
-	let rootPath = params.get("rootPath");
-	let processId = params.get("processId");
-	let capabilities = params.get("capabilities");
-//	InitializeParams
+fn dispatch__initialize(params: Map<String, Value>) {
+	// FIXME: unwrap, etc.
+	let init_params : lsp::InitializeParams = serde_json::from_value(Value::Object(params)).unwrap();
 }
