@@ -46,7 +46,7 @@ impl RustLSPServer {
 		}
 	}
 	
-	pub fn read_incoming_messages(&mut self, mut input: &mut io::BufRead, mut output : &mut io::Write) -> Result<()> {
+	pub fn read_incoming_messages(&mut self, mut input: &mut io::BufRead, mut output : &mut io::Write) -> GResult<()> {
 		loop {
 			let message = try!(parse_transport_message(&mut input));
 			
@@ -73,7 +73,7 @@ impl RustLSPServer {
 
 const CONTENT_LENGTH: &'static str = "Content-Length:";
 	
-pub fn parse_transport_message<R>(mut reader: R) -> Result<String>
+pub fn parse_transport_message<R>(mut reader: R) -> GResult<String>
     where R: io::BufRead,
 {
 	let reader : &mut io::BufRead = &mut reader;
@@ -96,7 +96,7 @@ pub fn parse_transport_message<R>(mut reader: R) -> Result<String>
 		}
 	}
 	if content_length == 0 {
-		return Err(StringCommonException::create(String::from(CONTENT_LENGTH) + " not defined or invalid."));
+		return Err(ErrorMessage::create(String::from(CONTENT_LENGTH) + " not defined or invalid."));
 	}
 	
 	let mut message_reader = reader.take(content_length as u64);

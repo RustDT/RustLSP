@@ -15,9 +15,9 @@ use std::fmt;
 use std::result;
 
 
-pub type CommonException = Box<CommonExceptionT>;
-pub type Result<T> = result::Result<T, CommonException>;
-pub type Void = Result<()>;
+pub type GError = Box<GErrorT>;
+pub type GResult<T> = result::Result<T, GError>;
+pub type Void = GResult<()>;
 
 
 pub trait CharOutput<ERR> {
@@ -92,11 +92,11 @@ impl<ERR> CharOutput<ERR> for String {
 
 /* ----------------- CommonCharOutput ----------------- */
 
-pub type CommonCharOutput = CharOutput<CommonException>;
+pub type CommonCharOutput = CharOutput<GError>;
 
 /* -----------------  ----------------- */
 
-pub trait CommonExceptionT {
+pub trait GErrorT {
 	
 	fn write_message(&self, writer: &mut CommonCharOutput) -> Void;
 	
@@ -108,7 +108,7 @@ pub trait CommonExceptionT {
 	
 }
 
-impl fmt::Display for CommonExceptionT {
+impl fmt::Display for GErrorT {
 	
 	fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result {
 		let to_string = self.write_message_to_string();
@@ -117,7 +117,7 @@ impl fmt::Display for CommonExceptionT {
 	
 }
 
-impl fmt::Debug for CommonExceptionT {
+impl fmt::Debug for GErrorT {
 	
 	fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result {
 		<Self as fmt::Display>::fmt(self, fmt)
@@ -126,25 +126,25 @@ impl fmt::Debug for CommonExceptionT {
 }
 
 
-pub struct StringCommonException(String);
+pub struct ErrorMessage(String);
 
-impl StringCommonException {
+impl ErrorMessage {
 	
-	pub fn create(string : String) -> Box<StringCommonException> {
-		Box::new(StringCommonException(string))
+	pub fn create(string : String) -> Box<ErrorMessage> {
+		Box::new(ErrorMessage(string))
 	}
 	
 }
 
-impl CommonExceptionT for StringCommonException {
+impl GErrorT for ErrorMessage {
 	fn write_message(&self, out: &mut CommonCharOutput) -> Void {
 		out.write_str(&self.0)
 	}
 }
 
-struct FmtDisplayCommonException<T : fmt::Display>(T);
+struct FmtDisplayError<T : fmt::Display>(T);
 
-impl<T : fmt::Display> CommonExceptionT for FmtDisplayCommonException<T> {
+impl<T : fmt::Display> GErrorT for FmtDisplayError<T> {
 	fn write_message(& self, out: &mut CommonCharOutput) -> Void {
 		write_display_to_char_out(& self.0, out)
 	}
@@ -194,32 +194,32 @@ fn test_write_display_to_BasicCharOut() {
 }
 */
 
-/* ----------------- convert to CommonException ----------------- */
+/* ----------------- convert to GError ----------------- */
 
 
-impl convert::From<io::Error> for CommonException {
+impl convert::From<io::Error> for GError {
 	fn from(obj: io::Error) -> Self {
-		Box::new(FmtDisplayCommonException(obj))
+		Box::new(FmtDisplayError(obj))
 	}
 }
 
-impl convert::From<fmt::Error> for CommonException {
+impl convert::From<fmt::Error> for GError {
 	fn from(obj: fmt::Error) -> Self {
-		Box::new(FmtDisplayCommonException(obj))
+		Box::new(FmtDisplayError(obj))
 	}
 }
 
-impl convert::From<String> for CommonException {
+impl convert::From<String> for GError {
 	fn from(obj: String) -> Self {
-		Box::new(StringCommonException(obj))
+		Box::new(ErrorMessage(obj))
 	}
 }
 
 use std::num;
 
-impl convert::From<num::ParseIntError> for CommonException {
+impl convert::From<num::ParseIntError> for GError {
 	fn from(obj: num::ParseIntError) -> Self {
-		Box::new(FmtDisplayCommonException(obj))
+		Box::new(FmtDisplayError(obj))
 	}
 }
 

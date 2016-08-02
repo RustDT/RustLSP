@@ -25,6 +25,6 @@ fn parse_transport_message__test2() {
 fn parse_transport_message__testNoContentError() {
 	
 	let string = String::from("\r\n\r\n1234567890abcdef");
-	let err : CommonException = parse_transport_message(BufReader::new(string.as_bytes())).unwrap_err();
+	let err : GError = parse_transport_message(BufReader::new(string.as_bytes())).unwrap_err();
 	assert_eq!(format!("{}", err), "Content-Length: not defined or invalid.");
 }
