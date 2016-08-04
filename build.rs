@@ -4,5 +4,5 @@ use std::env;
 use std::path::Path;
 
 pub fn main() {
-    serde_codegen::expand(&Path::new("src/lsp.in.rs"), &Path::new("src/lsp.rs")).unwrap();
+    serde_codegen::expand(&Path::new("src/lsp.IN.rs"), &Path::new("src/lsp.rs")).unwrap();
 }
