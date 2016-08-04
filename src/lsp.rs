@@ -3803,7 +3803,7 @@ pub struct DocumentSymbolParams {
     /**
      * The text document.
      */
-    textDocument: TextDocumentIdentifier,
+    pub textDocument: TextDocumentIdentifier,
 }
 /**
  * Represents information about programming constructs like variables, classes,
@@ -3902,7 +3902,7 @@ pub struct CodeActionContext {
     /**
      * An array of diagnostics.
      */
-    diagnostics: Vec<Diagnostic>,
+    pub diagnostics: Vec<Diagnostic>,
 }
 /**
  * The code lens request is sent from the client to the server to compute code lenses for a given text document.
@@ -3915,7 +3915,7 @@ pub struct CodeLensParams {
     /**
      * The document to request code lens for.
      */
-    textDocument: TextDocumentIdentifier,
+    pub textDocument: TextDocumentIdentifier,
 }
 /**
  * A code lens represents a command that should be shown along with
@@ -3928,16 +3928,16 @@ pub struct CodeLens {
     /**
      * The range in which this code lens is valid. Should only span a single line.
      */
-    range: Range,
+    pub range: Range,
     /**
      * The command this code lens represents.
      */
-    command: Option<Command>,
+    pub command: Option<Command>,
     /**
      * A data entry field that is preserved on a code lens item between
      * a code lens and a code lens resolve request.
      */
-    data: Option<any>,
+    pub data: Option<any>,
 }
 /**
  * The code lens resolve request is sent from the client to the server to resolve the command for a 
