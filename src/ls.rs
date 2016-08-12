@@ -8,15 +8,23 @@
 
 // WARNING: Rust newbie code ahead (-_-)'
 
+#![allow(non_camel_case_types)]
 
 use ::util::core::*;
 
 use lsp::*;
 
-pub struct LanguageServer {
+pub type LanguageServerMethod<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR> = 
+	Fn(&LanguageServer, METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>; 
+
+pub type Method_Initialize = LanguageServerMethod<InitializeParams, InitializeResult, InitializeError>;
+
+
+pub trait LanguageServer {
+	
+	fn initialize(&self, params: InitializeParams) -> Result<InitializeResult, InitializeError>;
 	
 }
 
-impl LanguageServer {
+pub const FN_INITIALIZE : &'static Method_Initialize = &|ls, params| { ls.initialize(params) };
 
-}

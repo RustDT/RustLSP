@@ -307,7 +307,7 @@ impl JsonRpcError {
 use std::collections::HashMap;
 
 pub struct JsonRpcDispatcher {
-	pub dispatcher_map : HashMap<String, Box<Fn(Map<String, Value>)>>, 
+	pub dispatcher_map : HashMap<String, Box<Fn(Map<String, Value>)>>,
 }
 
 impl JsonRpcDispatcher {
@@ -320,7 +320,7 @@ impl JsonRpcDispatcher {
 		match 
 			self.dispatcher_map.get(&request.method) 
 		{
-			Some(dispatcher_fn) => { 
+			Some(dispatcher_fn) => {
 				dispatcher_fn(request.params);
 				Ok(())
 			}

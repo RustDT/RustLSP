@@ -1,11 +1,24 @@
 extern crate rust_lsp;
 
-use std::io;
 
-fn main() {
-	let stdin = io::stdin();
-	let stdout = io::stdout();
+use rust_lsp::ls::*;
+use rust_lsp::lsp::*;
+
+struct DummyLanguageServer {
 	
-	rust_lsp::rust_lsp_server::RustLSPServer::new().handle_streams(&mut stdin.lock(), &mut stdout.lock());
+}
+impl LanguageServer for DummyLanguageServer {
+	
+	fn initialize(&self, params: InitializeParams) -> Result<InitializeResult, InitializeError> {
+		Ok(InitializeResult { capabilities : ServerCapabilities::default() })
+	}
 }
 
+fn main() {
+	let stdin = std::io::stdin();
+	let stdout = std::io::stdout();
+	
+	let mut ls = std::rc::Rc::new(DummyLanguageServer{ }); 
+	
+	rust_lsp::rust_lsp_server::RustLSPServer::start_new(ls, &mut stdin.lock(), &mut stdout.lock());
+}

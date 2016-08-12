@@ -390,7 +390,7 @@ pub struct DocumentOnTypeFormattingOptions {
     pub triggerCharacters: Option<Vec<string>>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct ServerCapabilities {
     /**
      * Defines how text documents are synced.

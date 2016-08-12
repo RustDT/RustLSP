@@ -8,6 +8,7 @@
 
 // WARNING: Rust newbie code ahead (-_-)'
 
+#![allow(non_camel_case_types)]
 
 extern crate serde_json;
 
@@ -15,28 +16,40 @@ use std::io::{self, Read, Write};
 
 use ::util::core::*;
 
-use self::serde_json::Map;
+use serde_json::Map;
+use serde_json::Value;
+use serde;
 
 use json_rpc;
 use json_rpc::JsonRpcDispatcher;
 use json_rpc::JsonRpcResult;
 
+use lsp;
+use lsp::*;
+use ls;
+use ls::LanguageServer;
+
+use std::collections::HashMap;
+use std::rc::Rc;
+
+/* -----------------  ----------------- */
+
 pub struct RustLSPServer {
 	
+	pub ls: Rc<LanguageServer>,
 	pub rpc_dispatcher : JsonRpcDispatcher,
 	
 }
 
 impl RustLSPServer {
 	
-	pub fn new() -> RustLSPServer {
-		let mut new = RustLSPServer { rpc_dispatcher : JsonRpcDispatcher::new() };
-		init_rust_lsp_procedures(&mut new.rpc_dispatcher);
-		new
-	}
-	
-	pub fn handle_streams(&mut self, mut input: &mut io::BufRead, mut output : &mut io::Write) {
-		let result = self.read_incoming_messages(&mut input, &mut output);
+	pub fn start_new(ls: Rc<LanguageServer>, input: &mut io::BufRead, output : &mut io::Write) {
+		let rpc_dispatcher = JsonRpcDispatcher::new();
+		let mut server = RustLSPServer { rpc_dispatcher : rpc_dispatcher, ls : ls };
+		
+		LanguageServerHandler::init(&mut server);
+		
+		let result = server.read_incoming_messages(input, output);
 		match result {
 			Err(error) => { 
 				writeln!(&mut io::stderr(), "Error reading/writing the connection streams: {}", error)
@@ -71,6 +84,45 @@ impl RustLSPServer {
 	}
 }
 
+
+
+pub struct LanguageServerHandler {
+	
+}
+
+impl LanguageServerHandler {
+	
+	pub fn init(lsp_handler : &mut RustLSPServer) {
+		let language_server = lsp_handler.ls.clone();
+		
+		let handler_fn : Box<Fn(Map<String, Value>)> = Box::new(move |params_map| { 
+			//FIXME : handle return
+			LanguageServerHandler::handle_method(params_map, &|params| { 
+				ls::FN_INITIALIZE(language_server.as_ref(), params) 
+			}); 
+		});
+		
+		lsp_handler.rpc_dispatcher.dispatcher_map.insert("blah".to_string(), handler_fn);
+	}
+	
+	pub fn handle_method<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR>(
+		params: Map<String, Value>, 
+		rpc_method: &Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>
+	) -> Result<METHOD_RESULT, METHOD_ERROR>
+		where 
+		METHOD_PARAMS: serde::Deserialize,
+		METHOD_RESULT: serde::Deserialize,
+		METHOD_ERROR: serde::Deserialize,
+	{
+		let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params));
+		let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
+		rpc_method(params)
+	}
+	
+}
+
+/* ----------------- Parse content-length ----------------- */
+
 const CONTENT_LENGTH: &'static str = "Content-Length:";
 	
 pub fn parse_transport_message<R>(mut reader: R) -> GResult<String>
@@ -103,18 +155,4 @@ pub fn parse_transport_message<R>(mut reader: R) -> GResult<String>
 	let mut message = String::new();
 	try!(message_reader.read_to_string(&mut message));
 	return Ok(message);
-}
-
-/* -----------------  ----------------- */
-
-use self::serde_json::Value;
-use lsp;
-
-fn init_rust_lsp_procedures(rcp_dispactcher: &mut JsonRpcDispatcher) {
-	rcp_dispactcher.dispatcher_map.insert("initialize".to_string(), Box::new(dispatch__initialize));
-}
-
-fn dispatch__initialize(params: Map<String, Value>) {
-	// FIXME: unwrap, etc.
-	let init_params : lsp::InitializeParams = serde_json::from_value(Value::Object(params)).unwrap();
 }

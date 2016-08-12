@@ -4423,7 +4423,7 @@ const _IMPL_SERIALIZE_FOR_DocumentOnTypeFormattingOptions: () =
             }
         }
     };
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct ServerCapabilities {
     /**
      * Defines how text documents are synced.
