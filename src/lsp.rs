@@ -23,15 +23,15 @@ use std::collections::HashMap;
 // Last revision 03/08/2016
 
 pub trait LanguageServerNotification<PARAMS> {
-    fn method_name()
+    fn procedure_name(&self)
     -> &'static str;
-    fn invoke(params: PARAMS);
+    fn invoke(&mut self, params: PARAMS);
 }
 
 pub trait LanguageServerRequest<PARAMS, RET, ERR> {
-    fn method_name()
+    fn procedure_name(&self)
     -> &'static str;
-    fn invoke(params: PARAMS)
+    fn invoke(&mut self, params: PARAMS)
     -> Result<RET, ERR>; /* FIXME: use error structure */
 }
 
@@ -148,7 +148,7 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
 
 
 
-                          /* ----------------- Protocol Structures ----------------- */
+                          /* ========================= Protocol Structures ========================= */
 
 
 
@@ -170,7 +170,6 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                           //moreTriggerCharacter?: string[],
 
                           //textDocumentSync?: number;
-
 
 
 
@@ -2871,7 +2870,7 @@ const _IMPL_SERIALIZE_FOR_TextDocumentPositionParams: () =
 pub trait InitializeRequest: LanguageServerRequest<InitializeParams,
                                                    InitializeResult,
                                                    InitializeError> {
-    fn method_name() -> &'static str { "initialize" }
+    fn procedure_name(&self) -> &'static str { "initialize" }
 }
 #[derive(Debug, Clone)]
 pub struct InitializeParams {
@@ -3136,12 +3135,175 @@ const _IMPL_SERIALIZE_FOR_InitializeParams: () =
  * Where ClientCapabilities are currently empty:
  */
 pub type ClientCapabilities = HashMap<String, Value>;
+#[derive(Debug, Clone)]
 pub struct InitializeResult {
     /**
      * The capabilities the language server provides.
      */
     pub capabilities: ServerCapabilities,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_InitializeResult: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for InitializeResult {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<InitializeResult, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "capabilities" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"capabilities" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        InitializeResult;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<InitializeResult,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               ServerCapabilities > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(InitializeResult{capabilities: __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<InitializeResult,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<ServerCapabilities> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("capabilities"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          ServerCapabilities >
+                                                          (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "capabilities" )),
+                                    };
+                                Ok(InitializeResult{capabilities: __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["capabilities"];
+                    deserializer.deserialize_struct("InitializeResult",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_InitializeResult: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for InitializeResult {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "InitializeResult" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "capabilities" , &self.capabilities
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
+#[derive(Debug, Clone)]
 pub struct InitializeError {
     /**
      * Indicates whether the client should retry to send the
@@ -3150,9 +3312,159 @@ pub struct InitializeError {
      */
     pub retry: boolean,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_InitializeError: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for InitializeError {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<InitializeError, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "retry" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"retry" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        InitializeError;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<InitializeError, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < boolean >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(InitializeError{retry: __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<InitializeError, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<boolean> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("retry"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          boolean > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "retry"
+                                             )),
+                                    };
+                                Ok(InitializeError{retry: __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["retry"];
+                    deserializer.deserialize_struct("InitializeError", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_InitializeError: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for InitializeError {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "InitializeError" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "retry" , &self.retry ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Defines how the host (editor) should sync document changes to the language server.
  */
+#[derive(Debug, Clone)]
 pub enum TextDocumentSyncKind {
 
     /**
@@ -3171,9 +3483,161 @@ pub enum TextDocumentSyncKind {
      */
     Incremental = 2,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_TextDocumentSyncKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for TextDocumentSyncKind {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<TextDocumentSyncKind, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => {
+                                            Err(_serde::de::Error::invalid_value("expected a variant"))
+                                        }
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "None" => { Ok(__Field::__field0) }
+                                        "Full" => { Ok(__Field::__field1) }
+                                        "Incremental" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ =>
+                                        Err(_serde::de::Error::unknown_variant(value)),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"None" => { Ok(__Field::__field0) }
+                                        b"Full" => { Ok(__Field::__field1) }
+                                        b"Incremental" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => {
+                                            let value =
+                                                ::std::string::String::from_utf8_lossy(value);
+                                            Err(_serde::de::Error::unknown_variant(&value))
+                                        }
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer>
+                     _serde::de::EnumVisitor for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        TextDocumentSyncKind;
+                        fn visit<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<TextDocumentSyncKind,
+                                                   __V::Error> where
+                         __V: _serde::de::VariantVisitor {
+                            match try!(visitor . visit_variant (  )) {
+                                __Field::__field0 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(TextDocumentSyncKind::None)
+                                    }
+                                }
+                                __Field::__field1 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(TextDocumentSyncKind::Full)
+                                    }
+                                }
+                                __Field::__field2 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(TextDocumentSyncKind::Incremental)
+                                    }
+                                }
+                                __Field::__ignore => {
+                                    Err(_serde::de::Error::end_of_stream())
+                                }
+                            }
+                        }
+                    }
+                    const VARIANTS: &'static [&'static str] =
+                        &["None", "Full", "Incremental"];
+                    deserializer.deserialize_enum("TextDocumentSyncKind",
+                                                  VARIANTS,
+                                                  __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_TextDocumentSyncKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for TextDocumentSyncKind {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                match *self {
+                    TextDocumentSyncKind::None => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "TextDocumentSyncKind",
+                                                                        0usize,
+                                                                        "None")
+                    }
+                    TextDocumentSyncKind::Full => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "TextDocumentSyncKind",
+                                                                        1usize,
+                                                                        "Full")
+                    }
+                    TextDocumentSyncKind::Incremental => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "TextDocumentSyncKind",
+                                                                        2usize,
+                                                                        "Incremental")
+                    }
+                }
+            }
+        }
+    };
 /**
  * Completion options.
  */
+#[derive(Debug, Clone)]
 pub struct CompletionOptions {
     /**
      * The server provides support to resolve additional information for a completion item.
@@ -3184,27 +3648,562 @@ pub struct CompletionOptions {
      */
     pub triggerCharacters: Option<Vec<string>>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CompletionOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CompletionOptions {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CompletionOptions, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "resolveProvider" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "triggerCharacters" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"resolveProvider" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"triggerCharacters" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CompletionOptions;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<CompletionOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<Vec<string>> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CompletionOptions{resolveProvider:
+                                                         __field0,
+                                                     triggerCharacters:
+                                                         __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<CompletionOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Option<boolean>> =
+                                    None;
+                                let mut __field1:
+                                        Option<Option<Vec<string>>> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("resolveProvider"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("triggerCharacters"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Vec<string>>
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "resolveProvider" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "triggerCharacters" )),
+                                    };
+                                Ok(CompletionOptions{resolveProvider:
+                                                         __field0,
+                                                     triggerCharacters:
+                                                         __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["resolveProvider", "triggerCharacters"];
+                    deserializer.deserialize_struct("CompletionOptions",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CompletionOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CompletionOptions {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CompletionOptions" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "resolveProvider" ,
+                             &self.resolveProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "triggerCharacters" ,
+                             &self.triggerCharacters ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Signature help options.
  */
+#[derive(Debug, Clone)]
 pub struct SignatureHelpOptions {
     /**
      * The characters that trigger signature help automatically.
      */
     pub triggerCharacters: Option<Vec<string>>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_SignatureHelpOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for SignatureHelpOptions {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<SignatureHelpOptions, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "triggerCharacters" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"triggerCharacters" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        SignatureHelpOptions;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<SignatureHelpOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Option<Vec<string>> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(SignatureHelpOptions{triggerCharacters:
+                                                            __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<SignatureHelpOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<Option<Vec<string>>> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("triggerCharacters"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Vec<string>>
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "triggerCharacters" )),
+                                    };
+                                Ok(SignatureHelpOptions{triggerCharacters:
+                                                            __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["triggerCharacters"];
+                    deserializer.deserialize_struct("SignatureHelpOptions",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_SignatureHelpOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for SignatureHelpOptions {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "SignatureHelpOptions" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "triggerCharacters" ,
+                             &self.triggerCharacters ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Code Lens options.
  */
+#[derive(Debug, Clone)]
 pub struct CodeLensOptions {
     /**
      * Code lens has a resolve provider as well.
      */
     pub resolveProvider: Option<boolean>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CodeLensOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CodeLensOptions {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CodeLensOptions, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "resolveProvider" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"resolveProvider" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CodeLensOptions;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CodeLensOptions, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CodeLensOptions{resolveProvider:
+                                                       __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CodeLensOptions, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Option<boolean>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("resolveProvider"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "resolveProvider" )),
+                                    };
+                                Ok(CodeLensOptions{resolveProvider:
+                                                       __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["resolveProvider"];
+                    deserializer.deserialize_struct("CodeLensOptions", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CodeLensOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CodeLensOptions {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CodeLensOptions" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "resolveProvider" ,
+                             &self.resolveProvider ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Format document on type options
  */
+#[derive(Debug, Clone)]
 pub struct DocumentOnTypeFormattingOptions {
     /**
      * A character on which formatting should be triggered, like `}`.
@@ -3215,6 +4214,216 @@ pub struct DocumentOnTypeFormattingOptions {
      */
     pub triggerCharacters: Option<Vec<string>>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DocumentOnTypeFormattingOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DocumentOnTypeFormattingOptions {
+            fn deserialize<__D>(deserializer: &mut __D)
+             ->
+                 ::std::result::Result<DocumentOnTypeFormattingOptions,
+                                       __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "firstTriggerCharacter" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "triggerCharacters" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"firstTriggerCharacter" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"triggerCharacters" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DocumentOnTypeFormattingOptions;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentOnTypeFormattingOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<Vec<string>> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DocumentOnTypeFormattingOptions{firstTriggerCharacter:
+                                                                       __field0,
+                                                                   triggerCharacters:
+                                                                       __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentOnTypeFormattingOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                let mut __field1:
+                                        Option<Option<Vec<string>>> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("firstTriggerCharacter"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("triggerCharacters"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Vec<string>>
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "firstTriggerCharacter" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "triggerCharacters" )),
+                                    };
+                                Ok(DocumentOnTypeFormattingOptions{firstTriggerCharacter:
+                                                                       __field0,
+                                                                   triggerCharacters:
+                                                                       __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["firstTriggerCharacter", "triggerCharacters"];
+                    deserializer.deserialize_struct("DocumentOnTypeFormattingOptions",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DocumentOnTypeFormattingOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DocumentOnTypeFormattingOptions {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DocumentOnTypeFormattingOptions" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "firstTriggerCharacter" ,
+                             &self.firstTriggerCharacter ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "triggerCharacters" ,
+                             &self.triggerCharacters ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
+#[derive(Debug, Clone)]
 pub struct ServerCapabilities {
     /**
      * Defines how text documents are synced.
@@ -3277,27 +4486,863 @@ pub struct ServerCapabilities {
      */
     pub renameProvider: Option<boolean>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for ServerCapabilities {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<ServerCapabilities, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __field4,
+                        __field5,
+                        __field6,
+                        __field7,
+                        __field8,
+                        __field9,
+                        __field10,
+                        __field11,
+                        __field12,
+                        __field13,
+                        __field14,
+                        __ignore,
+                    }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
+                                        4usize => { Ok(__Field::__field4) }
+                                        5usize => { Ok(__Field::__field5) }
+                                        6usize => { Ok(__Field::__field6) }
+                                        7usize => { Ok(__Field::__field7) }
+                                        8usize => { Ok(__Field::__field8) }
+                                        9usize => { Ok(__Field::__field9) }
+                                        10usize => { Ok(__Field::__field10) }
+                                        11usize => { Ok(__Field::__field11) }
+                                        12usize => { Ok(__Field::__field12) }
+                                        13usize => { Ok(__Field::__field13) }
+                                        14usize => { Ok(__Field::__field14) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocumentSync" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "hoverProvider" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        "completionProvider" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        "signatureHelpProvider" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        "definitionProvider" => {
+                                            Ok(__Field::__field4)
+                                        }
+                                        "referencesProvider" => {
+                                            Ok(__Field::__field5)
+                                        }
+                                        "documentHighlightProvider" => {
+                                            Ok(__Field::__field6)
+                                        }
+                                        "documentSymbolProvider" => {
+                                            Ok(__Field::__field7)
+                                        }
+                                        "workspaceSymbolProvider" => {
+                                            Ok(__Field::__field8)
+                                        }
+                                        "codeActionProvider" => {
+                                            Ok(__Field::__field9)
+                                        }
+                                        "codeLensProvider" => {
+                                            Ok(__Field::__field10)
+                                        }
+                                        "documentFormattingProvider" => {
+                                            Ok(__Field::__field11)
+                                        }
+                                        "documentRangeFormattingProvider" => {
+                                            Ok(__Field::__field12)
+                                        }
+                                        "documentOnTypeFormattingProvider" =>
+                                        {
+                                            Ok(__Field::__field13)
+                                        }
+                                        "renameProvider" => {
+                                            Ok(__Field::__field14)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocumentSync" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"hoverProvider" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"completionProvider" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        b"signatureHelpProvider" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        b"definitionProvider" => {
+                                            Ok(__Field::__field4)
+                                        }
+                                        b"referencesProvider" => {
+                                            Ok(__Field::__field5)
+                                        }
+                                        b"documentHighlightProvider" => {
+                                            Ok(__Field::__field6)
+                                        }
+                                        b"documentSymbolProvider" => {
+                                            Ok(__Field::__field7)
+                                        }
+                                        b"workspaceSymbolProvider" => {
+                                            Ok(__Field::__field8)
+                                        }
+                                        b"codeActionProvider" => {
+                                            Ok(__Field::__field9)
+                                        }
+                                        b"codeLensProvider" => {
+                                            Ok(__Field::__field10)
+                                        }
+                                        b"documentFormattingProvider" => {
+                                            Ok(__Field::__field11)
+                                        }
+                                        b"documentRangeFormattingProvider" =>
+                                        {
+                                            Ok(__Field::__field12)
+                                        }
+                                        b"documentOnTypeFormattingProvider" =>
+                                        {
+                                            Ok(__Field::__field13)
+                                        }
+                                        b"renameProvider" => {
+                                            Ok(__Field::__field14)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        ServerCapabilities;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ServerCapabilities,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Option<TextDocumentSyncKind> >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               Option<CompletionOptions> > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                let __field3 =
+                                    match try!(visitor . visit :: <
+                                               Option<SignatureHelpOptions> >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(3usize));
+                                        }
+                                    };
+                                let __field4 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(4usize));
+                                        }
+                                    };
+                                let __field5 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(5usize));
+                                        }
+                                    };
+                                let __field6 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(6usize));
+                                        }
+                                    };
+                                let __field7 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(7usize));
+                                        }
+                                    };
+                                let __field8 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(8usize));
+                                        }
+                                    };
+                                let __field9 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(9usize));
+                                        }
+                                    };
+                                let __field10 =
+                                    match try!(visitor . visit :: <
+                                               Option<CodeLensOptions> > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(10usize));
+                                        }
+                                    };
+                                let __field11 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(11usize));
+                                        }
+                                    };
+                                let __field12 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(12usize));
+                                        }
+                                    };
+                                let __field13 =
+                                    match try!(visitor . visit :: <
+                                               Option<DocumentOnTypeFormattingOptions>
+                                               > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(13usize));
+                                        }
+                                    };
+                                let __field14 =
+                                    match try!(visitor . visit :: <
+                                               Option<boolean> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(14usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(ServerCapabilities{textDocumentSync:
+                                                          __field0,
+                                                      hoverProvider: __field1,
+                                                      completionProvider:
+                                                          __field2,
+                                                      signatureHelpProvider:
+                                                          __field3,
+                                                      definitionProvider:
+                                                          __field4,
+                                                      referencesProvider:
+                                                          __field5,
+                                                      documentHighlightProvider:
+                                                          __field6,
+                                                      documentSymbolProvider:
+                                                          __field7,
+                                                      workspaceSymbolProvider:
+                                                          __field8,
+                                                      codeActionProvider:
+                                                          __field9,
+                                                      codeLensProvider:
+                                                          __field10,
+                                                      documentFormattingProvider:
+                                                          __field11,
+                                                      documentRangeFormattingProvider:
+                                                          __field12,
+                                                      documentOnTypeFormattingProvider:
+                                                          __field13,
+                                                      renameProvider:
+                                                          __field14,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ServerCapabilities,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<Option<TextDocumentSyncKind>> =
+                                    None;
+                                let mut __field1: Option<Option<boolean>> =
+                                    None;
+                                let mut __field2:
+                                        Option<Option<CompletionOptions>> =
+                                    None;
+                                let mut __field3:
+                                        Option<Option<SignatureHelpOptions>> =
+                                    None;
+                                let mut __field4: Option<Option<boolean>> =
+                                    None;
+                                let mut __field5: Option<Option<boolean>> =
+                                    None;
+                                let mut __field6: Option<Option<boolean>> =
+                                    None;
+                                let mut __field7: Option<Option<boolean>> =
+                                    None;
+                                let mut __field8: Option<Option<boolean>> =
+                                    None;
+                                let mut __field9: Option<Option<boolean>> =
+                                    None;
+                                let mut __field10:
+                                        Option<Option<CodeLensOptions>> =
+                                    None;
+                                let mut __field11: Option<Option<boolean>> =
+                                    None;
+                                let mut __field12: Option<Option<boolean>> =
+                                    None;
+                                let mut __field13:
+                                        Option<Option<DocumentOnTypeFormattingOptions>> =
+                                    None;
+                                let mut __field14: Option<Option<boolean>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocumentSync"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<TextDocumentSyncKind>
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("hoverProvider"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("completionProvider"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<CompletionOptions>
+                                                          > (  )));
+                                        }
+                                        __Field::__field3 => {
+                                            if __field3.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("signatureHelpProvider"));
+                                            }
+                                            __field3 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<SignatureHelpOptions>
+                                                          > (  )));
+                                        }
+                                        __Field::__field4 => {
+                                            if __field4.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("definitionProvider"));
+                                            }
+                                            __field4 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field5 => {
+                                            if __field5.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("referencesProvider"));
+                                            }
+                                            __field5 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field6 => {
+                                            if __field6.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentHighlightProvider"));
+                                            }
+                                            __field6 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field7 => {
+                                            if __field7.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentSymbolProvider"));
+                                            }
+                                            __field7 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field8 => {
+                                            if __field8.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("workspaceSymbolProvider"));
+                                            }
+                                            __field8 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field9 => {
+                                            if __field9.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("codeActionProvider"));
+                                            }
+                                            __field9 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field10 => {
+                                            if __field10.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("codeLensProvider"));
+                                            }
+                                            __field10 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<CodeLensOptions>
+                                                          > (  )));
+                                        }
+                                        __Field::__field11 => {
+                                            if __field11.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentFormattingProvider"));
+                                            }
+                                            __field11 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field12 => {
+                                            if __field12.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentRangeFormattingProvider"));
+                                            }
+                                            __field12 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        __Field::__field13 => {
+                                            if __field13.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentOnTypeFormattingProvider"));
+                                            }
+                                            __field13 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<DocumentOnTypeFormattingOptions>
+                                                          > (  )));
+                                        }
+                                        __Field::__field14 => {
+                                            if __field14.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("renameProvider"));
+                                            }
+                                            __field14 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<boolean> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocumentSync" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "hoverProvider" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "completionProvider" )),
+                                    };
+                                let __field3 =
+                                    match __field3 {
+                                        Some(__field3) => __field3,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "signatureHelpProvider" )),
+                                    };
+                                let __field4 =
+                                    match __field4 {
+                                        Some(__field4) => __field4,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "definitionProvider" )),
+                                    };
+                                let __field5 =
+                                    match __field5 {
+                                        Some(__field5) => __field5,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "referencesProvider" )),
+                                    };
+                                let __field6 =
+                                    match __field6 {
+                                        Some(__field6) => __field6,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentHighlightProvider" )),
+                                    };
+                                let __field7 =
+                                    match __field7 {
+                                        Some(__field7) => __field7,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentSymbolProvider" )),
+                                    };
+                                let __field8 =
+                                    match __field8 {
+                                        Some(__field8) => __field8,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "workspaceSymbolProvider" )),
+                                    };
+                                let __field9 =
+                                    match __field9 {
+                                        Some(__field9) => __field9,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "codeActionProvider" )),
+                                    };
+                                let __field10 =
+                                    match __field10 {
+                                        Some(__field10) => __field10,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "codeLensProvider" )),
+                                    };
+                                let __field11 =
+                                    match __field11 {
+                                        Some(__field11) => __field11,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentFormattingProvider" )),
+                                    };
+                                let __field12 =
+                                    match __field12 {
+                                        Some(__field12) => __field12,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentRangeFormattingProvider"
+                                             )),
+                                    };
+                                let __field13 =
+                                    match __field13 {
+                                        Some(__field13) => __field13,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentOnTypeFormattingProvider"
+                                             )),
+                                    };
+                                let __field14 =
+                                    match __field14 {
+                                        Some(__field14) => __field14,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "renameProvider" )),
+                                    };
+                                Ok(ServerCapabilities{textDocumentSync:
+                                                          __field0,
+                                                      hoverProvider: __field1,
+                                                      completionProvider:
+                                                          __field2,
+                                                      signatureHelpProvider:
+                                                          __field3,
+                                                      definitionProvider:
+                                                          __field4,
+                                                      referencesProvider:
+                                                          __field5,
+                                                      documentHighlightProvider:
+                                                          __field6,
+                                                      documentSymbolProvider:
+                                                          __field7,
+                                                      workspaceSymbolProvider:
+                                                          __field8,
+                                                      codeActionProvider:
+                                                          __field9,
+                                                      codeLensProvider:
+                                                          __field10,
+                                                      documentFormattingProvider:
+                                                          __field11,
+                                                      documentRangeFormattingProvider:
+                                                          __field12,
+                                                      documentOnTypeFormattingProvider:
+                                                          __field13,
+                                                      renameProvider:
+                                                          __field14,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["textDocumentSync", "hoverProvider",
+                          "completionProvider", "signatureHelpProvider",
+                          "definitionProvider", "referencesProvider",
+                          "documentHighlightProvider",
+                          "documentSymbolProvider", "workspaceSymbolProvider",
+                          "codeActionProvider", "codeLensProvider",
+                          "documentFormattingProvider",
+                          "documentRangeFormattingProvider",
+                          "documentOnTypeFormattingProvider",
+                          "renameProvider"];
+                    deserializer.deserialize_struct("ServerCapabilities",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_ServerCapabilities: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for ServerCapabilities {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "ServerCapabilities" ,
+                             0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
+                             ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocumentSync" ,
+                             &self.textDocumentSync ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "hoverProvider" ,
+                             &self.hoverProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "completionProvider" ,
+                             &self.completionProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "signatureHelpProvider" ,
+                             &self.signatureHelpProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "definitionProvider" ,
+                             &self.definitionProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "referencesProvider" ,
+                             &self.referencesProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentHighlightProvider" ,
+                             &self.documentHighlightProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentSymbolProvider" ,
+                             &self.documentSymbolProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "workspaceSymbolProvider" ,
+                             &self.workspaceSymbolProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "codeActionProvider" ,
+                             &self.codeActionProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "codeLensProvider" ,
+                             &self.codeLensProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentFormattingProvider" ,
+                             &self.documentFormattingProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentRangeFormattingProvider" ,
+                             &self.documentRangeFormattingProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentOnTypeFormattingProvider"
+                             , &self.documentOnTypeFormattingProvider ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "renameProvider" ,
+                             &self.renameProvider ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The shutdown request is sent from the client to the server. It asks the server to shut down,
  * but to not exit (otherwise the response might not be delivered correctly to the client).
  * There is a separate exit notification that asks the server to exit.
  */
 pub trait ShutdownRequest: LanguageServerRequest<(), (), ()> {
-    fn method_name() -> &'static str { "shutdown" }
+    fn procedure_name(&self) -> &'static str { "shutdown" }
 }
 /**
  * A notification to ask the server to exit its process.
  */
 pub trait ExitNotification: LanguageServerNotification<()> {
-    fn method_name() -> &'static str { "exit" }
+    fn procedure_name(&self) -> &'static str { "exit" }
 }
 /**
  * The show message notification is sent from a server to a client to ask the client to display a particular message
  * in the user interface.
  */
 pub trait ShowMessageNotification: LanguageServerNotification<ShowMessageParams> {
-    fn method_name() -> &'static str { "window/showMessage" }
+    fn procedure_name(&self) -> &'static str { "window/showMessage" }
 }
+#[derive(Debug, Clone)]
 pub struct ShowMessageParams {
     /**
      * The message type. See {@link MessageType}.
@@ -3308,6 +5353,200 @@ pub struct ShowMessageParams {
      */
     pub message: string,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_ShowMessageParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for ShowMessageParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<ShowMessageParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "type" => { Ok(__Field::__field0) }
+                                        "message" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"type" => { Ok(__Field::__field0) }
+                                        b"message" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        ShowMessageParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ShowMessageParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < number > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(ShowMessageParams{type_: __field0,
+                                                     message: __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ShowMessageParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<number> = None;
+                                let mut __field1: Option<string> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("type"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          number > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("message"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "type"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "message" )),
+                                    };
+                                Ok(ShowMessageParams{type_: __field0,
+                                                     message: __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["type_", "message"];
+                    deserializer.deserialize_struct("ShowMessageParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_ShowMessageParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for ShowMessageParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "ShowMessageParams" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "type" , &self.type_ ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "message" , &self.message ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
+#[derive(Debug, Clone)]
 pub enum MessageType {
 
     /**
@@ -3330,14 +5569,182 @@ pub enum MessageType {
      */
     Log = 4,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_MessageType: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for MessageType {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<MessageType, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __ignore,
+                    }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
+                                        _ => {
+                                            Err(_serde::de::Error::invalid_value("expected a variant"))
+                                        }
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "Error" => { Ok(__Field::__field0) }
+                                        "Warning" => { Ok(__Field::__field1) }
+                                        "Info" => { Ok(__Field::__field2) }
+                                        "Log" => { Ok(__Field::__field3) }
+                                        _ =>
+                                        Err(_serde::de::Error::unknown_variant(value)),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"Error" => { Ok(__Field::__field0) }
+                                        b"Warning" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"Info" => { Ok(__Field::__field2) }
+                                        b"Log" => { Ok(__Field::__field3) }
+                                        _ => {
+                                            let value =
+                                                ::std::string::String::from_utf8_lossy(value);
+                                            Err(_serde::de::Error::unknown_variant(&value))
+                                        }
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer>
+                     _serde::de::EnumVisitor for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        MessageType;
+                        fn visit<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<MessageType, __V::Error>
+                         where __V: _serde::de::VariantVisitor {
+                            match try!(visitor . visit_variant (  )) {
+                                __Field::__field0 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(MessageType::Error)
+                                    }
+                                }
+                                __Field::__field1 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(MessageType::Warning)
+                                    }
+                                }
+                                __Field::__field2 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(MessageType::Info)
+                                    }
+                                }
+                                __Field::__field3 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(MessageType::Log)
+                                    }
+                                }
+                                __Field::__ignore => {
+                                    Err(_serde::de::Error::end_of_stream())
+                                }
+                            }
+                        }
+                    }
+                    const VARIANTS: &'static [&'static str] =
+                        &["Error", "Warning", "Info", "Log"];
+                    deserializer.deserialize_enum("MessageType", VARIANTS,
+                                                  __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_MessageType: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for MessageType {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                match *self {
+                    MessageType::Error => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "MessageType",
+                                                                        0usize,
+                                                                        "Error")
+                    }
+                    MessageType::Warning => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "MessageType",
+                                                                        1usize,
+                                                                        "Warning")
+                    }
+                    MessageType::Info => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "MessageType",
+                                                                        2usize,
+                                                                        "Info")
+                    }
+                    MessageType::Log => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "MessageType",
+                                                                        3usize,
+                                                                        "Log")
+                    }
+                }
+            }
+        }
+    };
 /**
  * The show message request is sent from a server to a client to ask the client to display a particular message
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
 pub trait ShowMessageRequestNotification: LanguageServerNotification<ShowMessageRequestParams> {
-    fn method_name() -> &'static str { "window/showMessageRequest" }
+    fn procedure_name(&self) -> &'static str { "window/showMessageRequest" }
 }
+#[derive(Debug, Clone)]
 pub struct ShowMessageRequestParams {
     /**
      * The message type. See {@link MessageType}
@@ -3352,18 +5759,411 @@ pub struct ShowMessageRequestParams {
      */
     pub actions: Option<Vec<MessageActionItem>>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_ShowMessageRequestParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for ShowMessageRequestParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<ShowMessageRequestParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "type" => { Ok(__Field::__field0) }
+                                        "message" => { Ok(__Field::__field1) }
+                                        "actions" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"type" => { Ok(__Field::__field0) }
+                                        b"message" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"actions" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        ShowMessageRequestParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ShowMessageRequestParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < number > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               Option<Vec<MessageActionItem>>
+                                               > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(ShowMessageRequestParams{type_: __field0,
+                                                            message: __field1,
+                                                            actions:
+                                                                __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ShowMessageRequestParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<number> = None;
+                                let mut __field1: Option<string> = None;
+                                let mut __field2:
+                                        Option<Option<Vec<MessageActionItem>>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("type"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          number > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("message"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("actions"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Vec<MessageActionItem>>
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "type"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "message" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "actions" )),
+                                    };
+                                Ok(ShowMessageRequestParams{type_: __field0,
+                                                            message: __field1,
+                                                            actions:
+                                                                __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["type_", "message", "actions"];
+                    deserializer.deserialize_struct("ShowMessageRequestParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_ShowMessageRequestParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for ShowMessageRequestParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "ShowMessageRequestParams" , 0 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "type" , &self.type_ ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "message" , &self.message ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "actions" , &self.actions ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
+#[derive(Debug, Clone)]
 pub struct MessageActionItem {
     /**
      * A short title like 'Retry', 'Open Log' etc.
      */
     title: string,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_MessageActionItem: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for MessageActionItem {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<MessageActionItem, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "title" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"title" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        MessageActionItem;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<MessageActionItem,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(MessageActionItem{title: __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<MessageActionItem,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("title"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "title"
+                                             )),
+                                    };
+                                Ok(MessageActionItem{title: __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["title"];
+                    deserializer.deserialize_struct("MessageActionItem",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_MessageActionItem: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for MessageActionItem {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "MessageActionItem" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "title" , &self.title ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The log message notification is sent from the server to the client to ask the client to log a particular message.
  */
 pub trait LogMessageNotification: LanguageServerNotification<LogMessageParams> {
-    fn method_name() -> &'static str { "window/logMessage" }
+    fn procedure_name(&self) -> &'static str { "window/logMessage" }
 }
+#[derive(Debug, Clone)]
 pub struct LogMessageParams {
     /**
      * The message type. See {@link MessageType}
@@ -3374,45 +6174,568 @@ pub struct LogMessageParams {
      */
     pub message: string,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_LogMessageParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for LogMessageParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<LogMessageParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "type" => { Ok(__Field::__field0) }
+                                        "message" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"type" => { Ok(__Field::__field0) }
+                                        b"message" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        LogMessageParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<LogMessageParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < number > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(LogMessageParams{type_: __field0,
+                                                    message: __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<LogMessageParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<number> = None;
+                                let mut __field1: Option<string> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("type"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          number > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("message"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "type"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "message" )),
+                                    };
+                                Ok(LogMessageParams{type_: __field0,
+                                                    message: __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["type_", "message"];
+                    deserializer.deserialize_struct("LogMessageParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_LogMessageParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for LogMessageParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "LogMessageParams" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "type" , &self.type_ ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "message" , &self.message ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The telemetry notification is sent from the server to the client to ask the client to log a telemetry event.
  */
 pub trait TelemetryEventNotification: LanguageServerNotification<any> {
-    fn method_name() -> &'static str { "telemetry/event" }
+    fn procedure_name(&self) -> &'static str { "telemetry/event" }
 }
 /**
  * A notification sent from the client to the server to signal the change of configuration settings.
  */
 pub trait WorkspaceChangeConfigurationNotification: LanguageServerNotification<DidChangeConfigurationParams> {
-    fn method_name() -> &'static str { "workspace/didChangeConfiguration" }
+    fn procedure_name(&self) -> &'static str {
+        "workspace/didChangeConfiguration"
+    }
 }
+#[derive(Debug, Clone)]
 pub struct DidChangeConfigurationParams {
     /**
      * The actual changed settings
      */
     pub settings: any,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DidChangeConfigurationParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DidChangeConfigurationParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             ->
+                 ::std::result::Result<DidChangeConfigurationParams,
+                                       __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "settings" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"settings" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DidChangeConfigurationParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidChangeConfigurationParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < any > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DidChangeConfigurationParams{settings:
+                                                                    __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidChangeConfigurationParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<any> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("settings"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: < any
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "settings" )),
+                                    };
+                                Ok(DidChangeConfigurationParams{settings:
+                                                                    __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["settings"];
+                    deserializer.deserialize_struct("DidChangeConfigurationParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DidChangeConfigurationParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DidChangeConfigurationParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DidChangeConfigurationParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "settings" , &self.settings ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The document open notification is sent from the client to the server to signal newly opened text documents.
  * The document's truth is now managed by the client and the server must not try to read the document's truth
  * using the document's uri.
  */
 pub trait DidOpenTextDocumentNotification: LanguageServerNotification<DidOpenTextDocumentParams> {
-    fn method_name() -> &'static str { "textDocument/didOpen" }
+    fn procedure_name(&self) -> &'static str { "textDocument/didOpen" }
 }
+#[derive(Debug, Clone)]
 pub struct DidOpenTextDocumentParams {
     /**
      * The document that was opened.
      */
     pub textDocument: TextDocumentItem,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DidOpenTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DidOpenTextDocumentParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DidOpenTextDocumentParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DidOpenTextDocumentParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidOpenTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentItem > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DidOpenTextDocumentParams{textDocument:
+                                                                 __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidOpenTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<TextDocumentItem> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentItem > (
+                                                           )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                Ok(DidOpenTextDocumentParams{textDocument:
+                                                                 __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["textDocument"];
+                    deserializer.deserialize_struct("DidOpenTextDocumentParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DidOpenTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DidOpenTextDocumentParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DidOpenTextDocumentParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The document change notification is sent from the client to the server to signal changes to a text document.
  * In 2.0 the shape of the params has changed to include proper version numbers and language ids.
  */
 pub trait DidChangeTextDocumentNotification: LanguageServerNotification<DidChangeTextDocumentParams> {
-    fn method_name() -> &'static str { "textDocument/didChange" }
+    fn procedure_name(&self) -> &'static str { "textDocument/didChange" }
 }
+#[derive(Debug, Clone)]
 pub struct DidChangeTextDocumentParams {
     /**
      * The document that did change. The version number points
@@ -3425,10 +6748,224 @@ pub struct DidChangeTextDocumentParams {
      */
     pub contentChanges: Vec<TextDocumentContentChangeEvent>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DidChangeTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DidChangeTextDocumentParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DidChangeTextDocumentParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "contentChanges" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"contentChanges" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DidChangeTextDocumentParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidChangeTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               VersionedTextDocumentIdentifier
+                                               > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Vec<TextDocumentContentChangeEvent>
+                                               > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DidChangeTextDocumentParams{textDocument:
+                                                                   __field0,
+                                                               contentChanges:
+                                                                   __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidChangeTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<VersionedTextDocumentIdentifier> =
+                                    None;
+                                let mut __field1:
+                                        Option<Vec<TextDocumentContentChangeEvent>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          VersionedTextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("contentChanges"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Vec<TextDocumentContentChangeEvent>
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "contentChanges" )),
+                                    };
+                                Ok(DidChangeTextDocumentParams{textDocument:
+                                                                   __field0,
+                                                               contentChanges:
+                                                                   __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["textDocument", "contentChanges"];
+                    deserializer.deserialize_struct("DidChangeTextDocumentParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DidChangeTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DidChangeTextDocumentParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DidChangeTextDocumentParams" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "contentChanges" ,
+                             &self.contentChanges ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * An event describing a change to a text document. If range and rangeLength are omitted
  * the new text is considered to be the full content of the document.
  */
+#[derive(Debug, Clone)]
 pub struct TextDocumentContentChangeEvent {
     /**
      * The range of the document that changed.
@@ -3443,25 +6980,435 @@ pub struct TextDocumentContentChangeEvent {
      */
     pub text: string,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_TextDocumentContentChangeEvent: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for TextDocumentContentChangeEvent {
+            fn deserialize<__D>(deserializer: &mut __D)
+             ->
+                 ::std::result::Result<TextDocumentContentChangeEvent,
+                                       __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "range" => { Ok(__Field::__field0) }
+                                        "rangeLength" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        "text" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"range" => { Ok(__Field::__field0) }
+                                        b"rangeLength" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"text" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        TextDocumentContentChangeEvent;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<TextDocumentContentChangeEvent,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Option<Range> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<number> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(TextDocumentContentChangeEvent{range:
+                                                                      __field0,
+                                                                  rangeLength:
+                                                                      __field1,
+                                                                  text:
+                                                                      __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<TextDocumentContentChangeEvent,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Option<Range>> =
+                                    None;
+                                let mut __field1: Option<Option<number>> =
+                                    None;
+                                let mut __field2: Option<string> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("range"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Range> > (
+                                                          )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("rangeLength"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<number> > (
+                                                          )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("text"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "range"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "rangeLength" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field ( "text"
+                                             )),
+                                    };
+                                Ok(TextDocumentContentChangeEvent{range:
+                                                                      __field0,
+                                                                  rangeLength:
+                                                                      __field1,
+                                                                  text:
+                                                                      __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["range", "rangeLength", "text"];
+                    deserializer.deserialize_struct("TextDocumentContentChangeEvent",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_TextDocumentContentChangeEvent: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for TextDocumentContentChangeEvent {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "TextDocumentContentChangeEvent" , 0 + 1 + 1 + 1
+                             ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "range" , &self.range ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "rangeLength" , &self.rangeLength
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "text" , &self.text ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The document close notification is sent from the client to the server when the document got closed in the client.
  * The document's truth now exists where the document's uri points to (e.g. if the document's uri is a file uri
  * the truth now exists on disk).
  */
 pub trait DidCloseTextDocumentNotification: LanguageServerNotification<DidCloseTextDocumentParams> {
-    fn method_name() -> &'static str { "textDocument/didClose" }
+    fn procedure_name(&self) -> &'static str { "textDocument/didClose" }
 }
+#[derive(Debug, Clone)]
 pub struct DidCloseTextDocumentParams {
     /**
      * The document that was closed.
      */
     pub textDocument: TextDocumentIdentifier,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DidCloseTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DidCloseTextDocumentParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DidCloseTextDocumentParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DidCloseTextDocumentParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidCloseTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DidCloseTextDocumentParams{textDocument:
+                                                                  __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidCloseTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                Ok(DidCloseTextDocumentParams{textDocument:
+                                                                  __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["textDocument"];
+                    deserializer.deserialize_struct("DidCloseTextDocumentParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DidCloseTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DidCloseTextDocumentParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DidCloseTextDocumentParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The document save notification is sent from the client to the server when the document was saved in the client.
  */
 pub trait DidSaveTextDocumentNotification: LanguageServerNotification<DidSaveTextDocumentParams> {
-    fn method_name() -> &'static str { "textDocument/didSave" }
+    fn procedure_name(&self) -> &'static str { "textDocument/didSave" }
 }
 pub struct DidSaveTextDocumentParams {
     /**
@@ -3474,7 +7421,9 @@ pub struct DidSaveTextDocumentParams {
  * watched by the language client.
  */
 pub trait DidChangeWatchedFilesNotification: LanguageServerNotification<DidChangeWatchedFilesParams> {
-    fn method_name() -> &'static str { "workspace/didChangeWatchedFiles" }
+    fn procedure_name(&self) -> &'static str {
+        "workspace/didChangeWatchedFiles"
+    }
 }
 pub struct DidChangeWatchedFilesParams {
     /**
@@ -3485,6 +7434,7 @@ pub struct DidChangeWatchedFilesParams {
 /**
  * The file event type.
  */
+#[derive(Debug, Clone)]
 pub enum FileChangeType {
 
     /**
@@ -3502,9 +7452,160 @@ pub enum FileChangeType {
      */
     Deleted = 3,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_FileChangeType: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for FileChangeType {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<FileChangeType, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => {
+                                            Err(_serde::de::Error::invalid_value("expected a variant"))
+                                        }
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "Created" => { Ok(__Field::__field0) }
+                                        "Changed" => { Ok(__Field::__field1) }
+                                        "Deleted" => { Ok(__Field::__field2) }
+                                        _ =>
+                                        Err(_serde::de::Error::unknown_variant(value)),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"Created" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"Changed" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"Deleted" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => {
+                                            let value =
+                                                ::std::string::String::from_utf8_lossy(value);
+                                            Err(_serde::de::Error::unknown_variant(&value))
+                                        }
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer>
+                     _serde::de::EnumVisitor for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        FileChangeType;
+                        fn visit<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<FileChangeType, __V::Error>
+                         where __V: _serde::de::VariantVisitor {
+                            match try!(visitor . visit_variant (  )) {
+                                __Field::__field0 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(FileChangeType::Created)
+                                    }
+                                }
+                                __Field::__field1 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(FileChangeType::Changed)
+                                    }
+                                }
+                                __Field::__field2 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(FileChangeType::Deleted)
+                                    }
+                                }
+                                __Field::__ignore => {
+                                    Err(_serde::de::Error::end_of_stream())
+                                }
+                            }
+                        }
+                    }
+                    const VARIANTS: &'static [&'static str] =
+                        &["Created", "Changed", "Deleted"];
+                    deserializer.deserialize_enum("FileChangeType", VARIANTS,
+                                                  __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_FileChangeType: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for FileChangeType {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                match *self {
+                    FileChangeType::Created => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "FileChangeType",
+                                                                        0usize,
+                                                                        "Created")
+                    }
+                    FileChangeType::Changed => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "FileChangeType",
+                                                                        1usize,
+                                                                        "Changed")
+                    }
+                    FileChangeType::Deleted => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "FileChangeType",
+                                                                        2usize,
+                                                                        "Deleted")
+                    }
+                }
+            }
+        }
+    };
 /**
  * An event describing a file change.
  */
+#[derive(Debug, Clone)]
 pub struct FileEvent {
     /**
      * The file's URI.
@@ -3515,12 +7616,200 @@ pub struct FileEvent {
      */
     pub type_: FileChangeType,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_FileEvent: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for FileEvent {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<FileEvent, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "uri" => { Ok(__Field::__field0) }
+                                        "type" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"uri" => { Ok(__Field::__field0) }
+                                        b"type" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        FileEvent;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<FileEvent, __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               FileChangeType > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(FileEvent{uri: __field0, type_: __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<FileEvent, __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                let mut __field1: Option<FileChangeType> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("uri"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("type"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          FileChangeType > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "uri"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "type"
+                                             )),
+                                    };
+                                Ok(FileEvent{uri: __field0, type_: __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["uri", "type_"];
+                    deserializer.deserialize_struct("FileEvent", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_FileEvent: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for FileEvent {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "FileEvent" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "uri" , &self.uri ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "type" , &self.type_ ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Diagnostics notification are sent from the server to the client to signal results of validation runs.
  */
 pub trait PublishDiagnosticsNotification: LanguageServerNotification<PublishDiagnosticsParams> {
-    fn method_name() -> &'static str { "textDocument/publishDiagnostics" }
+    fn procedure_name(&self) -> &'static str {
+        "textDocument/publishDiagnostics"
+    }
 }
+#[derive(Debug, Clone)]
 pub struct PublishDiagnosticsParams {
     /**
      * The URI for which diagnostic information is reported.
@@ -3531,6 +7820,206 @@ pub struct PublishDiagnosticsParams {
      */
     pub diagnostics: Vec<Diagnostic>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_PublishDiagnosticsParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for PublishDiagnosticsParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<PublishDiagnosticsParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "uri" => { Ok(__Field::__field0) }
+                                        "diagnostics" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"uri" => { Ok(__Field::__field0) }
+                                        b"diagnostics" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        PublishDiagnosticsParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<PublishDiagnosticsParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Vec<Diagnostic> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(PublishDiagnosticsParams{uri: __field0,
+                                                            diagnostics:
+                                                                __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<PublishDiagnosticsParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                let mut __field1: Option<Vec<Diagnostic>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("uri"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("diagnostics"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Vec<Diagnostic> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "uri"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "diagnostics" )),
+                                    };
+                                Ok(PublishDiagnosticsParams{uri: __field0,
+                                                            diagnostics:
+                                                                __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["uri", "diagnostics"];
+                    deserializer.deserialize_struct("PublishDiagnosticsParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_PublishDiagnosticsParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for PublishDiagnosticsParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "PublishDiagnosticsParams" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "uri" , &self.uri ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "diagnostics" , &self.diagnostics
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The Completion request is sent from the client to the server to compute completion items at a given cursor position.
  * Completion items are presented in the IntelliSense user interface. If computing full completion items is expensive,
@@ -3539,12 +8028,13 @@ pub struct PublishDiagnosticsParams {
  */
 pub trait CompletionRequest: LanguageServerRequest<TextDocumentPositionParams,
                                                    CompletionList, ()> {
-    fn method_name() -> &'static str { "textDocument/completion" }
+    fn procedure_name(&self) -> &'static str { "textDocument/completion" }
 }
 /**
  * Represents a collection of [completion items](#CompletionItem) to be presented
  * in the editor.
  */
+#[derive(Debug, Clone)]
 pub struct CompletionList {
     /**
      * This list it not complete. Further typing should result in recomputing
@@ -3556,6 +8046,200 @@ pub struct CompletionList {
      */
     pub items: Vec<CompletionItem>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CompletionList: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CompletionList {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CompletionList, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "isIncomplete" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "items" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"isIncomplete" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"items" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CompletionList;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CompletionList, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < boolean >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Vec<CompletionItem> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CompletionList{isIncomplete: __field0,
+                                                  items: __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CompletionList, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<boolean> = None;
+                                let mut __field1:
+                                        Option<Vec<CompletionItem>> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("isIncomplete"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          boolean > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("items"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Vec<CompletionItem>
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "isIncomplete" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "items"
+                                             )),
+                                    };
+                                Ok(CompletionList{isIncomplete: __field0,
+                                                  items: __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["isIncomplete", "items"];
+                    deserializer.deserialize_struct("CompletionList", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CompletionList: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CompletionList {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CompletionList" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "isIncomplete" , &self.isIncomplete
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "items" , &self.items ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
+#[derive(Debug, Clone)]
 pub struct CompletionItem {
     /**
      * The label of this completion item. By default
@@ -3604,9 +8288,500 @@ pub struct CompletionItem {
      */
     pub data: Option<any>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CompletionItem {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CompletionItem, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __field4,
+                        __field5,
+                        __field6,
+                        __field7,
+                        __field8,
+                        __ignore,
+                    }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
+                                        4usize => { Ok(__Field::__field4) }
+                                        5usize => { Ok(__Field::__field5) }
+                                        6usize => { Ok(__Field::__field6) }
+                                        7usize => { Ok(__Field::__field7) }
+                                        8usize => { Ok(__Field::__field8) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "label" => { Ok(__Field::__field0) }
+                                        "kind" => { Ok(__Field::__field1) }
+                                        "detail" => { Ok(__Field::__field2) }
+                                        "documentation" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        "sortText" => {
+                                            Ok(__Field::__field4)
+                                        }
+                                        "filterText" => {
+                                            Ok(__Field::__field5)
+                                        }
+                                        "insertText" => {
+                                            Ok(__Field::__field6)
+                                        }
+                                        "textEdit" => {
+                                            Ok(__Field::__field7)
+                                        }
+                                        "data" => { Ok(__Field::__field8) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"label" => { Ok(__Field::__field0) }
+                                        b"kind" => { Ok(__Field::__field1) }
+                                        b"detail" => { Ok(__Field::__field2) }
+                                        b"documentation" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        b"sortText" => {
+                                            Ok(__Field::__field4)
+                                        }
+                                        b"filterText" => {
+                                            Ok(__Field::__field5)
+                                        }
+                                        b"insertText" => {
+                                            Ok(__Field::__field6)
+                                        }
+                                        b"textEdit" => {
+                                            Ok(__Field::__field7)
+                                        }
+                                        b"data" => { Ok(__Field::__field8) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CompletionItem;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CompletionItem, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<CompletionItemKind> > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                let __field3 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(3usize));
+                                        }
+                                    };
+                                let __field4 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(4usize));
+                                        }
+                                    };
+                                let __field5 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(5usize));
+                                        }
+                                    };
+                                let __field6 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(6usize));
+                                        }
+                                    };
+                                let __field7 =
+                                    match try!(visitor . visit :: <
+                                               Option<TextEdit> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(7usize));
+                                        }
+                                    };
+                                let __field8 =
+                                    match try!(visitor . visit :: <
+                                               Option<any> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(8usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CompletionItem{label: __field0,
+                                                  kind: __field1,
+                                                  detail: __field2,
+                                                  documentation: __field3,
+                                                  sortText: __field4,
+                                                  filterText: __field5,
+                                                  insertText: __field6,
+                                                  textEdit: __field7,
+                                                  data: __field8,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CompletionItem, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                let mut __field1:
+                                        Option<Option<CompletionItemKind>> =
+                                    None;
+                                let mut __field2: Option<Option<string>> =
+                                    None;
+                                let mut __field3: Option<Option<string>> =
+                                    None;
+                                let mut __field4: Option<Option<string>> =
+                                    None;
+                                let mut __field5: Option<Option<string>> =
+                                    None;
+                                let mut __field6: Option<Option<string>> =
+                                    None;
+                                let mut __field7: Option<Option<TextEdit>> =
+                                    None;
+                                let mut __field8: Option<Option<any>> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("label"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("kind"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<CompletionItemKind>
+                                                          > (  )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("detail"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        __Field::__field3 => {
+                                            if __field3.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentation"));
+                                            }
+                                            __field3 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        __Field::__field4 => {
+                                            if __field4.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("sortText"));
+                                            }
+                                            __field4 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        __Field::__field5 => {
+                                            if __field5.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("filterText"));
+                                            }
+                                            __field5 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        __Field::__field6 => {
+                                            if __field6.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("insertText"));
+                                            }
+                                            __field6 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        __Field::__field7 => {
+                                            if __field7.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textEdit"));
+                                            }
+                                            __field7 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<TextEdit> > (
+                                                           )));
+                                        }
+                                        __Field::__field8 => {
+                                            if __field8.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("data"));
+                                            }
+                                            __field8 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<any> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "label"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "kind"
+                                             )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "detail" )),
+                                    };
+                                let __field3 =
+                                    match __field3 {
+                                        Some(__field3) => __field3,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentation" )),
+                                    };
+                                let __field4 =
+                                    match __field4 {
+                                        Some(__field4) => __field4,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "sortText" )),
+                                    };
+                                let __field5 =
+                                    match __field5 {
+                                        Some(__field5) => __field5,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "filterText" )),
+                                    };
+                                let __field6 =
+                                    match __field6 {
+                                        Some(__field6) => __field6,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "insertText" )),
+                                    };
+                                let __field7 =
+                                    match __field7 {
+                                        Some(__field7) => __field7,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textEdit" )),
+                                    };
+                                let __field8 =
+                                    match __field8 {
+                                        Some(__field8) => __field8,
+                                        None =>
+                                        try!(visitor . missing_field ( "data"
+                                             )),
+                                    };
+                                Ok(CompletionItem{label: __field0,
+                                                  kind: __field1,
+                                                  detail: __field2,
+                                                  documentation: __field3,
+                                                  sortText: __field4,
+                                                  filterText: __field5,
+                                                  insertText: __field6,
+                                                  textEdit: __field7,
+                                                  data: __field8,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["label", "kind", "detail", "documentation",
+                          "sortText", "filterText", "insertText", "textEdit",
+                          "data"];
+                    deserializer.deserialize_struct("CompletionItem", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CompletionItem: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CompletionItem {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CompletionItem" ,
+                             0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "label" , &self.label ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "kind" , &self.kind ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "detail" , &self.detail ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentation" ,
+                             &self.documentation ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "sortText" , &self.sortText ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "filterText" , &self.filterText ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "insertText" , &self.insertText ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textEdit" , &self.textEdit ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "data" , &self.data ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The kind of a completion entry.
  */
+#[derive(Debug, Clone)]
 pub enum CompletionItemKind {
     Text = 1,
     Method = 2,
@@ -3627,13 +8802,440 @@ pub enum CompletionItemKind {
     File = 17,
     Reference = 18,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CompletionItemKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CompletionItemKind {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CompletionItemKind, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __field4,
+                        __field5,
+                        __field6,
+                        __field7,
+                        __field8,
+                        __field9,
+                        __field10,
+                        __field11,
+                        __field12,
+                        __field13,
+                        __field14,
+                        __field15,
+                        __field16,
+                        __field17,
+                        __ignore,
+                    }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
+                                        4usize => { Ok(__Field::__field4) }
+                                        5usize => { Ok(__Field::__field5) }
+                                        6usize => { Ok(__Field::__field6) }
+                                        7usize => { Ok(__Field::__field7) }
+                                        8usize => { Ok(__Field::__field8) }
+                                        9usize => { Ok(__Field::__field9) }
+                                        10usize => { Ok(__Field::__field10) }
+                                        11usize => { Ok(__Field::__field11) }
+                                        12usize => { Ok(__Field::__field12) }
+                                        13usize => { Ok(__Field::__field13) }
+                                        14usize => { Ok(__Field::__field14) }
+                                        15usize => { Ok(__Field::__field15) }
+                                        16usize => { Ok(__Field::__field16) }
+                                        17usize => { Ok(__Field::__field17) }
+                                        _ => {
+                                            Err(_serde::de::Error::invalid_value("expected a variant"))
+                                        }
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "Text" => { Ok(__Field::__field0) }
+                                        "Method" => { Ok(__Field::__field1) }
+                                        "Function" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        "Constructor" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        "Field" => { Ok(__Field::__field4) }
+                                        "Variable" => {
+                                            Ok(__Field::__field5)
+                                        }
+                                        "Class" => { Ok(__Field::__field6) }
+                                        "Interface" => {
+                                            Ok(__Field::__field7)
+                                        }
+                                        "Module" => { Ok(__Field::__field8) }
+                                        "Property" => {
+                                            Ok(__Field::__field9)
+                                        }
+                                        "Unit" => { Ok(__Field::__field10) }
+                                        "Value" => { Ok(__Field::__field11) }
+                                        "Enum" => { Ok(__Field::__field12) }
+                                        "Keyword" => {
+                                            Ok(__Field::__field13)
+                                        }
+                                        "Snippet" => {
+                                            Ok(__Field::__field14)
+                                        }
+                                        "Color" => { Ok(__Field::__field15) }
+                                        "File" => { Ok(__Field::__field16) }
+                                        "Reference" => {
+                                            Ok(__Field::__field17)
+                                        }
+                                        _ =>
+                                        Err(_serde::de::Error::unknown_variant(value)),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"Text" => { Ok(__Field::__field0) }
+                                        b"Method" => { Ok(__Field::__field1) }
+                                        b"Function" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        b"Constructor" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        b"Field" => { Ok(__Field::__field4) }
+                                        b"Variable" => {
+                                            Ok(__Field::__field5)
+                                        }
+                                        b"Class" => { Ok(__Field::__field6) }
+                                        b"Interface" => {
+                                            Ok(__Field::__field7)
+                                        }
+                                        b"Module" => { Ok(__Field::__field8) }
+                                        b"Property" => {
+                                            Ok(__Field::__field9)
+                                        }
+                                        b"Unit" => { Ok(__Field::__field10) }
+                                        b"Value" => { Ok(__Field::__field11) }
+                                        b"Enum" => { Ok(__Field::__field12) }
+                                        b"Keyword" => {
+                                            Ok(__Field::__field13)
+                                        }
+                                        b"Snippet" => {
+                                            Ok(__Field::__field14)
+                                        }
+                                        b"Color" => { Ok(__Field::__field15) }
+                                        b"File" => { Ok(__Field::__field16) }
+                                        b"Reference" => {
+                                            Ok(__Field::__field17)
+                                        }
+                                        _ => {
+                                            let value =
+                                                ::std::string::String::from_utf8_lossy(value);
+                                            Err(_serde::de::Error::unknown_variant(&value))
+                                        }
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer>
+                     _serde::de::EnumVisitor for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CompletionItemKind;
+                        fn visit<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<CompletionItemKind,
+                                                   __V::Error> where
+                         __V: _serde::de::VariantVisitor {
+                            match try!(visitor . visit_variant (  )) {
+                                __Field::__field0 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Text)
+                                    }
+                                }
+                                __Field::__field1 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Method)
+                                    }
+                                }
+                                __Field::__field2 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Function)
+                                    }
+                                }
+                                __Field::__field3 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Constructor)
+                                    }
+                                }
+                                __Field::__field4 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Field)
+                                    }
+                                }
+                                __Field::__field5 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Variable)
+                                    }
+                                }
+                                __Field::__field6 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Class)
+                                    }
+                                }
+                                __Field::__field7 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Interface)
+                                    }
+                                }
+                                __Field::__field8 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Module)
+                                    }
+                                }
+                                __Field::__field9 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Property)
+                                    }
+                                }
+                                __Field::__field10 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Unit)
+                                    }
+                                }
+                                __Field::__field11 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Value)
+                                    }
+                                }
+                                __Field::__field12 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Enum)
+                                    }
+                                }
+                                __Field::__field13 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Keyword)
+                                    }
+                                }
+                                __Field::__field14 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Snippet)
+                                    }
+                                }
+                                __Field::__field15 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Color)
+                                    }
+                                }
+                                __Field::__field16 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::File)
+                                    }
+                                }
+                                __Field::__field17 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(CompletionItemKind::Reference)
+                                    }
+                                }
+                                __Field::__ignore => {
+                                    Err(_serde::de::Error::end_of_stream())
+                                }
+                            }
+                        }
+                    }
+                    const VARIANTS: &'static [&'static str] =
+                        &["Text", "Method", "Function", "Constructor",
+                          "Field", "Variable", "Class", "Interface", "Module",
+                          "Property", "Unit", "Value", "Enum", "Keyword",
+                          "Snippet", "Color", "File", "Reference"];
+                    deserializer.deserialize_enum("CompletionItemKind",
+                                                  VARIANTS,
+                                                  __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CompletionItemKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CompletionItemKind {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                match *self {
+                    CompletionItemKind::Text => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        0usize,
+                                                                        "Text")
+                    }
+                    CompletionItemKind::Method => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        1usize,
+                                                                        "Method")
+                    }
+                    CompletionItemKind::Function => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        2usize,
+                                                                        "Function")
+                    }
+                    CompletionItemKind::Constructor => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        3usize,
+                                                                        "Constructor")
+                    }
+                    CompletionItemKind::Field => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        4usize,
+                                                                        "Field")
+                    }
+                    CompletionItemKind::Variable => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        5usize,
+                                                                        "Variable")
+                    }
+                    CompletionItemKind::Class => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        6usize,
+                                                                        "Class")
+                    }
+                    CompletionItemKind::Interface => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        7usize,
+                                                                        "Interface")
+                    }
+                    CompletionItemKind::Module => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        8usize,
+                                                                        "Module")
+                    }
+                    CompletionItemKind::Property => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        9usize,
+                                                                        "Property")
+                    }
+                    CompletionItemKind::Unit => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        10usize,
+                                                                        "Unit")
+                    }
+                    CompletionItemKind::Value => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        11usize,
+                                                                        "Value")
+                    }
+                    CompletionItemKind::Enum => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        12usize,
+                                                                        "Enum")
+                    }
+                    CompletionItemKind::Keyword => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        13usize,
+                                                                        "Keyword")
+                    }
+                    CompletionItemKind::Snippet => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        14usize,
+                                                                        "Snippet")
+                    }
+                    CompletionItemKind::Color => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        15usize,
+                                                                        "Color")
+                    }
+                    CompletionItemKind::File => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        16usize,
+                                                                        "File")
+                    }
+                    CompletionItemKind::Reference => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "CompletionItemKind",
+                                                                        17usize,
+                                                                        "Reference")
+                    }
+                }
+            }
+        }
+    };
 /**
  * The request is sent from the client to the server to resolve additional information for a given completion item. 
  */
 pub trait ResolveCompletionItemRequest: LanguageServerRequest<CompletionItem,
                                                               CompletionItem,
                                                               ()> {
-    fn method_name() -> &'static str { "completionItem/resolve" }
+    fn procedure_name(&self) -> &'static str { "completionItem/resolve" }
 }
 /**
  * The hover request is sent from the client to the server to request hover information at a given text 
@@ -3641,11 +9243,12 @@ pub trait ResolveCompletionItemRequest: LanguageServerRequest<CompletionItem,
  */
 pub trait HoverRequest: LanguageServerRequest<TextDocumentPositionParams,
                                               Hover, ()> {
-    fn method_name() -> &'static str { "textDocument/hover" }
+    fn procedure_name(&self) -> &'static str { "textDocument/hover" }
 }
 /**
  * The result of a hover request.
  */
+#[derive(Debug, Clone)]
 pub struct Hover {
     /**
      * The hover's content
@@ -3656,6 +9259,200 @@ pub struct Hover {
      */
     pub range: Option<Range>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_Hover: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for Hover {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<Hover, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "contents" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "range" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"contents" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"range" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        Hover;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<Hover, __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Vec<MarkedString> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<Range> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(Hover{contents: __field0,
+                                         range: __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<Hover, __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Vec<MarkedString>> =
+                                    None;
+                                let mut __field1: Option<Option<Range>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("contents"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Vec<MarkedString> >
+                                                          (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("range"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Range> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "contents" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "range"
+                                             )),
+                                    };
+                                Ok(Hover{contents: __field0,
+                                         range: __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["contents", "range"];
+                    deserializer.deserialize_struct("Hover", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_Hover: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for Hover {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "Hover" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "contents" , &self.contents ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "range" , &self.range ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 pub type MarkedString = string;
 /**
  * The signature help request is sent from the client to the server to request signature information at 
@@ -3663,13 +9460,14 @@ pub type MarkedString = string;
  */
 pub trait SignatureHelpRequest: LanguageServerRequest<TextDocumentPositionParams,
                                                       SignatureHelp, ()> {
-    fn method_name() -> &'static str { "textDocument/signatureHelp" }
+    fn procedure_name(&self) -> &'static str { "textDocument/signatureHelp" }
 }
 /**
  * Signature help represents the signature of something
  * callable. There can be multiple signature but only one
  * active and only one active parameter.
  */
+#[derive(Debug, Clone)]
 pub struct SignatureHelp {
     /**
      * One or more signatures.
@@ -3684,11 +9482,256 @@ pub struct SignatureHelp {
      */
     pub activeParameter: Option<number>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_SignatureHelp: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for SignatureHelp {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<SignatureHelp, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "signatures" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "activeSignature" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        "activeParameter" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"signatures" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"activeSignature" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"activeParameter" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        SignatureHelp;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<SignatureHelp, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Vec<SignatureInformation> > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<number> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               Option<number> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(SignatureHelp{signatures: __field0,
+                                                 activeSignature: __field1,
+                                                 activeParameter: __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<SignatureHelp, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<Vec<SignatureInformation>> =
+                                    None;
+                                let mut __field1: Option<Option<number>> =
+                                    None;
+                                let mut __field2: Option<Option<number>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("signatures"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Vec<SignatureInformation>
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("activeSignature"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<number> > (
+                                                          )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("activeParameter"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<number> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "signatures" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "activeSignature" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "activeParameter" )),
+                                    };
+                                Ok(SignatureHelp{signatures: __field0,
+                                                 activeSignature: __field1,
+                                                 activeParameter: __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["signatures", "activeSignature", "activeParameter"];
+                    deserializer.deserialize_struct("SignatureHelp", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_SignatureHelp: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for SignatureHelp {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "SignatureHelp" , 0 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "signatures" , &self.signatures ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "activeSignature" ,
+                             &self.activeSignature ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "activeParameter" ,
+                             &self.activeParameter ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Represents the signature of something callable. A signature
  * can have a label, like a function-name, a doc-comment, and
  * a set of parameters.
  */
+#[derive(Debug, Clone)]
 pub struct SignatureInformation {
     /**
      * The label of this signature. Will be shown in
@@ -3705,10 +9748,257 @@ pub struct SignatureInformation {
      */
     pub parameters: Option<Vec<ParameterInformation>>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_SignatureInformation: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for SignatureInformation {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<SignatureInformation, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "label" => { Ok(__Field::__field0) }
+                                        "documentation" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        "parameters" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"label" => { Ok(__Field::__field0) }
+                                        b"documentation" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"parameters" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        SignatureInformation;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<SignatureInformation,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               Option<Vec<ParameterInformation>>
+                                               > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(SignatureInformation{label: __field0,
+                                                        documentation:
+                                                            __field1,
+                                                        parameters:
+                                                            __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<SignatureInformation,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                let mut __field1: Option<Option<string>> =
+                                    None;
+                                let mut __field2:
+                                        Option<Option<Vec<ParameterInformation>>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("label"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentation"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("parameters"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Vec<ParameterInformation>>
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "label"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentation" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "parameters" )),
+                                    };
+                                Ok(SignatureInformation{label: __field0,
+                                                        documentation:
+                                                            __field1,
+                                                        parameters:
+                                                            __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["label", "documentation", "parameters"];
+                    deserializer.deserialize_struct("SignatureInformation",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_SignatureInformation: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for SignatureInformation {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "SignatureInformation" , 0 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "label" , &self.label ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentation" ,
+                             &self.documentation ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "parameters" , &self.parameters ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Represents a parameter of a callable-signature. A parameter can
  * have a label and a doc-comment.
  */
+#[derive(Debug, Clone)]
 pub struct ParameterInformation {
     /**
      * The label of this signature. Will be shown in
@@ -3721,13 +10011,213 @@ pub struct ParameterInformation {
      */
     pub documentation: Option<string>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_ParameterInformation: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for ParameterInformation {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<ParameterInformation, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "label" => { Ok(__Field::__field0) }
+                                        "documentation" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"label" => { Ok(__Field::__field0) }
+                                        b"documentation" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        ParameterInformation;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ParameterInformation,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(ParameterInformation{label: __field0,
+                                                        documentation:
+                                                            __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ParameterInformation,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                let mut __field1: Option<Option<string>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("label"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("documentation"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "label"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "documentation" )),
+                                    };
+                                Ok(ParameterInformation{label: __field0,
+                                                        documentation:
+                                                            __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["label", "documentation"];
+                    deserializer.deserialize_struct("ParameterInformation",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_ParameterInformation: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for ParameterInformation {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "ParameterInformation" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "label" , &self.label ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "documentation" ,
+                             &self.documentation ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The goto definition request is sent from the client to the server to resolve the definition location of 
  * a symbol at a given text document position.
  */
 pub trait GotoDefinitionRequest: LanguageServerRequest<TextDocumentPositionParams,
                                                        Vec<Location>, ()> {
-    fn method_name() -> &'static str { "textDocument/definition" }
+    fn procedure_name(&self) -> &'static str { "textDocument/definition" }
 }
 /**
  * The references request is sent from the client to the server to resolve project-wide references for the 
@@ -3735,17 +10225,334 @@ pub trait GotoDefinitionRequest: LanguageServerRequest<TextDocumentPositionParam
  */
 pub trait ReferencesRequest: LanguageServerRequest<ReferenceParams,
                                                    Vec<Location>, ()> {
-    fn method_name() -> &'static str { "textDocument/references" }
+    fn procedure_name(&self) -> &'static str { "textDocument/references" }
 }
+#[derive(Debug, Clone)]
 pub struct ReferenceParams {
     pub context: ReferenceContext,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_ReferenceParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for ReferenceParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<ReferenceParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "context" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"context" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        ReferenceParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<ReferenceParams, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               ReferenceContext > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(ReferenceParams{context: __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<ReferenceParams, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<ReferenceContext> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("context"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          ReferenceContext > (
+                                                           )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "context" )),
+                                    };
+                                Ok(ReferenceParams{context: __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["context"];
+                    deserializer.deserialize_struct("ReferenceParams", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_ReferenceParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for ReferenceParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "ReferenceParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "context" , &self.context ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
+#[derive(Debug, Clone)]
 pub struct ReferenceContext {
     /**
      * Include the declaration of the current symbol.
      */
     pub includeDeclaration: boolean,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_ReferenceContext: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for ReferenceContext {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<ReferenceContext, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "includeDeclaration" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"includeDeclaration" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        ReferenceContext;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ReferenceContext,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < boolean >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(ReferenceContext{includeDeclaration:
+                                                        __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<ReferenceContext,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<boolean> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("includeDeclaration"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          boolean > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "includeDeclaration" )),
+                                    };
+                                Ok(ReferenceContext{includeDeclaration:
+                                                        __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["includeDeclaration"];
+                    deserializer.deserialize_struct("ReferenceContext",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_ReferenceContext: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for ReferenceContext {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "ReferenceContext" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "includeDeclaration" ,
+                             &self.includeDeclaration ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The document highlight request is sent from the client to the server to resolve a document highlights 
  * for a given text document position. 
@@ -3753,13 +10560,16 @@ pub struct ReferenceContext {
 pub trait DocumentHighlightRequest: LanguageServerRequest<TextDocumentPositionParams,
                                                           DocumentHighlight,
                                                           ()> {
-    fn method_name() -> &'static str { "textDocument/documentHighlight" }
+    fn procedure_name(&self) -> &'static str {
+        "textDocument/documentHighlight"
+    }
 }
 /**
  * A document highlight is a range inside a text document which deserves
  * special attention. Usually a document highlight is visualized by changing
  * the background color of its range.
  */
+#[derive(Debug, Clone)]
 pub struct DocumentHighlight {
     /**
      * The range this highlight applies to.
@@ -3770,9 +10580,203 @@ pub struct DocumentHighlight {
      */
     pub kind: Option<number>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DocumentHighlight: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DocumentHighlight {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DocumentHighlight, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "range" => { Ok(__Field::__field0) }
+                                        "kind" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"range" => { Ok(__Field::__field0) }
+                                        b"kind" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DocumentHighlight;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentHighlight,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < Range > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<number> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DocumentHighlight{range: __field0,
+                                                     kind: __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentHighlight,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Range> = None;
+                                let mut __field1: Option<Option<number>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("range"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Range > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("kind"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<number> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "range"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "kind"
+                                             )),
+                                    };
+                                Ok(DocumentHighlight{range: __field0,
+                                                     kind: __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["range", "kind"];
+                    deserializer.deserialize_struct("DocumentHighlight",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DocumentHighlight: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DocumentHighlight {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DocumentHighlight" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "range" , &self.range ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "kind" , &self.kind ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * A document highlight kind.
  */
+#[derive(Debug, Clone)]
 pub enum DocumentHighlightKind {
 
     /**
@@ -3790,6 +10794,153 @@ pub enum DocumentHighlightKind {
      */
     Write = 3,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DocumentHighlightKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DocumentHighlightKind {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DocumentHighlightKind, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => {
+                                            Err(_serde::de::Error::invalid_value("expected a variant"))
+                                        }
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "Text" => { Ok(__Field::__field0) }
+                                        "Read" => { Ok(__Field::__field1) }
+                                        "Write" => { Ok(__Field::__field2) }
+                                        _ =>
+                                        Err(_serde::de::Error::unknown_variant(value)),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"Text" => { Ok(__Field::__field0) }
+                                        b"Read" => { Ok(__Field::__field1) }
+                                        b"Write" => { Ok(__Field::__field2) }
+                                        _ => {
+                                            let value =
+                                                ::std::string::String::from_utf8_lossy(value);
+                                            Err(_serde::de::Error::unknown_variant(&value))
+                                        }
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer>
+                     _serde::de::EnumVisitor for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DocumentHighlightKind;
+                        fn visit<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentHighlightKind,
+                                                   __V::Error> where
+                         __V: _serde::de::VariantVisitor {
+                            match try!(visitor . visit_variant (  )) {
+                                __Field::__field0 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(DocumentHighlightKind::Text)
+                                    }
+                                }
+                                __Field::__field1 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(DocumentHighlightKind::Read)
+                                    }
+                                }
+                                __Field::__field2 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(DocumentHighlightKind::Write)
+                                    }
+                                }
+                                __Field::__ignore => {
+                                    Err(_serde::de::Error::end_of_stream())
+                                }
+                            }
+                        }
+                    }
+                    const VARIANTS: &'static [&'static str] =
+                        &["Text", "Read", "Write"];
+                    deserializer.deserialize_enum("DocumentHighlightKind",
+                                                  VARIANTS,
+                                                  __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DocumentHighlightKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DocumentHighlightKind {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                match *self {
+                    DocumentHighlightKind::Text => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "DocumentHighlightKind",
+                                                                        0usize,
+                                                                        "Text")
+                    }
+                    DocumentHighlightKind::Read => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "DocumentHighlightKind",
+                                                                        1usize,
+                                                                        "Read")
+                    }
+                    DocumentHighlightKind::Write => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "DocumentHighlightKind",
+                                                                        2usize,
+                                                                        "Write")
+                    }
+                }
+            }
+        }
+    };
 /**
  * The document symbol request is sent from the client to the server to list all symbols found in a given 
  * text document.
@@ -3797,18 +10948,184 @@ pub enum DocumentHighlightKind {
 pub trait DocumentSymbolsRequest: LanguageServerRequest<DocumentSymbolParams,
                                                         Vec<SymbolInformation>,
                                                         ()> {
-    fn method_name() -> &'static str { "textDocument/documentSymbol" }
+    fn procedure_name(&self) -> &'static str { "textDocument/documentSymbol" }
 }
+#[derive(Debug, Clone)]
 pub struct DocumentSymbolParams {
     /**
      * The text document.
      */
     pub textDocument: TextDocumentIdentifier,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DocumentSymbolParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DocumentSymbolParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DocumentSymbolParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DocumentSymbolParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentSymbolParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DocumentSymbolParams{textDocument:
+                                                            __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentSymbolParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                Ok(DocumentSymbolParams{textDocument:
+                                                            __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["textDocument"];
+                    deserializer.deserialize_struct("DocumentSymbolParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DocumentSymbolParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DocumentSymbolParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DocumentSymbolParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Represents information about programming constructs like variables, classes,
  * interfaces etc.
  */
+#[derive(Debug, Clone)]
 pub struct SymbolInformation {
     /**
      * The name of this symbol.
@@ -3827,9 +11144,292 @@ pub struct SymbolInformation {
      */
     pub containerName: Option<string>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_SymbolInformation: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for SymbolInformation {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<SymbolInformation, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __ignore,
+                    }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "name" => { Ok(__Field::__field0) }
+                                        "kind" => { Ok(__Field::__field1) }
+                                        "location" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        "containerName" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"name" => { Ok(__Field::__field0) }
+                                        b"kind" => { Ok(__Field::__field1) }
+                                        b"location" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        b"containerName" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        SymbolInformation;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<SymbolInformation,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < number > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: < Location >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                let __field3 =
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(3usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(SymbolInformation{name: __field0,
+                                                     kind: __field1,
+                                                     location: __field2,
+                                                     containerName:
+                                                         __field3,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<SymbolInformation,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                let mut __field1: Option<number> = None;
+                                let mut __field2: Option<Location> = None;
+                                let mut __field3: Option<Option<string>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("name"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("kind"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          number > (  )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("location"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Location > (  )));
+                                        }
+                                        __Field::__field3 => {
+                                            if __field3.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("containerName"));
+                                            }
+                                            __field3 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<string> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "name"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "kind"
+                                             )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "location" )),
+                                    };
+                                let __field3 =
+                                    match __field3 {
+                                        Some(__field3) => __field3,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "containerName" )),
+                                    };
+                                Ok(SymbolInformation{name: __field0,
+                                                     kind: __field1,
+                                                     location: __field2,
+                                                     containerName:
+                                                         __field3,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["name", "kind", "location", "containerName"];
+                    deserializer.deserialize_struct("SymbolInformation",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_SymbolInformation: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for SymbolInformation {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "SymbolInformation" , 0 + 1 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "name" , &self.name ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "kind" , &self.kind ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "location" , &self.location ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "containerName" ,
+                             &self.containerName ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * A symbol kind.
  */
+#[derive(Debug, Copy, Clone)]
 pub enum SymbolKind {
     File = 1,
     Module = 2,
@@ -3850,6 +11450,436 @@ pub enum SymbolKind {
     Boolean = 17,
     Array = 18,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_SymbolKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for SymbolKind {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<SymbolKind, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __field4,
+                        __field5,
+                        __field6,
+                        __field7,
+                        __field8,
+                        __field9,
+                        __field10,
+                        __field11,
+                        __field12,
+                        __field13,
+                        __field14,
+                        __field15,
+                        __field16,
+                        __field17,
+                        __ignore,
+                    }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
+                                        4usize => { Ok(__Field::__field4) }
+                                        5usize => { Ok(__Field::__field5) }
+                                        6usize => { Ok(__Field::__field6) }
+                                        7usize => { Ok(__Field::__field7) }
+                                        8usize => { Ok(__Field::__field8) }
+                                        9usize => { Ok(__Field::__field9) }
+                                        10usize => { Ok(__Field::__field10) }
+                                        11usize => { Ok(__Field::__field11) }
+                                        12usize => { Ok(__Field::__field12) }
+                                        13usize => { Ok(__Field::__field13) }
+                                        14usize => { Ok(__Field::__field14) }
+                                        15usize => { Ok(__Field::__field15) }
+                                        16usize => { Ok(__Field::__field16) }
+                                        17usize => { Ok(__Field::__field17) }
+                                        _ => {
+                                            Err(_serde::de::Error::invalid_value("expected a variant"))
+                                        }
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "File" => { Ok(__Field::__field0) }
+                                        "Module" => { Ok(__Field::__field1) }
+                                        "Namespace" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        "Package" => { Ok(__Field::__field3) }
+                                        "Class" => { Ok(__Field::__field4) }
+                                        "Method" => { Ok(__Field::__field5) }
+                                        "Property" => {
+                                            Ok(__Field::__field6)
+                                        }
+                                        "Field" => { Ok(__Field::__field7) }
+                                        "Constructor" => {
+                                            Ok(__Field::__field8)
+                                        }
+                                        "Enum" => { Ok(__Field::__field9) }
+                                        "Interface" => {
+                                            Ok(__Field::__field10)
+                                        }
+                                        "Function" => {
+                                            Ok(__Field::__field11)
+                                        }
+                                        "Variable" => {
+                                            Ok(__Field::__field12)
+                                        }
+                                        "Constant" => {
+                                            Ok(__Field::__field13)
+                                        }
+                                        "String" => { Ok(__Field::__field14) }
+                                        "Number" => { Ok(__Field::__field15) }
+                                        "Boolean" => {
+                                            Ok(__Field::__field16)
+                                        }
+                                        "Array" => { Ok(__Field::__field17) }
+                                        _ =>
+                                        Err(_serde::de::Error::unknown_variant(value)),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"File" => { Ok(__Field::__field0) }
+                                        b"Module" => { Ok(__Field::__field1) }
+                                        b"Namespace" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        b"Package" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        b"Class" => { Ok(__Field::__field4) }
+                                        b"Method" => { Ok(__Field::__field5) }
+                                        b"Property" => {
+                                            Ok(__Field::__field6)
+                                        }
+                                        b"Field" => { Ok(__Field::__field7) }
+                                        b"Constructor" => {
+                                            Ok(__Field::__field8)
+                                        }
+                                        b"Enum" => { Ok(__Field::__field9) }
+                                        b"Interface" => {
+                                            Ok(__Field::__field10)
+                                        }
+                                        b"Function" => {
+                                            Ok(__Field::__field11)
+                                        }
+                                        b"Variable" => {
+                                            Ok(__Field::__field12)
+                                        }
+                                        b"Constant" => {
+                                            Ok(__Field::__field13)
+                                        }
+                                        b"String" => {
+                                            Ok(__Field::__field14)
+                                        }
+                                        b"Number" => {
+                                            Ok(__Field::__field15)
+                                        }
+                                        b"Boolean" => {
+                                            Ok(__Field::__field16)
+                                        }
+                                        b"Array" => { Ok(__Field::__field17) }
+                                        _ => {
+                                            let value =
+                                                ::std::string::String::from_utf8_lossy(value);
+                                            Err(_serde::de::Error::unknown_variant(&value))
+                                        }
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer>
+                     _serde::de::EnumVisitor for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        SymbolKind;
+                        fn visit<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<SymbolKind, __V::Error>
+                         where __V: _serde::de::VariantVisitor {
+                            match try!(visitor . visit_variant (  )) {
+                                __Field::__field0 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::File)
+                                    }
+                                }
+                                __Field::__field1 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Module)
+                                    }
+                                }
+                                __Field::__field2 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Namespace)
+                                    }
+                                }
+                                __Field::__field3 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Package)
+                                    }
+                                }
+                                __Field::__field4 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Class)
+                                    }
+                                }
+                                __Field::__field5 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Method)
+                                    }
+                                }
+                                __Field::__field6 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Property)
+                                    }
+                                }
+                                __Field::__field7 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Field)
+                                    }
+                                }
+                                __Field::__field8 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Constructor)
+                                    }
+                                }
+                                __Field::__field9 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Enum)
+                                    }
+                                }
+                                __Field::__field10 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Interface)
+                                    }
+                                }
+                                __Field::__field11 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Function)
+                                    }
+                                }
+                                __Field::__field12 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Variable)
+                                    }
+                                }
+                                __Field::__field13 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Constant)
+                                    }
+                                }
+                                __Field::__field14 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::String)
+                                    }
+                                }
+                                __Field::__field15 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Number)
+                                    }
+                                }
+                                __Field::__field16 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Boolean)
+                                    }
+                                }
+                                __Field::__field17 => {
+                                    {
+                                        try!(visitor . visit_unit (  ));
+                                        Ok(SymbolKind::Array)
+                                    }
+                                }
+                                __Field::__ignore => {
+                                    Err(_serde::de::Error::end_of_stream())
+                                }
+                            }
+                        }
+                    }
+                    const VARIANTS: &'static [&'static str] =
+                        &["File", "Module", "Namespace", "Package", "Class",
+                          "Method", "Property", "Field", "Constructor",
+                          "Enum", "Interface", "Function", "Variable",
+                          "Constant", "String", "Number", "Boolean", "Array"];
+                    deserializer.deserialize_enum("SymbolKind", VARIANTS,
+                                                  __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_SymbolKind: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for SymbolKind {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                match *self {
+                    SymbolKind::File => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        0usize,
+                                                                        "File")
+                    }
+                    SymbolKind::Module => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        1usize,
+                                                                        "Module")
+                    }
+                    SymbolKind::Namespace => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        2usize,
+                                                                        "Namespace")
+                    }
+                    SymbolKind::Package => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        3usize,
+                                                                        "Package")
+                    }
+                    SymbolKind::Class => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        4usize,
+                                                                        "Class")
+                    }
+                    SymbolKind::Method => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        5usize,
+                                                                        "Method")
+                    }
+                    SymbolKind::Property => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        6usize,
+                                                                        "Property")
+                    }
+                    SymbolKind::Field => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        7usize,
+                                                                        "Field")
+                    }
+                    SymbolKind::Constructor => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        8usize,
+                                                                        "Constructor")
+                    }
+                    SymbolKind::Enum => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        9usize,
+                                                                        "Enum")
+                    }
+                    SymbolKind::Interface => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        10usize,
+                                                                        "Interface")
+                    }
+                    SymbolKind::Function => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        11usize,
+                                                                        "Function")
+                    }
+                    SymbolKind::Variable => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        12usize,
+                                                                        "Variable")
+                    }
+                    SymbolKind::Constant => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        13usize,
+                                                                        "Constant")
+                    }
+                    SymbolKind::String => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        14usize,
+                                                                        "String")
+                    }
+                    SymbolKind::Number => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        15usize,
+                                                                        "Number")
+                    }
+                    SymbolKind::Boolean => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        16usize,
+                                                                        "Boolean")
+                    }
+                    SymbolKind::Array => {
+                        _serde::ser::Serializer::serialize_unit_variant(_serializer,
+                                                                        "SymbolKind",
+                                                                        17usize,
+                                                                        "Array")
+                    }
+                }
+            }
+        }
+    };
 /**
  * The workspace symbol request is sent from the client to the server to list project-wide symbols 
  * matching the query string.
@@ -3857,17 +11887,172 @@ pub enum SymbolKind {
 pub trait WorkspaceSymbolsRequest: LanguageServerRequest<WorkspaceSymbolParams,
                                                          Vec<SymbolInformation>,
                                                          ()> {
-    fn method_name() -> &'static str { "workspace/symbol" }
+    fn procedure_name(&self) -> &'static str { "workspace/symbol" }
 }
 /**
  * The parameters of a Workspace Symbol Request.
  */
+#[derive(Debug, Clone)]
 pub struct WorkspaceSymbolParams {
     /**
      * A non-empty query string
      */
     pub query: string,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_WorkspaceSymbolParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for WorkspaceSymbolParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<WorkspaceSymbolParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "query" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"query" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        WorkspaceSymbolParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<WorkspaceSymbolParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(WorkspaceSymbolParams{query: __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<WorkspaceSymbolParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<string> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("query"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "query"
+                                             )),
+                                    };
+                                Ok(WorkspaceSymbolParams{query: __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["query"];
+                    deserializer.deserialize_struct("WorkspaceSymbolParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_WorkspaceSymbolParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for WorkspaceSymbolParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "WorkspaceSymbolParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "query" , &self.query ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The code action request is sent from the client to the server to compute commands for a given text document
  * and range. The request is triggered when the user moves the cursor into a problem marker in the editor or 
@@ -3875,11 +12060,12 @@ pub struct WorkspaceSymbolParams {
  */
 pub trait CodeActionRequest: LanguageServerRequest<CodeActionParams,
                                                    Vec<Command>, ()> {
-    fn method_name() -> &'static str { "textDocument/codeAction" }
+    fn procedure_name(&self) -> &'static str { "textDocument/codeAction" }
 }
 /**
  * Params for the CodeActionRequest
  */
+#[derive(Debug, Clone)]
 pub struct CodeActionParams {
     /**
      * The document in which the command was invoked.
@@ -3894,29 +12080,588 @@ pub struct CodeActionParams {
      */
     pub context: CodeActionContext,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CodeActionParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CodeActionParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CodeActionParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "range" => { Ok(__Field::__field1) }
+                                        "context" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"range" => { Ok(__Field::__field1) }
+                                        b"context" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CodeActionParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<CodeActionParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < Range > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               CodeActionContext > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CodeActionParams{textDocument: __field0,
+                                                    range: __field1,
+                                                    context: __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<CodeActionParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                let mut __field1: Option<Range> = None;
+                                let mut __field2: Option<CodeActionContext> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("range"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Range > (  )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("context"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          CodeActionContext >
+                                                          (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "range"
+                                             )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "context" )),
+                                    };
+                                Ok(CodeActionParams{textDocument: __field0,
+                                                    range: __field1,
+                                                    context: __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["textDocument", "range", "context"];
+                    deserializer.deserialize_struct("CodeActionParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CodeActionParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CodeActionParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CodeActionParams" , 0 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "range" , &self.range ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "context" , &self.context ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Contains additional diagnostic information about the context in which
  * a code action is run.
  */
+#[derive(Debug, Clone)]
 pub struct CodeActionContext {
     /**
      * An array of diagnostics.
      */
     pub diagnostics: Vec<Diagnostic>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CodeActionContext: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CodeActionContext {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CodeActionContext, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "diagnostics" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"diagnostics" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CodeActionContext;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<CodeActionContext,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Vec<Diagnostic> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CodeActionContext{diagnostics: __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<CodeActionContext,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Vec<Diagnostic>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("diagnostics"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Vec<Diagnostic> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "diagnostics" )),
+                                    };
+                                Ok(CodeActionContext{diagnostics: __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["diagnostics"];
+                    deserializer.deserialize_struct("CodeActionContext",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CodeActionContext: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CodeActionContext {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CodeActionContext" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "diagnostics" , &self.diagnostics
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The code lens request is sent from the client to the server to compute code lenses for a given text document.
  */
 pub trait CodeLensRequest: LanguageServerRequest<CodeLensParams,
                                                  Vec<CodeLens>, ()> {
-    fn method_name() -> &'static str { "textDocument/codeLens" }
+    fn procedure_name(&self) -> &'static str { "textDocument/codeLens" }
 }
+#[derive(Debug, Clone)]
 pub struct CodeLensParams {
     /**
      * The document to request code lens for.
      */
     pub textDocument: TextDocumentIdentifier,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CodeLensParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CodeLensParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CodeLensParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CodeLensParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CodeLensParams, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CodeLensParams{textDocument: __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CodeLensParams, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                Ok(CodeLensParams{textDocument: __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["textDocument"];
+                    deserializer.deserialize_struct("CodeLensParams", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CodeLensParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CodeLensParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CodeLensParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * A code lens represents a command that should be shown along with
  * source text, like the number of references, a way to run tests, etc.
@@ -3924,6 +12669,7 @@ pub struct CodeLensParams {
  * A code lens is _unresolved_ when no command is associated to it. For performance
  * reasons the creation of a code lens and resolving should be done in two stages.
  */
+#[derive(Debug, Clone)]
 pub struct CodeLens {
     /**
      * The range in which this code lens is valid. Should only span a single line.
@@ -3939,21 +12685,249 @@ pub struct CodeLens {
      */
     pub data: Option<any>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_CodeLens: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for CodeLens {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<CodeLens, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "range" => { Ok(__Field::__field0) }
+                                        "command" => { Ok(__Field::__field1) }
+                                        "data" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"range" => { Ok(__Field::__field0) }
+                                        b"command" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"data" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        CodeLens;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CodeLens, __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < Range > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               Option<Command> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               Option<any> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(CodeLens{range: __field0,
+                                            command: __field1,
+                                            data: __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<CodeLens, __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Range> = None;
+                                let mut __field1: Option<Option<Command>> =
+                                    None;
+                                let mut __field2: Option<Option<any>> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("range"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Range > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("command"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<Command> > (
+                                                          )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("data"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<any> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field ( "range"
+                                             )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "command" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field ( "data"
+                                             )),
+                                    };
+                                Ok(CodeLens{range: __field0,
+                                            command: __field1,
+                                            data: __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["range", "command", "data"];
+                    deserializer.deserialize_struct("CodeLens", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_CodeLens: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for CodeLens {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "CodeLens" , 0 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "range" , &self.range ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "command" , &self.command ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "data" , &self.data ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The code lens resolve request is sent from the client to the server to resolve the command for a 
  * given code lens item.
  */
 pub trait CodeLensResolveRequest: LanguageServerRequest<CodeLens, CodeLens,
                                                         ()> {
-    fn method_name() -> &'static str { "codeLens/resolve" }
+    fn procedure_name(&self) -> &'static str { "codeLens/resolve" }
 }
 /**
  * The document formatting request is sent from the server to the client to format a whole document.
  */
 pub trait FormattingRequest: LanguageServerRequest<DocumentFormattingParams,
                                                    Vec<TextEdit>, ()> {
-    fn method_name() -> &'static str { "textDocument/formatting" }
+    fn procedure_name(&self) -> &'static str { "textDocument/formatting" }
 }
+#[derive(Debug, Clone)]
 pub struct DocumentFormattingParams {
     /**
      * The document to format.
@@ -3964,9 +12938,217 @@ pub struct DocumentFormattingParams {
      */
     pub options: FormattingOptions,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DocumentFormattingParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DocumentFormattingParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DocumentFormattingParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "options" => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"options" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DocumentFormattingParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentFormattingParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: <
+                                               FormattingOptions > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DocumentFormattingParams{textDocument:
+                                                                __field0,
+                                                            options:
+                                                                __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentFormattingParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                let mut __field1: Option<FormattingOptions> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("options"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          FormattingOptions >
+                                                          (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "options" )),
+                                    };
+                                Ok(DocumentFormattingParams{textDocument:
+                                                                __field0,
+                                                            options:
+                                                                __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["textDocument", "options"];
+                    deserializer.deserialize_struct("DocumentFormattingParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DocumentFormattingParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DocumentFormattingParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DocumentFormattingParams" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "options" , &self.options ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * Value-object describing what options formatting should use.
  */
+#[derive(Debug, Clone)]
 pub struct FormattingOptions {
     /**
      * Size of a tab in spaces.
@@ -3977,13 +13159,214 @@ pub struct FormattingOptions {
      */
     pub insertSpaces: boolean,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_FormattingOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for FormattingOptions {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<FormattingOptions, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "tabSize" => { Ok(__Field::__field0) }
+                                        "insertSpaces" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"tabSize" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"insertSpaces" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        FormattingOptions;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<FormattingOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: < number > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < boolean >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(FormattingOptions{tabSize: __field0,
+                                                     insertSpaces: __field1,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<FormattingOptions,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<number> = None;
+                                let mut __field1: Option<boolean> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("tabSize"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          number > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("insertSpaces"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          boolean > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "tabSize" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "insertSpaces" )),
+                                    };
+                                Ok(FormattingOptions{tabSize: __field0,
+                                                     insertSpaces: __field1,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["tabSize", "insertSpaces"];
+                    deserializer.deserialize_struct("FormattingOptions",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_FormattingOptions: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for FormattingOptions {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "FormattingOptions" , 0 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "tabSize" , &self.tabSize ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "insertSpaces" , &self.insertSpaces
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The document range formatting request is sent from the client to the server to format a given range in a document.
  */
 pub trait RangeFormattingRequest: LanguageServerRequest<DocumentRangeFormattingParams,
                                                         Vec<TextEdit>, ()> {
-    fn method_name() -> &'static str { "textDocument/rangeFormatting" }
+    fn procedure_name(&self) -> &'static str {
+        "textDocument/rangeFormatting"
+    }
 }
+#[derive(Debug, Clone)]
 pub struct DocumentRangeFormattingParams {
     /**
      * The document to format.
@@ -3998,14 +13381,265 @@ pub struct DocumentRangeFormattingParams {
      */
     pub options: FormattingOptions,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DocumentRangeFormattingParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DocumentRangeFormattingParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             ->
+                 ::std::result::Result<DocumentRangeFormattingParams,
+                                       __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "range" => { Ok(__Field::__field1) }
+                                        "options" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"range" => { Ok(__Field::__field1) }
+                                        b"options" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DocumentRangeFormattingParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentRangeFormattingParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < Range > (
+                                               )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: <
+                                               FormattingOptions > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DocumentRangeFormattingParams{textDocument:
+                                                                     __field0,
+                                                                 range:
+                                                                     __field1,
+                                                                 options:
+                                                                     __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentRangeFormattingParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                let mut __field1: Option<Range> = None;
+                                let mut __field2: Option<FormattingOptions> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("range"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Range > (  )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("options"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          FormattingOptions >
+                                                          (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field ( "range"
+                                             )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "options" )),
+                                    };
+                                Ok(DocumentRangeFormattingParams{textDocument:
+                                                                     __field0,
+                                                                 range:
+                                                                     __field1,
+                                                                 options:
+                                                                     __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["textDocument", "range", "options"];
+                    deserializer.deserialize_struct("DocumentRangeFormattingParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DocumentRangeFormattingParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DocumentRangeFormattingParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DocumentRangeFormattingParams" , 0 + 1 + 1 + 1
+                             ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "range" , &self.range ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "options" , &self.options ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The document on type formatting request is sent from the client to the server to format parts of 
  * the document during typing.
  */
 pub trait OnTypeFormattingRequest: LanguageServerRequest<DocumentOnTypeFormattingParams,
                                                          Vec<TextEdit>, ()> {
-    fn method_name() -> &'static str { "textDocument/onTypeFormatting" }
+    fn procedure_name(&self) -> &'static str {
+        "textDocument/onTypeFormatting"
+    }
 }
+#[derive(Debug, Clone)]
 pub struct DocumentOnTypeFormattingParams {
     /**
      * The document to format.
@@ -4024,13 +13658,310 @@ pub struct DocumentOnTypeFormattingParams {
      */
     pub options: FormattingOptions,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DocumentOnTypeFormattingParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DocumentOnTypeFormattingParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             ->
+                 ::std::result::Result<DocumentOnTypeFormattingParams,
+                                       __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __ignore,
+                    }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "position" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        "ch" => { Ok(__Field::__field2) }
+                                        "options" => { Ok(__Field::__field3) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"position" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"ch" => { Ok(__Field::__field2) }
+                                        b"options" => {
+                                            Ok(__Field::__field3)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DocumentOnTypeFormattingParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentOnTypeFormattingParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < Position >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                let __field3 =
+                                    match try!(visitor . visit :: <
+                                               FormattingOptions > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(3usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DocumentOnTypeFormattingParams{textDocument:
+                                                                      __field0,
+                                                                  position:
+                                                                      __field1,
+                                                                  ch:
+                                                                      __field2,
+                                                                  options:
+                                                                      __field3,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DocumentOnTypeFormattingParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                let mut __field1: Option<Position> = None;
+                                let mut __field2: Option<string> = None;
+                                let mut __field3: Option<FormattingOptions> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("position"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Position > (  )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("ch"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        __Field::__field3 => {
+                                            if __field3.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("options"));
+                                            }
+                                            __field3 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          FormattingOptions >
+                                                          (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "position" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field ( "ch"
+                                             )),
+                                    };
+                                let __field3 =
+                                    match __field3 {
+                                        Some(__field3) => __field3,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "options" )),
+                                    };
+                                Ok(DocumentOnTypeFormattingParams{textDocument:
+                                                                      __field0,
+                                                                  position:
+                                                                      __field1,
+                                                                  ch:
+                                                                      __field2,
+                                                                  options:
+                                                                      __field3,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["textDocument", "position", "ch", "options"];
+                    deserializer.deserialize_struct("DocumentOnTypeFormattingParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DocumentOnTypeFormattingParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DocumentOnTypeFormattingParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DocumentOnTypeFormattingParams" ,
+                             0 + 1 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "position" , &self.position ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "ch" , &self.ch ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "options" , &self.options ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The rename request is sent from the client to the server to perform a workspace-wide rename of a symbol.
  */
 pub trait RenameRequest: LanguageServerRequest<RenameParams, WorkspaceEdit,
                                                ()> {
-    fn method_name() -> &'static str { "textDocument/rename" }
+    fn procedure_name(&self) -> &'static str { "textDocument/rename" }
 }
+#[derive(Debug, Clone)]
 pub struct RenameParams {
     /**
      * The document to format.
@@ -4047,3 +13978,239 @@ pub struct RenameParams {
      */
     pub newName: string,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_RenameParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for RenameParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<RenameParams, __D::Error> where
+             __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        1usize => { Ok(__Field::__field1) }
+                                        2usize => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        "position" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        "newName" => { Ok(__Field::__field2) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        b"position" => {
+                                            Ok(__Field::__field1)
+                                        }
+                                        b"newName" => {
+                                            Ok(__Field::__field2)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        RenameParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<RenameParams, __V::Error>
+                         where __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                let __field1 =
+                                    match try!(visitor . visit :: < Position >
+                                               (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(1usize));
+                                        }
+                                    };
+                                let __field2 =
+                                    match try!(visitor . visit :: < string > (
+                                                )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(2usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(RenameParams{textDocument: __field0,
+                                                position: __field1,
+                                                newName: __field2,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         -> ::std::result::Result<RenameParams, __V::Error>
+                         where __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                let mut __field1: Option<Position> = None;
+                                let mut __field2: Option<string> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        __Field::__field1 => {
+                                            if __field1.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("position"));
+                                            }
+                                            __field1 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Position > (  )));
+                                        }
+                                        __Field::__field2 => {
+                                            if __field2.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("newName"));
+                                            }
+                                            __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          string > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                let __field1 =
+                                    match __field1 {
+                                        Some(__field1) => __field1,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "position" )),
+                                    };
+                                let __field2 =
+                                    match __field2 {
+                                        Some(__field2) => __field2,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "newName" )),
+                                    };
+                                Ok(RenameParams{textDocument: __field0,
+                                                position: __field1,
+                                                newName: __field2,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] =
+                        &["textDocument", "position", "newName"];
+                    deserializer.deserialize_struct("RenameParams", FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_RenameParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for RenameParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "RenameParams" , 0 + 1 + 1 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "position" , &self.position ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "newName" , &self.newName ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };

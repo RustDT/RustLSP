@@ -17,8 +17,6 @@ pub struct LanguageServer {
 	
 }
 
-// See: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md#actual-protocol
-
 impl LanguageServer {
 
 }

@@ -24,16 +24,16 @@ use std::collections::HashMap;
 
 pub trait LanguageServerNotification<PARAMS> {
 	
-	fn method_name() -> &'static str;  
+	fn procedure_name(&self) -> &'static str;  
 	
-	fn invoke(params: PARAMS);
+	fn invoke(&mut self, params: PARAMS);
 }
 
 pub trait LanguageServerRequest<PARAMS, RET, ERR> {
 	
-	fn method_name() -> &'static str;  
+	fn procedure_name(&self) -> &'static str;  
 	
-	fn invoke(params: PARAMS) -> Result<RET, ERR>; /* FIXME: use error structure */
+	fn invoke(&mut self, params: PARAMS) -> Result<RET, ERR>; /* FIXME: use error structure */
 	
 }
 
@@ -257,14 +257,14 @@ pub struct TextDocumentPositionParams {
     pub position: Position,
 }
 
-/* ----------------- Protocol Structures ----------------- */
+/* ========================= Protocol Structures ========================= */
 
 /**
  * The initialize request is sent as the first request from the client to the server.
  */
 pub trait InitializeRequest : LanguageServerRequest<InitializeParams, InitializeResult, InitializeError> {
 	
-	fn method_name() -> &'static str { "initialize" }
+	fn procedure_name(&self) -> &'static str { "initialize" }
 	
 }
 
@@ -294,6 +294,7 @@ pub struct InitializeParams {
 pub type ClientCapabilities = HashMap<String, Value>;
 
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct InitializeResult {
     /**
      * The capabilities the language server provides.
@@ -301,6 +302,7 @@ pub struct InitializeResult {
     pub capabilities: ServerCapabilities,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct InitializeError {
     /**
      * Indicates whether the client should retry to send the
@@ -315,6 +317,7 @@ pub struct InitializeError {
 /**
  * Defines how the host (editor) should sync document changes to the language server.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum TextDocumentSyncKind {
     /**
      * Documents should not be synced at all.
@@ -334,6 +337,7 @@ pub enum TextDocumentSyncKind {
 /**
  * Completion options.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CompletionOptions {
     /**
      * The server provides support to resolve additional information for a completion item.
@@ -350,6 +354,7 @@ pub struct CompletionOptions {
 /**
  * Signature help options.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SignatureHelpOptions {
     /**
      * The characters that trigger signature help automatically.
@@ -361,6 +366,7 @@ pub struct SignatureHelpOptions {
 /**
  * Code Lens options.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CodeLensOptions {
     /**
      * Code lens has a resolve provider as well.
@@ -371,6 +377,7 @@ pub struct CodeLensOptions {
 /**
  * Format document on type options
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentOnTypeFormattingOptions {
     /**
      * A character on which formatting should be triggered, like `}`.
@@ -383,6 +390,7 @@ pub struct DocumentOnTypeFormattingOptions {
     pub triggerCharacters: Option<Vec<string>>,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ServerCapabilities {
     /**
      * Defines how text documents are synced.
@@ -455,7 +463,7 @@ pub struct ServerCapabilities {
  */
 pub trait ShutdownRequest : LanguageServerRequest<(), (), ()> {
 	
-	fn method_name() -> &'static str { "shutdown" }
+	fn procedure_name(&self) -> &'static str { "shutdown" }
 	
 }
 
@@ -464,7 +472,7 @@ pub trait ShutdownRequest : LanguageServerRequest<(), (), ()> {
  */
 pub trait ExitNotification : LanguageServerNotification<()> {
 	
-	fn method_name() -> &'static str { "exit" }
+	fn procedure_name(&self) -> &'static str { "exit" }
 	
 }
 
@@ -474,10 +482,11 @@ pub trait ExitNotification : LanguageServerNotification<()> {
  */
 pub trait ShowMessageNotification : LanguageServerNotification<ShowMessageParams> {
 	
-	fn method_name() -> &'static str { "window/showMessage" }
+	fn procedure_name(&self) -> &'static str { "window/showMessage" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ShowMessageParams {
     /**
      * The message type. See {@link MessageType}.
@@ -491,7 +500,7 @@ pub struct ShowMessageParams {
     pub message: string,
 }
 
-
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum MessageType {
     /**
      * An error message.
@@ -518,10 +527,11 @@ pub enum MessageType {
  */
 pub trait ShowMessageRequestNotification : LanguageServerNotification<ShowMessageRequestParams> {
 	
-	fn method_name() -> &'static str { "window/showMessageRequest" }
+	fn procedure_name(&self) -> &'static str { "window/showMessageRequest" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ShowMessageRequestParams {
     /**
      * The message type. See {@link MessageType}
@@ -540,6 +550,7 @@ pub struct ShowMessageRequestParams {
     pub actions: Option<Vec<MessageActionItem>>,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct MessageActionItem {
     /**
      * A short title like 'Retry', 'Open Log' etc.
@@ -552,10 +563,11 @@ pub struct MessageActionItem {
  */
 pub trait LogMessageNotification : LanguageServerNotification<LogMessageParams> {
 	
-	fn method_name() -> &'static str { "window/logMessage" }
+	fn procedure_name(&self) -> &'static str { "window/logMessage" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct LogMessageParams {
     /**
      * The message type. See {@link MessageType}
@@ -574,7 +586,7 @@ pub struct LogMessageParams {
  */
 pub trait TelemetryEventNotification : LanguageServerNotification<any> {
 	
-	fn method_name() -> &'static str { "telemetry/event" }
+	fn procedure_name(&self) -> &'static str { "telemetry/event" }
 	
 }
 
@@ -583,10 +595,11 @@ pub trait TelemetryEventNotification : LanguageServerNotification<any> {
  */
 pub trait WorkspaceChangeConfigurationNotification : LanguageServerNotification<DidChangeConfigurationParams> {
 	
-	fn method_name() -> &'static str { "workspace/didChangeConfiguration" }
+	fn procedure_name(&self) -> &'static str { "workspace/didChangeConfiguration" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidChangeConfigurationParams {
     /**
      * The actual changed settings
@@ -603,10 +616,11 @@ pub struct DidChangeConfigurationParams {
  */
 pub trait DidOpenTextDocumentNotification : LanguageServerNotification<DidOpenTextDocumentParams> {
 	
-	fn method_name() -> &'static str { "textDocument/didOpen" }
+	fn procedure_name(&self) -> &'static str { "textDocument/didOpen" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidOpenTextDocumentParams {
     /**
      * The document that was opened.
@@ -620,10 +634,11 @@ pub struct DidOpenTextDocumentParams {
  */
 pub trait DidChangeTextDocumentNotification : LanguageServerNotification<DidChangeTextDocumentParams> {
 	
-	fn method_name() -> &'static str { "textDocument/didChange" }
+	fn procedure_name(&self) -> &'static str { "textDocument/didChange" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidChangeTextDocumentParams {
     /**
      * The document that did change. The version number points
@@ -642,6 +657,7 @@ pub struct DidChangeTextDocumentParams {
  * An event describing a change to a text document. If range and rangeLength are omitted
  * the new text is considered to be the full content of the document.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TextDocumentContentChangeEvent {
     /**
      * The range of the document that changed.
@@ -667,10 +683,11 @@ pub struct TextDocumentContentChangeEvent {
  */
 pub trait DidCloseTextDocumentNotification : LanguageServerNotification<DidCloseTextDocumentParams> {
 	
-	fn method_name() -> &'static str { "textDocument/didClose" }
+	fn procedure_name(&self) -> &'static str { "textDocument/didClose" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidCloseTextDocumentParams {
     /**
      * The document that was closed.
@@ -683,7 +700,7 @@ pub struct DidCloseTextDocumentParams {
  */
 pub trait DidSaveTextDocumentNotification : LanguageServerNotification<DidSaveTextDocumentParams> {
 	
-	fn method_name() -> &'static str { "textDocument/didSave" }
+	fn procedure_name(&self) -> &'static str { "textDocument/didSave" }
 	
 }
 
@@ -700,7 +717,7 @@ pub struct DidSaveTextDocumentParams {
  */
 pub trait DidChangeWatchedFilesNotification : LanguageServerNotification<DidChangeWatchedFilesParams> {
 	
-	fn method_name() -> &'static str { "workspace/didChangeWatchedFiles" }
+	fn procedure_name(&self) -> &'static str { "workspace/didChangeWatchedFiles" }
 	
 }
 
@@ -714,6 +731,7 @@ pub struct DidChangeWatchedFilesParams {
 /**
  * The file event type.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum FileChangeType {
     /**
      * The file got created.
@@ -732,6 +750,7 @@ pub enum FileChangeType {
 /**
  * An event describing a file change.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FileEvent {
     /**
      * The file's URI.
@@ -749,10 +768,11 @@ pub struct FileEvent {
  */
 pub trait PublishDiagnosticsNotification : LanguageServerNotification<PublishDiagnosticsParams> {
 	
-	fn method_name() -> &'static str { "textDocument/publishDiagnostics" }
+	fn procedure_name(&self) -> &'static str { "textDocument/publishDiagnostics" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct PublishDiagnosticsParams {
     /**
      * The URI for which diagnostic information is reported.
@@ -774,7 +794,7 @@ pub struct PublishDiagnosticsParams {
 // result: CompletionItem[] | CompletionList FIXME
 pub trait CompletionRequest : LanguageServerRequest<TextDocumentPositionParams, CompletionList, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/completion" }
+	fn procedure_name(&self) -> &'static str { "textDocument/completion" }
 	
 }
 
@@ -783,6 +803,7 @@ pub trait CompletionRequest : LanguageServerRequest<TextDocumentPositionParams, 
  * Represents a collection of [completion items](#CompletionItem) to be presented
  * in the editor.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CompletionList {
     /**
      * This list it not complete. Further typing should result in recomputing
@@ -795,6 +816,7 @@ pub struct CompletionList {
     pub items: Vec<CompletionItem>,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CompletionItem {
     /**
      * The label of this completion item. By default
@@ -847,6 +869,7 @@ pub struct CompletionItem {
 /**
  * The kind of a completion entry.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum CompletionItemKind {
     Text = 1,
     Method = 2,
@@ -874,7 +897,7 @@ pub enum CompletionItemKind {
  */
 pub trait ResolveCompletionItemRequest : LanguageServerRequest<CompletionItem, CompletionItem, ()> {
 	
-	fn method_name() -> &'static str { "completionItem/resolve" }
+	fn procedure_name(&self) -> &'static str { "completionItem/resolve" }
 	
 }
 
@@ -885,13 +908,14 @@ pub trait ResolveCompletionItemRequest : LanguageServerRequest<CompletionItem, C
  */
 pub trait HoverRequest : LanguageServerRequest<TextDocumentPositionParams, Hover, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/hover" }
+	fn procedure_name(&self) -> &'static str { "textDocument/hover" }
 	
 }
 
 /**
  * The result of a hover request.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Hover {
     /**
      * The hover's content
@@ -914,7 +938,7 @@ pub type MarkedString = string; /* FIXME: todo*/
  */
 pub trait SignatureHelpRequest : LanguageServerRequest<TextDocumentPositionParams, SignatureHelp, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/signatureHelp" }
+	fn procedure_name(&self) -> &'static str { "textDocument/signatureHelp" }
 	
 }
 
@@ -924,6 +948,7 @@ pub trait SignatureHelpRequest : LanguageServerRequest<TextDocumentPositionParam
  * callable. There can be multiple signature but only one
  * active and only one active parameter.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SignatureHelp {
     /**
      * One or more signatures.
@@ -946,6 +971,7 @@ pub struct SignatureHelp {
  * can have a label, like a function-name, a doc-comment, and
  * a set of parameters.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SignatureInformation {
     /**
      * The label of this signature. Will be shown in
@@ -969,6 +995,7 @@ pub struct SignatureInformation {
  * Represents a parameter of a callable-signature. A parameter can
  * have a label and a doc-comment.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ParameterInformation {
     /**
      * The label of this signature. Will be shown in
@@ -990,7 +1017,7 @@ pub struct ParameterInformation {
  */
 pub trait GotoDefinitionRequest : LanguageServerRequest<TextDocumentPositionParams, Vec<Location>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/definition" }
+	fn procedure_name(&self) -> &'static str { "textDocument/definition" }
 	
 }
 
@@ -1000,16 +1027,18 @@ pub trait GotoDefinitionRequest : LanguageServerRequest<TextDocumentPositionPara
  */
 pub trait ReferencesRequest : LanguageServerRequest<ReferenceParams, Vec<Location>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/references" }
+	fn procedure_name(&self) -> &'static str { "textDocument/references" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ReferenceParams 
 //extends TextDocumentPositionParams FIXME
 {
     pub context: ReferenceContext,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ReferenceContext {
     /**
      * Include the declaration of the current symbol.
@@ -1024,7 +1053,7 @@ pub struct ReferenceContext {
  */
 pub trait DocumentHighlightRequest : LanguageServerRequest<TextDocumentPositionParams, DocumentHighlight, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/documentHighlight" }
+	fn procedure_name(&self) -> &'static str { "textDocument/documentHighlight" }
 	
 }
 
@@ -1033,6 +1062,7 @@ pub trait DocumentHighlightRequest : LanguageServerRequest<TextDocumentPositionP
  * special attention. Usually a document highlight is visualized by changing
  * the background color of its range.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentHighlight {
     /**
      * The range this highlight applies to.
@@ -1048,6 +1078,7 @@ pub struct DocumentHighlight {
 /**
  * A document highlight kind.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub enum DocumentHighlightKind {
     /**
      * A textual occurrance.
@@ -1071,10 +1102,11 @@ pub enum DocumentHighlightKind {
  */
 pub trait DocumentSymbolsRequest : LanguageServerRequest<DocumentSymbolParams, Vec<SymbolInformation>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/documentSymbol" }
+	fn procedure_name(&self) -> &'static str { "textDocument/documentSymbol" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentSymbolParams {
     /**
      * The text document.
@@ -1086,6 +1118,7 @@ pub struct DocumentSymbolParams {
  * Represents information about programming constructs like variables, classes,
  * interfaces etc.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SymbolInformation {
     /**
      * The name of this symbol.
@@ -1111,6 +1144,7 @@ pub struct SymbolInformation {
 /**
  * A symbol kind.
  */
+#[derive(Clone, Copy, Serialize, Deserialize, Debug)]
 pub enum SymbolKind {
     File = 1,
     Module = 2,
@@ -1138,13 +1172,14 @@ pub enum SymbolKind {
  */
 pub trait WorkspaceSymbolsRequest : LanguageServerRequest<WorkspaceSymbolParams, Vec<SymbolInformation>, ()> {
 	
-	fn method_name() -> &'static str { "workspace/symbol" }
+	fn procedure_name(&self) -> &'static str { "workspace/symbol" }
 	
 }
 
 /**
  * The parameters of a Workspace Symbol Request.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct WorkspaceSymbolParams {
     /**
      * A non-empty query string
@@ -1159,13 +1194,14 @@ pub struct WorkspaceSymbolParams {
  */
 pub trait CodeActionRequest : LanguageServerRequest<CodeActionParams, Vec<Command>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/codeAction" }
+	fn procedure_name(&self) -> &'static str { "textDocument/codeAction" }
 	
 }
 
 /**
  * Params for the CodeActionRequest
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CodeActionParams {
     /**
      * The document in which the command was invoked.
@@ -1187,6 +1223,7 @@ pub struct CodeActionParams {
  * Contains additional diagnostic information about the context in which
  * a code action is run.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CodeActionContext {
     /**
      * An array of diagnostics.
@@ -1199,10 +1236,11 @@ pub struct CodeActionContext {
  */
 pub trait CodeLensRequest : LanguageServerRequest<CodeLensParams, Vec<CodeLens>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/codeLens" }
+	fn procedure_name(&self) -> &'static str { "textDocument/codeLens" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CodeLensParams {
     /**
      * The document to request code lens for.
@@ -1218,6 +1256,7 @@ pub struct CodeLensParams {
  * A code lens is _unresolved_ when no command is associated to it. For performance
  * reasons the creation of a code lens and resolving should be done in two stages.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CodeLens {
     /**
      * The range in which this code lens is valid. Should only span a single line.
@@ -1243,7 +1282,7 @@ pub struct CodeLens {
  */
 pub trait CodeLensResolveRequest : LanguageServerRequest<CodeLens, CodeLens, ()> {
 	
-	fn method_name() -> &'static str { "codeLens/resolve" }
+	fn procedure_name(&self) -> &'static str { "codeLens/resolve" }
 	
 }
 
@@ -1252,10 +1291,11 @@ pub trait CodeLensResolveRequest : LanguageServerRequest<CodeLens, CodeLens, ()>
  */
 pub trait FormattingRequest : LanguageServerRequest<DocumentFormattingParams, Vec<TextEdit>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/formatting" }
+	fn procedure_name(&self) -> &'static str { "textDocument/formatting" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentFormattingParams {
     /**
      * The document to format.
@@ -1271,6 +1311,7 @@ pub struct DocumentFormattingParams {
 /**
  * Value-object describing what options formatting should use.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct FormattingOptions {
     /**
      * Size of a tab in spaces.
@@ -1295,10 +1336,11 @@ pub struct FormattingOptions {
  */
 pub trait RangeFormattingRequest : LanguageServerRequest<DocumentRangeFormattingParams, Vec<TextEdit>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/rangeFormatting" }
+	fn procedure_name(&self) -> &'static str { "textDocument/rangeFormatting" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentRangeFormattingParams {
     /**
      * The document to format.
@@ -1322,10 +1364,11 @@ pub struct DocumentRangeFormattingParams {
  */
 pub trait OnTypeFormattingRequest : LanguageServerRequest<DocumentOnTypeFormattingParams, Vec<TextEdit>, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/onTypeFormatting" }
+	fn procedure_name(&self) -> &'static str { "textDocument/onTypeFormatting" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentOnTypeFormattingParams {
     /**
      * The document to format.
@@ -1353,10 +1396,11 @@ pub struct DocumentOnTypeFormattingParams {
  */
 pub trait RenameRequest : LanguageServerRequest<RenameParams, WorkspaceEdit, ()> {
 	
-	fn method_name() -> &'static str { "textDocument/rename" }
+	fn procedure_name(&self) -> &'static str { "textDocument/rename" }
 	
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RenameParams {
     /**
      * The document to format.

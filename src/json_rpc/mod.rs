@@ -385,7 +385,7 @@ fn parse_jsonrpc_request_json_Test() {
 		.insert("method", "myMethod")
 //		.insert("params", sample_params.clone())
 		.build();
-		
+	
 	let result = parse_jsonrpc_request_json(&mut request).unwrap();
 	assert_eq!(result, JsonRpcRequest { 
 			id : Some(RpcId::Number(1)), 
