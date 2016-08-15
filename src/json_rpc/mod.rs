@@ -306,31 +306,55 @@ impl JsonRpcError {
 
 use std::collections::HashMap;
 
+pub type DispatcherFn = Fn(&mut JsonRpcStreams, Map<String, Value>);
+
 pub struct JsonRpcDispatcher {
-	pub dispatcher_map : HashMap<String, Box<Fn(Map<String, Value>)>>,
+	pub dispatcher_map : HashMap<String, Box<DispatcherFn>>,
+	pub other : JsonRpcStreams,
 }
 
 impl JsonRpcDispatcher {
 	
 	pub fn new() -> JsonRpcDispatcher {
-		JsonRpcDispatcher { dispatcher_map : HashMap::new() }
+		JsonRpcDispatcher { dispatcher_map : HashMap::new() , other : JsonRpcStreams { } }
 	}
 	
-	pub fn dispatch(&self, request: JsonRpcRequest) -> JsonRpcResult<()> {
-		match 
-			self.dispatcher_map.get(&request.method) 
+	pub fn dispatch(&mut self, request: JsonRpcRequest) -> JsonRpcResult<()> {
+		
+		if let Some(dispatcher_fn) = self.dispatcher_map.get(&request.method) 
 		{
-			Some(dispatcher_fn) => {
-				dispatcher_fn(request.params);
-				Ok(())
-			}
-			None => { 
-				Err(error_JSON_RPC_MethodNotFound())
-			}
+			dispatcher_fn(&mut self.other, request.params);
+			Ok(())
+		} else {
+			Err(error_JSON_RPC_MethodNotFound())
 		}
 	}
 	
 }
+
+pub struct JsonRpcStreams {
+	
+}
+
+impl JsonRpcStreams {
+	
+	pub fn handle_method<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR>(
+		&mut self,
+		params: Map<String, Value>, 
+		rpc_method: &Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>
+	) -> Result<METHOD_RESULT, METHOD_ERROR>
+		where 
+		METHOD_PARAMS: serde::Deserialize,
+		METHOD_RESULT: serde::Deserialize,
+		METHOD_ERROR: serde::Deserialize,
+	{
+		let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params));
+		let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
+		rpc_method(params)
+	}
+	
+}
+
 
 /* ----------------- Test ----------------- */
 

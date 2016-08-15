@@ -21,8 +21,7 @@ use serde_json::Value;
 use serde;
 
 use json_rpc;
-use json_rpc::JsonRpcDispatcher;
-use json_rpc::JsonRpcResult;
+use json_rpc::*;
 
 use lsp;
 use lsp::*;
@@ -59,14 +58,14 @@ impl RustLSPServer {
 		}
 	}
 	
-	pub fn read_incoming_messages(&mut self, mut input: &mut io::BufRead, mut output : &mut io::Write) -> GResult<()> {
+	pub fn read_incoming_messages(&mut self, input: &mut io::BufRead, output : &mut io::Write) -> GResult<()> {
 		loop {
-			let message = try!(parse_transport_message(&mut input));
+			let message = try!(parse_transport_message::<&mut _>(input));
 			
 			match self.process_message(&message) {
 				Ok(_) => {  } 
 				Err(error) => {
-					try!(error.write_out(&mut output));
+					try!(error.write_out(output));
 					// TODO log 
 //					try!(output.write_fmt(format_args!("Error parsing message: "))); 
 				}
@@ -85,7 +84,6 @@ impl RustLSPServer {
 }
 
 
-
 pub struct LanguageServerHandler {
 	
 }
@@ -95,28 +93,14 @@ impl LanguageServerHandler {
 	pub fn init(lsp_handler : &mut RustLSPServer) {
 		let language_server = lsp_handler.ls.clone();
 		
-		let handler_fn : Box<Fn(Map<String, Value>)> = Box::new(move |params_map| { 
+		let handler_fn : Box<json_rpc::DispatcherFn> = Box::new(move |json_rpc_handler, params_map| { 
 			//FIXME : handle return
-			LanguageServerHandler::handle_method(params_map, &|params| { 
+			json_rpc_handler.handle_method(params_map, &|params| { 
 				ls::FN_INITIALIZE(language_server.as_ref(), params) 
 			}); 
 		});
 		
 		lsp_handler.rpc_dispatcher.dispatcher_map.insert("blah".to_string(), handler_fn);
-	}
-	
-	pub fn handle_method<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR>(
-		params: Map<String, Value>, 
-		rpc_method: &Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>
-	) -> Result<METHOD_RESULT, METHOD_ERROR>
-		where 
-		METHOD_PARAMS: serde::Deserialize,
-		METHOD_RESULT: serde::Deserialize,
-		METHOD_ERROR: serde::Deserialize,
-	{
-		let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params));
-		let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
-		rpc_method(params)
 	}
 	
 }
@@ -125,10 +109,8 @@ impl LanguageServerHandler {
 
 const CONTENT_LENGTH: &'static str = "Content-Length:";
 	
-pub fn parse_transport_message<R>(mut reader: R) -> GResult<String>
-	where R: io::BufRead,
+pub fn parse_transport_message<R : io::BufRead>(mut reader: R) -> GResult<String>
 {
-	let reader : &mut io::BufRead = &mut reader;
 	
 	let mut content_length : u32 = 0; 
 	
