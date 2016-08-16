@@ -17,6 +17,6 @@ name = "rust_lsp"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rust_lsp_app"
-path = "src/main_lsp.rs"
+name = "dummy_lsp"
+path = "src/dummy_lsp.rs"
 test = false

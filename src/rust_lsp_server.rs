@@ -16,37 +16,30 @@ use std::io::{self, Read, Write};
 
 use ::util::core::*;
 
-use serde_json::Map;
-use serde_json::Value;
-use serde;
-
 use json_rpc;
 use json_rpc::*;
 
 use lsp;
 use lsp::*;
-use ls;
-use ls::LanguageServer;
 
-use std::collections::HashMap;
 use std::rc::Rc;
 
 /* -----------------  ----------------- */
 
-pub struct RustLSPServer {
+pub struct LSPServer {
 	
 	pub ls: Rc<LanguageServer>,
 	pub rpc_dispatcher : JsonRpcDispatcher,
 	
 }
 
-impl RustLSPServer {
+impl LSPServer {
 	
 	pub fn start_new(ls: Rc<LanguageServer>, input: &mut io::BufRead, output : &mut io::Write) {
 		let rpc_dispatcher = JsonRpcDispatcher::new();
-		let mut server = RustLSPServer { rpc_dispatcher : rpc_dispatcher, ls : ls };
+		let mut server = LSPServer { rpc_dispatcher : rpc_dispatcher, ls : ls };
 		
-		LanguageServerHandler::init(&mut server);
+		initialize_methods(&mut server);
 		
 		let result = server.read_incoming_messages(input, output);
 		match result {
@@ -84,24 +77,42 @@ impl RustLSPServer {
 }
 
 
-pub struct LanguageServerHandler {
+pub fn initialize_methods(lsp_handler : &mut LSPServer) {
+	let ls = &lsp_handler.ls;
 	
-}
-
-impl LanguageServerHandler {
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__Initialize(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__Shutdown(ls.clone()));
 	
-	pub fn init(lsp_handler : &mut RustLSPServer) {
-		let language_server = lsp_handler.ls.clone();
-		
-		let handler_fn : Box<json_rpc::DispatcherFn> = Box::new(move |json_rpc_handler, params_map| { 
-			//FIXME : handle return
-			json_rpc_handler.handle_method(params_map, &|params| { 
-				ls::FN_INITIALIZE(language_server.as_ref(), params) 
-			}); 
-		});
-		
-		lsp_handler.rpc_dispatcher.dispatcher_map.insert("blah".to_string(), handler_fn);
-	}
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__Exit(ls.clone()));
+	
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__ShowMessage(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__ShowMessageRequest(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__LogMessage(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__TelemetryEvent(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__WorkspaceChangeConfiguration(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__DidOpenTextDocument(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__DidChangeTextDocument(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__DidCloseTextDocument(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__DidSaveTextDocument(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__DidChangeWatchedFiles(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_notification(lsp::notification__PublishDiagnostics(ls.clone()));
+	
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__Completion(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__ResolveCompletionItem(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__Hover(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__SignatureHelp(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__GotoDefinition(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__References(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__DocumentHighlight(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__DocumentSymbols(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__WorkspaceSymbols(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__CodeAction(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__CodeLens(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__CodeLensResolve(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__Formatting(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__RangeFormatting(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__OnTypeFormatting(ls.clone()));
+	lsp_handler.rpc_dispatcher.add_request(lsp::request__Rename(ls.clone()));
 	
 }
 

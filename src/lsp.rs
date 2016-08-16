@@ -14,7 +14,6 @@
 
 extern crate serde_json;
 
-use self::serde_json::Map;
 use self::serde_json::Value;
 use std::collections::HashMap;
 
@@ -22,18 +21,178 @@ use std::collections::HashMap;
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
 // Last revision 03/08/2016
 
-pub trait LanguageServerNotification<PARAMS> {
-    fn procedure_name(&self)
-    -> &'static str;
-    fn invoke(&mut self, params: PARAMS);
+
+pub struct LanguageServerError<DATA> {
+    pub error: u32,
+    pub message: String,
+    pub data: DATA,
 }
 
-pub trait LanguageServerRequest<PARAMS, RET, ERR> {
-    fn procedure_name(&self)
-    -> &'static str;
-    fn invoke(&mut self, params: PARAMS)
-    -> Result<RET, ERR>; /* FIXME: use error structure */
+pub type LSResult<RET, ERR_DATA> = Result<RET, LanguageServerError<ERR_DATA>>;
+
+pub type FnLanguageServerNotification<PARAMS> =
+    (&'static str, Box<Fn(PARAMS)>);
+pub type FnLanguageServerRequest<PARAMS, RET, ERR> =
+    (&'static str, Box<Fn(PARAMS) -> LSResult<RET, ERR>>);
+
+
+use std::rc::Rc;
+
+
+pub trait LanguageServer {
+    fn initialize(&self, params: InitializeParams)
+    -> LSResult<InitializeResult, InitializeError>;
+    fn shutdown(&self, params: ())
+    -> LSResult<(), ()>;
+    fn exit(&self, params: ());
+    fn showMessage(&self, params: ShowMessageParams);
+    fn showMessageRequest(&self, params: ShowMessageRequestParams);
+    fn logMessage(&self, params: LogMessageParams);
+    fn telemetryEvent(&self, params: any);
+    fn workspaceChangeConfiguration(&self,
+                                    params: DidChangeConfigurationParams);
+    fn didOpenTextDocument(&self, params: DidOpenTextDocumentParams);
+    fn didChangeTextDocument(&self, params: DidChangeTextDocumentParams);
+    fn didCloseTextDocument(&self, params: DidCloseTextDocumentParams);
+    fn didSaveTextDocument(&self, params: DidSaveTextDocumentParams);
+    fn didChangeWatchedFiles(&self, params: DidChangeWatchedFilesParams);
+    fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
+
+    fn completion(&self, params: TextDocumentPositionParams)
+    -> LSResult<CompletionList, ()>;
+    fn resolveCompletionItem(&self, params: CompletionItem)
+    -> LSResult<CompletionItem, ()>;
+    fn hover(&self, params: TextDocumentPositionParams)
+    -> LSResult<Hover, ()>;
+    fn signatureHelp(&self, params: TextDocumentPositionParams)
+    -> LSResult<SignatureHelp, ()>;
+    fn gotoDefinition(&self, params: TextDocumentPositionParams)
+    -> LSResult<Vec<Location>, ()>;
+    fn references(&self, params: ReferenceParams)
+    -> LSResult<Vec<Location>, ()>;
+    fn documentHighlight(&self, params: TextDocumentPositionParams)
+    -> LSResult<DocumentHighlight, ()>;
+    fn documentSymbols(&self, params: DocumentSymbolParams)
+    -> LSResult<Vec<SymbolInformation>, ()>;
+    fn workspaceSymbols(&self, params: WorkspaceSymbolParams)
+    -> LSResult<Vec<SymbolInformation>, ()>;
+    fn codeAction(&self, params: CodeActionParams)
+    -> LSResult<Vec<Command>, ()>;
+    fn codeLens(&self, params: CodeLensParams)
+    -> LSResult<Vec<CodeLens>, ()>;
+    fn codeLensResolve(&self, params: CodeLens)
+    -> LSResult<CodeLens, ()>;
+    fn formatting(&self, params: DocumentFormattingParams)
+    -> LSResult<Vec<TextEdit>, ()>;
+    fn rangeFormatting(&self, params: DocumentRangeFormattingParams)
+    -> LSResult<Vec<TextEdit>, ()>;
+    fn onTypeFormatting(&self, params: DocumentOnTypeFormattingParams)
+    -> LSResult<Vec<TextEdit>, ()>;
+    fn rename(&self, params: RenameParams)
+    -> LSResult<WorkspaceEdit, ()>;
 }
+
+
+pub trait LanguageClient {
+    // FIXME move methods here
+}
+
+pub struct DummyLanguageServer {
+}
+
+/**
+ * A no-op language server
+ */
+impl DummyLanguageServer {
+    pub fn error_not_available<DATA>(data: DATA)
+     -> LanguageServerError<DATA> {
+        let msg = "Functionality not implemented.".to_string();
+        let err: LanguageServerError<DATA> =
+            LanguageServerError{error: 1, message: msg, data: data,};
+        err
+    }
+}
+
+impl LanguageServer for DummyLanguageServer {
+    fn initialize(&self, _: InitializeParams)
+     -> LSResult<InitializeResult, InitializeError> {
+        Ok(InitializeResult{capabilities: ServerCapabilities::default(),})
+    }
+    fn shutdown(&self, _: ()) -> LSResult<(), ()> { Ok(()) }
+    fn exit(&self, _: ()) { }
+    fn showMessage(&self, _: ShowMessageParams) { }
+    fn showMessageRequest(&self, _: ShowMessageRequestParams) { }
+    fn logMessage(&self, _: LogMessageParams) { }
+    fn telemetryEvent(&self, _: any) { }
+    fn workspaceChangeConfiguration(&self, _: DidChangeConfigurationParams) {
+    }
+    fn didOpenTextDocument(&self, _: DidOpenTextDocumentParams) { }
+    fn didChangeTextDocument(&self, _: DidChangeTextDocumentParams) { }
+    fn didCloseTextDocument(&self, _: DidCloseTextDocumentParams) { }
+    fn didSaveTextDocument(&self, _: DidSaveTextDocumentParams) { }
+    fn didChangeWatchedFiles(&self, _: DidChangeWatchedFilesParams) { }
+    fn publishDiagnostics(&self, _: PublishDiagnosticsParams) { }
+
+    fn completion(&self, _: TextDocumentPositionParams)
+     -> LSResult<CompletionList, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn resolveCompletionItem(&self, _: CompletionItem)
+     -> LSResult<CompletionItem, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn hover(&self, _: TextDocumentPositionParams) -> LSResult<Hover, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn signatureHelp(&self, _: TextDocumentPositionParams)
+     -> LSResult<SignatureHelp, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn gotoDefinition(&self, _: TextDocumentPositionParams)
+     -> LSResult<Vec<Location>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn references(&self, _: ReferenceParams) -> LSResult<Vec<Location>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn documentHighlight(&self, _: TextDocumentPositionParams)
+     -> LSResult<DocumentHighlight, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn documentSymbols(&self, _: DocumentSymbolParams)
+     -> LSResult<Vec<SymbolInformation>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn workspaceSymbols(&self, _: WorkspaceSymbolParams)
+     -> LSResult<Vec<SymbolInformation>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn codeAction(&self, _: CodeActionParams) -> LSResult<Vec<Command>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn codeLens(&self, _: CodeLensParams) -> LSResult<Vec<CodeLens>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn codeLensResolve(&self, _: CodeLens) -> LSResult<CodeLens, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn formatting(&self, _: DocumentFormattingParams)
+     -> LSResult<Vec<TextEdit>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn rangeFormatting(&self, _: DocumentRangeFormattingParams)
+     -> LSResult<Vec<TextEdit>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn onTypeFormatting(&self, _: DocumentOnTypeFormattingParams)
+     -> LSResult<Vec<TextEdit>, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+    fn rename(&self, _: RenameParams) -> LSResult<WorkspaceEdit, ()> {
+        Err(DummyLanguageServer::error_not_available(()))
+    }
+}
+
 
 /* ----------------- Basic JSON Structures ----------------- */
 
@@ -2867,10 +3026,11 @@ const _IMPL_SERIALIZE_FOR_TextDocumentPositionParams: () =
 /**
  * The initialize request is sent as the first request from the client to the server.
  */
-pub trait InitializeRequest: LanguageServerRequest<InitializeParams,
-                                                   InitializeResult,
-                                                   InitializeError> {
-    fn procedure_name(&self) -> &'static str { "initialize" }
+pub fn request__Initialize(ls: Rc<LanguageServer>)
+ ->
+     FnLanguageServerRequest<InitializeParams, InitializeResult,
+                             InitializeError> {
+    ("initialize", Box::new(move |params| { ls.initialize(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct InitializeParams {
@@ -5326,21 +5486,24 @@ const _IMPL_SERIALIZE_FOR_ServerCapabilities: () =
  * but to not exit (otherwise the response might not be delivered correctly to the client).
  * There is a separate exit notification that asks the server to exit.
  */
-pub trait ShutdownRequest: LanguageServerRequest<(), (), ()> {
-    fn procedure_name(&self) -> &'static str { "shutdown" }
+pub fn request__Shutdown(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<(), (), ()> {
+    ("shutdown", Box::new(move |params| { ls.shutdown(params) }))
 }
 /**
  * A notification to ask the server to exit its process.
  */
-pub trait ExitNotification: LanguageServerNotification<()> {
-    fn procedure_name(&self) -> &'static str { "exit" }
+pub fn notification__Exit(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<()> {
+    ("exit", Box::new(move |params| { ls.exit(params) }))
 }
 /**
  * The show message notification is sent from a server to a client to ask the client to display a particular message
  * in the user interface.
  */
-pub trait ShowMessageNotification: LanguageServerNotification<ShowMessageParams> {
-    fn procedure_name(&self) -> &'static str { "window/showMessage" }
+pub fn notification__ShowMessage(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<ShowMessageParams> {
+    ("window/showMessage", Box::new(move |params| { ls.showMessage(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct ShowMessageParams {
@@ -5741,8 +5904,10 @@ const _IMPL_SERIALIZE_FOR_MessageType: () =
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
-pub trait ShowMessageRequestNotification: LanguageServerNotification<ShowMessageRequestParams> {
-    fn procedure_name(&self) -> &'static str { "window/showMessageRequest" }
+pub fn notification__ShowMessageRequest(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<ShowMessageRequestParams> {
+    ("window/showMessageRequest",
+     Box::new(move |params| { ls.showMessageRequest(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct ShowMessageRequestParams {
@@ -6160,8 +6325,9 @@ const _IMPL_SERIALIZE_FOR_MessageActionItem: () =
 /**
  * The log message notification is sent from the server to the client to ask the client to log a particular message.
  */
-pub trait LogMessageNotification: LanguageServerNotification<LogMessageParams> {
-    fn procedure_name(&self) -> &'static str { "window/logMessage" }
+pub fn notification__LogMessage(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<LogMessageParams> {
+    ("window/logMessage", Box::new(move |params| { ls.logMessage(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct LogMessageParams {
@@ -6370,16 +6536,17 @@ const _IMPL_SERIALIZE_FOR_LogMessageParams: () =
 /**
  * The telemetry notification is sent from the server to the client to ask the client to log a telemetry event.
  */
-pub trait TelemetryEventNotification: LanguageServerNotification<any> {
-    fn procedure_name(&self) -> &'static str { "telemetry/event" }
+pub fn notification__TelemetryEvent(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<any> {
+    ("telemetry/event", Box::new(move |params| { ls.telemetryEvent(params) }))
 }
 /**
  * A notification sent from the client to the server to signal the change of configuration settings.
  */
-pub trait WorkspaceChangeConfigurationNotification: LanguageServerNotification<DidChangeConfigurationParams> {
-    fn procedure_name(&self) -> &'static str {
-        "workspace/didChangeConfiguration"
-    }
+pub fn notification__WorkspaceChangeConfiguration(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<DidChangeConfigurationParams> {
+    ("workspace/didChangeConfiguration",
+     Box::new(move |params| { ls.workspaceChangeConfiguration(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DidChangeConfigurationParams {
@@ -6555,8 +6722,10 @@ const _IMPL_SERIALIZE_FOR_DidChangeConfigurationParams: () =
  * The document's truth is now managed by the client and the server must not try to read the document's truth
  * using the document's uri.
  */
-pub trait DidOpenTextDocumentNotification: LanguageServerNotification<DidOpenTextDocumentParams> {
-    fn procedure_name(&self) -> &'static str { "textDocument/didOpen" }
+pub fn notification__DidOpenTextDocument(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<DidOpenTextDocumentParams> {
+    ("textDocument/didOpen",
+     Box::new(move |params| { ls.didOpenTextDocument(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DidOpenTextDocumentParams {
@@ -6732,8 +6901,10 @@ const _IMPL_SERIALIZE_FOR_DidOpenTextDocumentParams: () =
  * The document change notification is sent from the client to the server to signal changes to a text document.
  * In 2.0 the shape of the params has changed to include proper version numbers and language ids.
  */
-pub trait DidChangeTextDocumentNotification: LanguageServerNotification<DidChangeTextDocumentParams> {
-    fn procedure_name(&self) -> &'static str { "textDocument/didChange" }
+pub fn notification__DidChangeTextDocument(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<DidChangeTextDocumentParams> {
+    ("textDocument/didChange",
+     Box::new(move |params| { ls.didChangeTextDocument(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DidChangeTextDocumentParams {
@@ -7230,8 +7401,10 @@ const _IMPL_SERIALIZE_FOR_TextDocumentContentChangeEvent: () =
  * The document's truth now exists where the document's uri points to (e.g. if the document's uri is a file uri
  * the truth now exists on disk).
  */
-pub trait DidCloseTextDocumentNotification: LanguageServerNotification<DidCloseTextDocumentParams> {
-    fn procedure_name(&self) -> &'static str { "textDocument/didClose" }
+pub fn notification__DidCloseTextDocument(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<DidCloseTextDocumentParams> {
+    ("textDocument/didClose",
+     Box::new(move |params| { ls.didCloseTextDocument(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DidCloseTextDocumentParams {
@@ -7407,30 +7580,358 @@ const _IMPL_SERIALIZE_FOR_DidCloseTextDocumentParams: () =
 /**
  * The document save notification is sent from the client to the server when the document was saved in the client.
  */
-pub trait DidSaveTextDocumentNotification: LanguageServerNotification<DidSaveTextDocumentParams> {
-    fn procedure_name(&self) -> &'static str { "textDocument/didSave" }
+pub fn notification__DidSaveTextDocument(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<DidSaveTextDocumentParams> {
+    ("textDocument/didSave",
+     Box::new(move |params| { ls.didSaveTextDocument(params) }))
 }
+#[derive(Debug, Clone)]
 pub struct DidSaveTextDocumentParams {
     /**
      * The document that was saved.
      */
     pub textDocument: TextDocumentIdentifier,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DidSaveTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DidSaveTextDocumentParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DidSaveTextDocumentParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"textDocument" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DidSaveTextDocumentParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidSaveTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               TextDocumentIdentifier > (  ))
+                                        {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DidSaveTextDocumentParams{textDocument:
+                                                                 __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidSaveTextDocumentParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0:
+                                        Option<TextDocumentIdentifier> = None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("textDocument"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          TextDocumentIdentifier
+                                                          > (  )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "textDocument" )),
+                                    };
+                                Ok(DidSaveTextDocumentParams{textDocument:
+                                                                 __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["textDocument"];
+                    deserializer.deserialize_struct("DidSaveTextDocumentParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DidSaveTextDocumentParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DidSaveTextDocumentParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DidSaveTextDocumentParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "textDocument" , &self.textDocument
+                             ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The watched files notification is sent from the client to the server when the client detects changes to files
  * watched by the language client.
  */
-pub trait DidChangeWatchedFilesNotification: LanguageServerNotification<DidChangeWatchedFilesParams> {
-    fn procedure_name(&self) -> &'static str {
-        "workspace/didChangeWatchedFiles"
-    }
+pub fn notification__DidChangeWatchedFiles(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<DidChangeWatchedFilesParams> {
+    ("workspace/didChangeWatchedFiles",
+     Box::new(move |params| { ls.didChangeWatchedFiles(params) }))
 }
+#[derive(Debug, Clone)]
 pub struct DidChangeWatchedFilesParams {
     /**
      * The actual file events.
      */
     pub changes: Vec<FileEvent>,
 }
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_DESERIALIZE_FOR_DidChangeWatchedFilesParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::de::Deserialize for DidChangeWatchedFilesParams {
+            fn deserialize<__D>(deserializer: &mut __D)
+             -> ::std::result::Result<DidChangeWatchedFilesParams, __D::Error>
+             where __D: _serde::de::Deserializer {
+                {
+                    #[allow(non_camel_case_types)]
+                    enum __Field { __field0, __ignore, }
+                    impl _serde::de::Deserialize for __Field {
+                        #[inline]
+                        fn deserialize<__D>(deserializer: &mut __D)
+                         -> ::std::result::Result<__Field, __D::Error> where
+                         __D: _serde::de::Deserializer {
+                            struct __FieldVisitor<__D> {
+                                phantom: ::std::marker::PhantomData<__D>,
+                            }
+                            impl <__D> _serde::de::Visitor for
+                             __FieldVisitor<__D> where
+                             __D: _serde::de::Deserializer {
+                                type
+                                Value
+                                =
+                                __Field;
+                                fn visit_usize<__E>(&mut self, value: usize)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        0usize => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_str<__E>(&mut self, value: &str)
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        "changes" => { Ok(__Field::__field0) }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                                fn visit_bytes<__E>(&mut self, value: &[u8])
+                                 -> ::std::result::Result<__Field, __E> where
+                                 __E: _serde::de::Error {
+                                    match value {
+                                        b"changes" => {
+                                            Ok(__Field::__field0)
+                                        }
+                                        _ => Ok(__Field::__ignore),
+                                    }
+                                }
+                            }
+                            deserializer.deserialize_struct_field(__FieldVisitor::<__D>{phantom:
+                                                                                            ::std::marker::PhantomData,})
+                        }
+                    }
+                    struct __Visitor<__D: _serde::de::Deserializer>(::std::marker::PhantomData<__D>);
+                    impl <__D: _serde::de::Deserializer> _serde::de::Visitor
+                     for __Visitor<__D> {
+                        type
+                        Value
+                        =
+                        DidChangeWatchedFilesParams;
+                        #[inline]
+                        fn visit_seq<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidChangeWatchedFilesParams,
+                                                   __V::Error> where
+                         __V: _serde::de::SeqVisitor {
+                            {
+                                let __field0 =
+                                    match try!(visitor . visit :: <
+                                               Vec<FileEvent> > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(0usize));
+                                        }
+                                    };
+                                try!(visitor . end (  ));
+                                Ok(DidChangeWatchedFilesParams{changes:
+                                                                   __field0,})
+                            }
+                        }
+                        #[inline]
+                        fn visit_map<__V>(&mut self, mut visitor: __V)
+                         ->
+                             ::std::result::Result<DidChangeWatchedFilesParams,
+                                                   __V::Error> where
+                         __V: _serde::de::MapVisitor {
+                            {
+                                let mut __field0: Option<Vec<FileEvent>> =
+                                    None;
+                                while let Some(key) =
+                                          try!(visitor . visit_key :: <
+                                               __Field > (  )) {
+                                    match key {
+                                        __Field::__field0 => {
+                                            if __field0.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("changes"));
+                                            }
+                                            __field0 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Vec<FileEvent> > (
+                                                          )));
+                                        }
+                                        _ => {
+                                            try!(visitor . visit_value :: <
+                                                 _serde :: de :: impls ::
+                                                 IgnoredAny > (  ));
+                                        }
+                                    }
+                                }
+                                try!(visitor . end (  ));
+                                let __field0 =
+                                    match __field0 {
+                                        Some(__field0) => __field0,
+                                        None =>
+                                        try!(visitor . missing_field (
+                                             "changes" )),
+                                    };
+                                Ok(DidChangeWatchedFilesParams{changes:
+                                                                   __field0,})
+                            }
+                        }
+                    }
+                    const FIELDS: &'static [&'static str] = &["changes"];
+                    deserializer.deserialize_struct("DidChangeWatchedFilesParams",
+                                                    FIELDS,
+                                                    __Visitor::<__D>(::std::marker::PhantomData))
+                }
+            }
+        }
+    };
+#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+const _IMPL_SERIALIZE_FOR_DidChangeWatchedFilesParams: () =
+    {
+        extern crate serde as _serde;
+        #[automatically_derived]
+        impl _serde::ser::Serialize for DidChangeWatchedFilesParams {
+            fn serialize<__S>(&self, _serializer: &mut __S)
+             -> ::std::result::Result<(), __S::Error> where
+             __S: _serde::ser::Serializer {
+                {
+                    let mut state =
+                        try!(_serializer . serialize_struct (
+                             "DidChangeWatchedFilesParams" , 0 + 1 ));
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "changes" , &self.changes ));
+                    }
+                    _serializer.serialize_struct_end(state)
+                }
+            }
+        }
+    };
 /**
  * The file event type.
  */
@@ -7804,10 +8305,10 @@ const _IMPL_SERIALIZE_FOR_FileEvent: () =
 /**
  * Diagnostics notification are sent from the server to the client to signal results of validation runs.
  */
-pub trait PublishDiagnosticsNotification: LanguageServerNotification<PublishDiagnosticsParams> {
-    fn procedure_name(&self) -> &'static str {
-        "textDocument/publishDiagnostics"
-    }
+pub fn notification__PublishDiagnostics(ls: Rc<LanguageServer>)
+ -> FnLanguageServerNotification<PublishDiagnosticsParams> {
+    ("textDocument/publishDiagnostics",
+     Box::new(move |params| { ls.publishDiagnostics(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct PublishDiagnosticsParams {
@@ -8026,9 +8527,10 @@ const _IMPL_SERIALIZE_FOR_PublishDiagnosticsParams: () =
  * servers can additionally provide a handler for the completion item resolve request. 
  * This request is sent when a completion item is selected in the user interface. 
  */
-pub trait CompletionRequest: LanguageServerRequest<TextDocumentPositionParams,
-                                                   CompletionList, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/completion" }
+pub fn request__Completion(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<TextDocumentPositionParams, CompletionList, ()> {
+    ("textDocument/completion",
+     Box::new(move |params| { ls.completion(params) }))
 }
 /**
  * Represents a collection of [completion items](#CompletionItem) to be presented
@@ -9232,18 +9734,18 @@ const _IMPL_SERIALIZE_FOR_CompletionItemKind: () =
 /**
  * The request is sent from the client to the server to resolve additional information for a given completion item. 
  */
-pub trait ResolveCompletionItemRequest: LanguageServerRequest<CompletionItem,
-                                                              CompletionItem,
-                                                              ()> {
-    fn procedure_name(&self) -> &'static str { "completionItem/resolve" }
+pub fn request__ResolveCompletionItem(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<CompletionItem, CompletionItem, ()> {
+    ("completionItem/resolve",
+     Box::new(move |params| { ls.resolveCompletionItem(params) }))
 }
 /**
  * The hover request is sent from the client to the server to request hover information at a given text 
  * document position.
  */
-pub trait HoverRequest: LanguageServerRequest<TextDocumentPositionParams,
-                                              Hover, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/hover" }
+pub fn request__Hover(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<TextDocumentPositionParams, Hover, ()> {
+    ("textDocument/hover", Box::new(move |params| { ls.hover(params) }))
 }
 /**
  * The result of a hover request.
@@ -9458,9 +9960,10 @@ pub type MarkedString = string;
  * The signature help request is sent from the client to the server to request signature information at 
  * a given cursor position.
  */
-pub trait SignatureHelpRequest: LanguageServerRequest<TextDocumentPositionParams,
-                                                      SignatureHelp, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/signatureHelp" }
+pub fn request__SignatureHelp(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<TextDocumentPositionParams, SignatureHelp, ()> {
+    ("textDocument/signatureHelp",
+     Box::new(move |params| { ls.signatureHelp(params) }))
 }
 /**
  * Signature help represents the signature of something
@@ -10215,17 +10718,19 @@ const _IMPL_SERIALIZE_FOR_ParameterInformation: () =
  * The goto definition request is sent from the client to the server to resolve the definition location of 
  * a symbol at a given text document position.
  */
-pub trait GotoDefinitionRequest: LanguageServerRequest<TextDocumentPositionParams,
-                                                       Vec<Location>, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/definition" }
+pub fn request__GotoDefinition(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<TextDocumentPositionParams, Vec<Location>, ()> {
+    ("textDocument/definition",
+     Box::new(move |params| { ls.gotoDefinition(params) }))
 }
 /**
  * The references request is sent from the client to the server to resolve project-wide references for the 
  * symbol denoted by the given text document position.
  */
-pub trait ReferencesRequest: LanguageServerRequest<ReferenceParams,
-                                                   Vec<Location>, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/references" }
+pub fn request__References(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<ReferenceParams, Vec<Location>, ()> {
+    ("textDocument/references",
+     Box::new(move |params| { ls.references(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct ReferenceParams {
@@ -10557,12 +11062,12 @@ const _IMPL_SERIALIZE_FOR_ReferenceContext: () =
  * The document highlight request is sent from the client to the server to resolve a document highlights 
  * for a given text document position. 
  */
-pub trait DocumentHighlightRequest: LanguageServerRequest<TextDocumentPositionParams,
-                                                          DocumentHighlight,
-                                                          ()> {
-    fn procedure_name(&self) -> &'static str {
-        "textDocument/documentHighlight"
-    }
+pub fn request__DocumentHighlight(ls: Rc<LanguageServer>)
+ ->
+     FnLanguageServerRequest<TextDocumentPositionParams, DocumentHighlight,
+                             ()> {
+    ("textDocument/documentHighlight",
+     Box::new(move |params| { ls.documentHighlight(params) }))
 }
 /**
  * A document highlight is a range inside a text document which deserves
@@ -10945,10 +11450,12 @@ const _IMPL_SERIALIZE_FOR_DocumentHighlightKind: () =
  * The document symbol request is sent from the client to the server to list all symbols found in a given 
  * text document.
  */
-pub trait DocumentSymbolsRequest: LanguageServerRequest<DocumentSymbolParams,
-                                                        Vec<SymbolInformation>,
-                                                        ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/documentSymbol" }
+pub fn request__DocumentSymbols(ls: Rc<LanguageServer>)
+ ->
+     FnLanguageServerRequest<DocumentSymbolParams, Vec<SymbolInformation>,
+                             ()> {
+    ("textDocument/documentSymbol",
+     Box::new(move |params| { ls.documentSymbols(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DocumentSymbolParams {
@@ -11884,10 +12391,12 @@ const _IMPL_SERIALIZE_FOR_SymbolKind: () =
  * The workspace symbol request is sent from the client to the server to list project-wide symbols 
  * matching the query string.
  */
-pub trait WorkspaceSymbolsRequest: LanguageServerRequest<WorkspaceSymbolParams,
-                                                         Vec<SymbolInformation>,
-                                                         ()> {
-    fn procedure_name(&self) -> &'static str { "workspace/symbol" }
+pub fn request__WorkspaceSymbols(ls: Rc<LanguageServer>)
+ ->
+     FnLanguageServerRequest<WorkspaceSymbolParams, Vec<SymbolInformation>,
+                             ()> {
+    ("workspace/symbol",
+     Box::new(move |params| { ls.workspaceSymbols(params) }))
 }
 /**
  * The parameters of a Workspace Symbol Request.
@@ -12058,9 +12567,10 @@ const _IMPL_SERIALIZE_FOR_WorkspaceSymbolParams: () =
  * and range. The request is triggered when the user moves the cursor into a problem marker in the editor or 
  * presses the lightbulb associated with a marker.
  */
-pub trait CodeActionRequest: LanguageServerRequest<CodeActionParams,
-                                                   Vec<Command>, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/codeAction" }
+pub fn request__CodeAction(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<CodeActionParams, Vec<Command>, ()> {
+    ("textDocument/codeAction",
+     Box::new(move |params| { ls.codeAction(params) }))
 }
 /**
  * Params for the CodeActionRequest
@@ -12494,9 +13004,9 @@ const _IMPL_SERIALIZE_FOR_CodeActionContext: () =
 /**
  * The code lens request is sent from the client to the server to compute code lenses for a given text document.
  */
-pub trait CodeLensRequest: LanguageServerRequest<CodeLensParams,
-                                                 Vec<CodeLens>, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/codeLens" }
+pub fn request__CodeLens(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<CodeLensParams, Vec<CodeLens>, ()> {
+    ("textDocument/codeLens", Box::new(move |params| { ls.codeLens(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct CodeLensParams {
@@ -12916,16 +13426,18 @@ const _IMPL_SERIALIZE_FOR_CodeLens: () =
  * The code lens resolve request is sent from the client to the server to resolve the command for a 
  * given code lens item.
  */
-pub trait CodeLensResolveRequest: LanguageServerRequest<CodeLens, CodeLens,
-                                                        ()> {
-    fn procedure_name(&self) -> &'static str { "codeLens/resolve" }
+pub fn request__CodeLensResolve(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<CodeLens, CodeLens, ()> {
+    ("codeLens/resolve",
+     Box::new(move |params| { ls.codeLensResolve(params) }))
 }
 /**
  * The document formatting request is sent from the server to the client to format a whole document.
  */
-pub trait FormattingRequest: LanguageServerRequest<DocumentFormattingParams,
-                                                   Vec<TextEdit>, ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/formatting" }
+pub fn request__Formatting(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<DocumentFormattingParams, Vec<TextEdit>, ()> {
+    ("textDocument/formatting",
+     Box::new(move |params| { ls.formatting(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DocumentFormattingParams {
@@ -13360,11 +13872,12 @@ const _IMPL_SERIALIZE_FOR_FormattingOptions: () =
 /**
  * The document range formatting request is sent from the client to the server to format a given range in a document.
  */
-pub trait RangeFormattingRequest: LanguageServerRequest<DocumentRangeFormattingParams,
-                                                        Vec<TextEdit>, ()> {
-    fn procedure_name(&self) -> &'static str {
-        "textDocument/rangeFormatting"
-    }
+pub fn request__RangeFormatting(ls: Rc<LanguageServer>)
+ ->
+     FnLanguageServerRequest<DocumentRangeFormattingParams, Vec<TextEdit>,
+                             ()> {
+    ("textDocument/rangeFormatting",
+     Box::new(move |params| { ls.rangeFormatting(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DocumentRangeFormattingParams {
@@ -13633,11 +14146,12 @@ const _IMPL_SERIALIZE_FOR_DocumentRangeFormattingParams: () =
  * The document on type formatting request is sent from the client to the server to format parts of 
  * the document during typing.
  */
-pub trait OnTypeFormattingRequest: LanguageServerRequest<DocumentOnTypeFormattingParams,
-                                                         Vec<TextEdit>, ()> {
-    fn procedure_name(&self) -> &'static str {
-        "textDocument/onTypeFormatting"
-    }
+pub fn request__OnTypeFormatting(ls: Rc<LanguageServer>)
+ ->
+     FnLanguageServerRequest<DocumentOnTypeFormattingParams, Vec<TextEdit>,
+                             ()> {
+    ("textDocument/onTypeFormatting",
+     Box::new(move |params| { ls.onTypeFormatting(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct DocumentOnTypeFormattingParams {
@@ -13957,9 +14471,9 @@ const _IMPL_SERIALIZE_FOR_DocumentOnTypeFormattingParams: () =
 /**
  * The rename request is sent from the client to the server to perform a workspace-wide rename of a symbol.
  */
-pub trait RenameRequest: LanguageServerRequest<RenameParams, WorkspaceEdit,
-                                               ()> {
-    fn procedure_name(&self) -> &'static str { "textDocument/rename" }
+pub fn request__Rename(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<RenameParams, WorkspaceEdit, ()> {
+    ("textDocument/rename", Box::new(move |params| { ls.rename(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct RenameParams {

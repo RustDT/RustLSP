@@ -13,100 +13,12 @@
 
 use serde_json;
 
-use serde_json::Serializer;
 use serde_json::Map;
 use serde_json::Value;
 
 //use ::util::core::*;
 use std::result::Result;
 
-
-/* ----------------- deserialize helpers ----------------- */
-
-pub fn unwrap_object(ob: ObjectBuilder) -> Map<String, Value> {
-	match ob.build() {
-		Value::Object(o) => o ,
-		_ => { panic!() },
-	}
-}
-
-// FIXME: parameterize trait 
-trait JsonDeserializerHelper {
-	
-	fn new_request_deserialization_error(&self) -> JsonRpcError;
-	
-	fn obtain_Value(&mut self, mut json_map : &mut Map<String, Value>, key: & str) 
-		-> Result<Value, JsonRpcError> 
-	{
-		let value = json_map.remove(key);
-		match value {
-			Some(value) => { Ok(value) }, 
-			None => { return Err(self.new_request_deserialization_error()) }
-		}
-	}
-	
-	fn obtain_Value_or(&mut self, mut json_map : &mut Map<String, Value>, key: & str, default: & Fn() -> Value) 
-		-> Value 
-	{
-		if let Some(value) = json_map.remove(key) {
-			value
-		} else {
-			default()
-		}
-	}
-	
-	fn as_String(&mut self, value: Value) -> Result<String, JsonRpcError> {
-		match value {
-			Value::String(string) => Ok(string),
-			_ => Err(self.new_request_deserialization_error()),
-		}
-	}
-	
-	fn as_Map(&mut self, value: Value) -> Result<Map<String, Value>, JsonRpcError> {
-		match value {
-			Value::Object(map) => Ok(map),
-			_ => Err(self.new_request_deserialization_error()),
-		}
-	}
-	
-	fn as_u32(&mut self, value: Value) -> Result<u32, JsonRpcError> {
-		match value {
-			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
-			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
-			_ => Err(self.new_request_deserialization_error()) ,
-		}
-	}
-	
-	
-	fn obtain_String(&mut self, json_map : &mut Map<String, Value>, key: &str) 
-		-> Result<String, JsonRpcError> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_String(value)
-	}
-	
-	fn obtain_Map(&mut self, json_map : &mut Map<String, Value>, key: &str) 
-		-> Result<Map<String, Value>, JsonRpcError> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_Map(value)
-	}
-	
-	fn obtain_Map_or(&mut self, json_map : &mut Map<String, Value>, key: &str, default: & Fn() -> Map<String, Value>) 
-		-> Result<Map<String, Value>, JsonRpcError> 
-	{
-		let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
-		self.as_Map(value)
-	}
-	
-	fn obtain_u32(&mut self, json_map: &mut Map<String, Value>, key: &str) 
-		-> Result<u32, JsonRpcError> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_u32(value)
-	}
-
-}
 
 /* ----------------- JSON RPC ----------------- */
 
@@ -178,7 +90,6 @@ impl JsonDeserializerHelper for JsonRequestDeserializerHelper {
 }
 
 use serde;
-use serde::Serialize;
 
 impl serde::Serialize for RpcId {
     fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -319,6 +230,47 @@ impl JsonRpcDispatcher {
 		JsonRpcDispatcher { dispatcher_map : HashMap::new() , other : JsonRpcStreams { } }
 	}
 	
+	pub fn add_notification<METHOD_PARAMS>(
+		&mut self,
+		method : (&'static str, Box<Fn(METHOD_PARAMS)>)
+	)
+		where 
+		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review
+	{
+		let method_name: String = method.0.to_string();
+		let method_fn: Box<Fn(METHOD_PARAMS)> = method.1;
+		
+		let handler_fn : Box<DispatcherFn> = Box::new(move |_json_rpc_handler, params_map| { 
+			let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
+			let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
+			method_fn(params);
+		});
+		
+		self.dispatcher_map.insert(method_name, handler_fn);
+	}
+	
+	pub fn add_request<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR>(
+		&mut self,
+		method : (&'static str, Box<Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>>)
+	)
+		where 
+		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review
+		METHOD_RESULT: serde::Deserialize + 'static,
+		METHOD_ERROR: 'static,
+	{
+		let method_name: String = method.0.to_string();
+		let method_fn: Box<Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>> = method.1;
+		
+		let handler_fn : Box<DispatcherFn> = Box::new(move |json_rpc_handler, params_map| { 
+			let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
+			let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
+			//FIXME : handle return
+			method_fn(params);
+		});
+		
+		self.dispatcher_map.insert(method_name, handler_fn);
+	}
+	
 	pub fn dispatch(&mut self, request: JsonRpcRequest) -> JsonRpcResult<()> {
 		
 		if let Some(dispatcher_fn) = self.dispatcher_map.get(&request.method) 
@@ -333,28 +285,12 @@ impl JsonRpcDispatcher {
 }
 
 pub struct JsonRpcStreams {
-	
+	/* FIXME: review */
 }
 
 impl JsonRpcStreams {
 	
-	pub fn handle_method<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR>(
-		&mut self,
-		params: Map<String, Value>, 
-		rpc_method: &Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>
-	) -> Result<METHOD_RESULT, METHOD_ERROR>
-		where 
-		METHOD_PARAMS: serde::Deserialize,
-		METHOD_RESULT: serde::Deserialize,
-		METHOD_ERROR: serde::Deserialize,
-	{
-		let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params));
-		let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
-		rpc_method(params)
-	}
-	
 }
-
 
 /* ----------------- Test ----------------- */
 
@@ -417,4 +353,91 @@ fn parse_jsonrpc_request_json_Test() {
 			params : unwrap_object(ObjectBuilder::new())
 	});
 	
+}
+
+/* ----------------- deserialize helpers ----------------- */
+
+pub fn unwrap_object(ob: ObjectBuilder) -> Map<String, Value> {
+	match ob.build() {
+		Value::Object(o) => o ,
+		_ => { panic!() },
+	}
+}
+
+// FIXME: parameterize trait 
+trait JsonDeserializerHelper {
+	
+	fn new_request_deserialization_error(&self) -> JsonRpcError;
+	
+	fn obtain_Value(&mut self, mut json_map : &mut Map<String, Value>, key: & str) 
+		-> Result<Value, JsonRpcError> 
+	{
+		let value = json_map.remove(key);
+		match value {
+			Some(value) => { Ok(value) }, 
+			None => { return Err(self.new_request_deserialization_error()) }
+		}
+	}
+	
+	fn obtain_Value_or(&mut self, mut json_map : &mut Map<String, Value>, key: & str, default: & Fn() -> Value) 
+		-> Value 
+	{
+		if let Some(value) = json_map.remove(key) {
+			value
+		} else {
+			default()
+		}
+	}
+	
+	fn as_String(&mut self, value: Value) -> Result<String, JsonRpcError> {
+		match value {
+			Value::String(string) => Ok(string),
+			_ => Err(self.new_request_deserialization_error()),
+		}
+	}
+	
+	fn as_Map(&mut self, value: Value) -> Result<Map<String, Value>, JsonRpcError> {
+		match value {
+			Value::Object(map) => Ok(map),
+			_ => Err(self.new_request_deserialization_error()),
+		}
+	}
+	
+	fn as_u32(&mut self, value: Value) -> Result<u32, JsonRpcError> {
+		match value {
+			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
+			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
+			_ => Err(self.new_request_deserialization_error()) ,
+		}
+	}
+	
+	
+	fn obtain_String(&mut self, json_map : &mut Map<String, Value>, key: &str) 
+		-> Result<String, JsonRpcError> 
+	{
+		let value = try!(self.obtain_Value(json_map, key));
+		self.as_String(value)
+	}
+	
+	fn obtain_Map(&mut self, json_map : &mut Map<String, Value>, key: &str) 
+		-> Result<Map<String, Value>, JsonRpcError> 
+	{
+		let value = try!(self.obtain_Value(json_map, key));
+		self.as_Map(value)
+	}
+	
+	fn obtain_Map_or(&mut self, json_map : &mut Map<String, Value>, key: &str, default: & Fn() -> Map<String, Value>) 
+		-> Result<Map<String, Value>, JsonRpcError> 
+	{
+		let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
+		self.as_Map(value)
+	}
+	
+	fn obtain_u32(&mut self, json_map: &mut Map<String, Value>, key: &str) 
+		-> Result<u32, JsonRpcError> 
+	{
+		let value = try!(self.obtain_Value(json_map, key));
+		self.as_u32(value)
+	}
+
 }
