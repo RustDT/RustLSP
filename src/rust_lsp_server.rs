@@ -29,14 +29,14 @@ use std::rc::Rc;
 pub struct LSPServer<'a> {
 	
 	pub ls: Rc<LanguageServer>,
-	pub json_rpc : JsonRpcDispatcher<'a>,
+	pub json_rpc : JsonRpcEndpoint<'a>,
 	
 }
 
 impl<'a> LSPServer<'a> {
 	
 	pub fn start_new(ls: Rc<LanguageServer>, input: &mut io::BufRead, output : &mut io::Write) {
-		let mut server = LSPServer { ls : ls, json_rpc : JsonRpcDispatcher::new(output), };
+		let mut server = LSPServer { ls : ls, json_rpc : JsonRpcEndpoint::new(output), };
 		
 		initialize_methods(&mut server);
 		

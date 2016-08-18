@@ -8,13 +8,20 @@
 
 // WARNING: Rust newbie code ahead (-_-)'
 
-
 #![allow(non_upper_case_globals)]
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+
+extern crate serde_json;
+extern crate serde;
+extern crate melnorme_util as util;
+
+pub mod json_util;
+pub mod service_util;
+
+/* -----------------  ----------------- */
 
 use util::core::*;
-
-use serde;
-use serde_json;
 
 use serde_json::Map;
 use serde_json::Value;
@@ -284,18 +291,20 @@ impl JsonRpcError {
 
 pub type DispatcherFn = Fn(&mut io::Write, Map<String, Value>);
 
-pub struct JsonRpcDispatcher<'a> {
+pub struct JsonRpcEndpoint<'a> {
 	pub dispatcher_map : HashMap<String, Box<DispatcherFn>>,
 	pub output : &'a mut io::Write,
 }
 
-impl<'a> JsonRpcDispatcher<'a> {
+impl<'a> JsonRpcEndpoint<'a> {
 	
-	pub fn new(output : &'a mut io::Write) -> JsonRpcDispatcher<'a> {
-		JsonRpcDispatcher { dispatcher_map : HashMap::new() , output : output }
+	pub fn new(output : &'a mut io::Write) -> JsonRpcEndpoint<'a> {
+		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output : output }
 	}
 	
-	pub fn read_incoming_messages<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER ) -> GResult<()> {
+	pub fn read_incoming_messages<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER) 
+		-> GResult<()> 
+	{
 		loop {
 			let message = try!(input.obtain_next());
 			
@@ -500,7 +509,7 @@ fn test_JsonRpcDispatcher() {
 	use std::collections::BTreeMap;
 	
 	let mut output : Vec<u8> = vec![];
-	let mut rpc = JsonRpcDispatcher::new(&mut output);
+	let mut rpc = JsonRpcEndpoint::new(&mut output);
 	
 	let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new()); 
 	assert_eq!(rpc.dispatch(request), Err(error_JSON_RPC_MethodNotFound()));

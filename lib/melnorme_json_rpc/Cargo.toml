@@ -10,4 +10,4 @@ serde_json = "0.8"
 
 [lib]
 name = "melnorme_json_rpc"
-path = "src/lib.rs"
+path = "src/json_rpc.rs"
