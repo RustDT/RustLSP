@@ -1,5 +1,9 @@
 use ::util::core::*;
 
+pub trait Provider<T> {
+	fn obtain_next(&mut self) -> GResult<T>;
+}
+
 pub struct ServiceError<DATA> {
 	pub code : u32,
 	pub message : String,

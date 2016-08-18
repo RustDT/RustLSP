@@ -14,7 +14,8 @@ extern crate serde_json;
 
 use std::io::{self, Read, Write};
 
-use ::util::core::*;
+use util::core::*;
+use util::service::Provider;
 
 use json_rpc;
 use json_rpc::*;
@@ -40,7 +41,7 @@ impl<'a> LSPServer<'a> {
 		
 		initialize_methods(&mut server);
 		
-		let result = server.read_incoming_messages(input);
+		let result = server.read_incoming_messages(LSPMessageProvider(input));
 		match result {
 			Err(error) => { 
 				writeln!(&mut io::stderr(), "Error reading/writing the connection streams: {}", error)
@@ -50,31 +51,15 @@ impl<'a> LSPServer<'a> {
 		}
 	}
 	
-	pub fn read_incoming_messages(&mut self, input: &mut io::BufRead) -> GResult<()> {
-		loop {
-			let message = try!(parse_transport_message::<&mut _>(input));
-			
-			match self.process_message(&message) {
-				Ok(_) => {  } 
-				Err(error) => {
-					try!(error.write_out(self.rpc_dispatcher.output));
-					// TODO log 
-//					try!(output.write_fmt(format_args!("Error parsing message: "))); 
-				}
-			};
-		}
-	}
-	
-	pub fn process_message(&mut self, message: &str) -> JsonRpcResult<()> {
-		
-		let rpc_request = try!(json_rpc::parse_jsonrpc_request(message));
-		
-		try!(self.rpc_dispatcher.dispatch(rpc_request));
-		
-		Ok(())
-	}
 }
 
+struct LSPMessageProvider<'a>(&'a mut io::BufRead);
+
+impl<'a> Provider<String> for LSPMessageProvider<'a> {
+	fn obtain_next(&mut self) -> GResult<String> {
+		parse_transport_message::<&mut _>(self.0)
+	}
+}
 
 pub fn initialize_methods(lsp_handler : &mut LSPServer) {
 	let ls = &lsp_handler.ls;

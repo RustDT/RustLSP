@@ -22,8 +22,10 @@ use std::io;
 use std::collections::HashMap;
 use std::result::Result;
 
+use util::core::*;
 use util::service::ServiceError;
 use util::service::ServiceHandler;
+use util::service::Provider;
 
 pub mod json_util;
 
@@ -48,7 +50,7 @@ pub struct JsonRpcRequest {
 /// Only one of 'result' or 'error' is defined
 #[derive(Debug, PartialEq)]
 pub struct JsonRpcResponse {
-	pub id : RpcId,
+	pub id : Option<RpcId>,
 //	pub result : Option<Value>,
 //	pub error: Option<JsonRpcError>,
 	pub result_or_error: JsonRpcResult_Or_Error,
@@ -68,10 +70,26 @@ pub struct JsonRpcError {
 }
 
 impl JsonRpcError {
-	pub fn new(code : i64, message : String) -> JsonRpcError {
-		JsonRpcError { code: code, message: message, data: None }
+	
+	pub fn new(code: i64, message: String) -> JsonRpcError {
+		JsonRpcError { code : code, message : message, data : None }
 	}
+	
 }
+
+impl JsonRpcResponse {
+	
+	pub fn new_result(id: Option<RpcId>, result: Value) -> JsonRpcResponse {
+		JsonRpcResponse { id : id, result_or_error : JsonRpcResult_Or_Error::Result(result) }
+	}
+	
+	pub fn new_error(id: Option<RpcId>, error: JsonRpcError) -> JsonRpcResponse {
+		JsonRpcResponse { id : id, result_or_error : JsonRpcResult_Or_Error::Error(error) }
+	}
+	
+}
+
+/* -----------------  ----------------- */
 
 pub fn error_JSON_RPC_ParseError() -> JsonRpcError { 
 	JsonRpcError::new(-32700, "Invalid JSON was received by the server.".to_string())
@@ -242,7 +260,6 @@ pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId
 
 
 
-
 impl JsonRpcError {
 	
 	pub fn to_string(&self) -> String {
@@ -276,6 +293,30 @@ impl<'a> JsonRpcDispatcher<'a> {
 	
 	pub fn new(output : &'a mut io::Write) -> JsonRpcDispatcher<'a> {
 		JsonRpcDispatcher { dispatcher_map : HashMap::new() , output : output }
+	}
+	
+	pub fn read_incoming_messages<PROVIDER : Provider<String>>(&mut self, mut input: PROVIDER ) -> GResult<()> {
+		loop {
+			let message = try!(input.obtain_next());
+			
+			match self.process_message(&message) {
+				Ok(_) => {  } 
+				Err(error) => {
+					try!(error.write_out(self.output));
+					// TODO log 
+//					try!(output.write_fmt(format_args!("Error parsing message: "))); 
+				}
+			};
+		}
+	}
+	
+	pub fn process_message(&mut self, message: &str) -> JsonRpcResult<()> {
+		
+		let rpc_request = try!(parse_jsonrpc_request(message));
+		
+		try!(self.dispatch(rpc_request));
+		
+		Ok(())
 	}
 	
 	pub fn add_notification<METHOD_PARAMS>(
@@ -331,7 +372,7 @@ impl<'a> JsonRpcDispatcher<'a> {
 		let result_or_error = Self::handle_request2(params_map, method_fn);
 		
 		let json_response = JsonRpcResponse { 
-			id : RpcId::Number(1), // FIXME: ID
+			id : Some(RpcId::Number(1)), // FIXME: ID
 			result_or_error : result_or_error, 
 		};
 		
