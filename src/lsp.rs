@@ -10,7 +10,7 @@
 
 #![allow(non_camel_case_types)]
 
-use ::util::service::*;
+use json_rpc::service_util::*;
 
 use serde_json::Value;
 use std::collections::HashMap;

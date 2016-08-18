@@ -8,7 +8,7 @@
 
 // WARNING: Rust newbie code ahead (-_-)'
 
-use ::util::core::*;
+use core::*;
 
 use std::io;
 use std::fmt;

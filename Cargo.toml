@@ -9,6 +9,8 @@ build = "build.rs"
 serde_codegen = "0.8"
 
 [dependencies]
+melnorme_util = { path = "lib/melnorme_util" }
+melnorme_json_rpc = { path = "lib/melnorme_json_rpc" }
 serde = "0.8"
 serde_json = "0.8"
 

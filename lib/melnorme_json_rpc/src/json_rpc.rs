@@ -11,6 +11,8 @@
 
 #![allow(non_upper_case_globals)]
 
+use util::core::*;
+
 use serde;
 use serde_json;
 
@@ -22,14 +24,12 @@ use std::io;
 use std::collections::HashMap;
 use std::result::Result;
 
-use util::core::*;
-use util::service::ServiceError;
-use util::service::ServiceHandler;
-use util::service::Provider;
+use service_util::ServiceError;
+use service_util::ServiceHandler;
+use service_util::Provider;
 
-pub mod json_util;
+use json_util::*;
 
-use self::json_util::*;
 
 /* ----------------- JSON RPC ----------------- */
 
@@ -295,7 +295,7 @@ impl<'a> JsonRpcDispatcher<'a> {
 		JsonRpcDispatcher { dispatcher_map : HashMap::new() , output : output }
 	}
 	
-	pub fn read_incoming_messages<PROVIDER : Provider<String>>(&mut self, mut input: PROVIDER ) -> GResult<()> {
+	pub fn read_incoming_messages<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER ) -> GResult<()> {
 		loop {
 			let message = try!(input.obtain_next());
 			
