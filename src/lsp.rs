@@ -10,11 +10,9 @@
 
 #![allow(non_camel_case_types)]
 
-//use ::util::core::*;
+use ::util::service::*;
 
-extern crate serde_json;
-
-use self::serde_json::Value;
+use serde_json::Value;
 use std::collections::HashMap;
 
 
@@ -22,13 +20,7 @@ use std::collections::HashMap;
 // Last revision 03/08/2016
 
 
-pub struct LanguageServerError<DATA> {
-    pub error: u32,
-    pub message: String,
-    pub data: DATA,
-}
-
-pub type LSResult<RET, ERR_DATA> = Result<RET, LanguageServerError<ERR_DATA>>;
+pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
 
 pub type FnLanguageServerNotification<PARAMS> =
     (&'static str, Box<Fn(PARAMS)>);
@@ -104,11 +96,10 @@ pub struct DummyLanguageServer {
  * A no-op language server
  */
 impl DummyLanguageServer {
-    pub fn error_not_available<DATA>(data: DATA)
-     -> LanguageServerError<DATA> {
+    pub fn error_not_available<DATA>(data: DATA) -> ServiceError<DATA> {
         let msg = "Functionality not implemented.".to_string();
-        let err: LanguageServerError<DATA> =
-            LanguageServerError{error: 1, message: msg, data: data,};
+        let err: ServiceError<DATA> =
+            ServiceError{code: 1, message: msg, data: data,};
         err
     }
 }

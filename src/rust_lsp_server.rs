@@ -26,22 +26,21 @@ use std::rc::Rc;
 
 /* -----------------  ----------------- */
 
-pub struct LSPServer {
+pub struct LSPServer<'a> {
 	
 	pub ls: Rc<LanguageServer>,
-	pub rpc_dispatcher : JsonRpcDispatcher,
+	pub rpc_dispatcher : JsonRpcDispatcher<'a>,
 	
 }
 
-impl LSPServer {
+impl<'a> LSPServer<'a> {
 	
 	pub fn start_new(ls: Rc<LanguageServer>, input: &mut io::BufRead, output : &mut io::Write) {
-		let rpc_dispatcher = JsonRpcDispatcher::new();
-		let mut server = LSPServer { rpc_dispatcher : rpc_dispatcher, ls : ls };
+		let mut server = LSPServer { ls : ls, rpc_dispatcher : JsonRpcDispatcher::new(output), };
 		
 		initialize_methods(&mut server);
 		
-		let result = server.read_incoming_messages(input, output);
+		let result = server.read_incoming_messages(input);
 		match result {
 			Err(error) => { 
 				writeln!(&mut io::stderr(), "Error reading/writing the connection streams: {}", error)
@@ -51,14 +50,14 @@ impl LSPServer {
 		}
 	}
 	
-	pub fn read_incoming_messages(&mut self, input: &mut io::BufRead, output : &mut io::Write) -> GResult<()> {
+	pub fn read_incoming_messages(&mut self, input: &mut io::BufRead) -> GResult<()> {
 		loop {
 			let message = try!(parse_transport_message::<&mut _>(input));
 			
 			match self.process_message(&message) {
 				Ok(_) => {  } 
 				Err(error) => {
-					try!(error.write_out(output));
+					try!(error.write_out(self.rpc_dispatcher.output));
 					// TODO log 
 //					try!(output.write_fmt(format_args!("Error parsing message: "))); 
 				}

@@ -11,14 +11,23 @@
 
 #![allow(non_upper_case_globals)]
 
+use serde;
 use serde_json;
 
 use serde_json::Map;
 use serde_json::Value;
+use serde_json::builder::ObjectBuilder;
 
-//use ::util::core::*;
+use std::io;
+use std::collections::HashMap;
 use std::result::Result;
 
+use util::service::ServiceError;
+use util::service::ServiceHandler;
+
+pub mod json_util;
+
+use self::json_util::*;
 
 /* ----------------- JSON RPC ----------------- */
 
@@ -40,8 +49,15 @@ pub struct JsonRpcRequest {
 #[derive(Debug, PartialEq)]
 pub struct JsonRpcResponse {
 	pub id : RpcId,
-	pub result : Option<Value>,
-	pub error: Option<JsonRpcError>,
+//	pub result : Option<Value>,
+//	pub error: Option<JsonRpcError>,
+	pub result_or_error: JsonRpcResult_Or_Error,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum JsonRpcResult_Or_Error {
+	Result(Value),
+	Error(JsonRpcError)
 }
 
 #[derive(Debug, PartialEq)]
@@ -81,7 +97,7 @@ struct JsonRequestDeserializerHelper {
 	
 }
 
-impl JsonDeserializerHelper for JsonRequestDeserializerHelper {
+impl JsonDeserializerHelper<JsonRpcError> for JsonRequestDeserializerHelper {
 	
 	fn new_request_deserialization_error(&self) -> JsonRpcError {
 		return error_JSON_RPC_InvalidRequest();
@@ -89,37 +105,17 @@ impl JsonDeserializerHelper for JsonRequestDeserializerHelper {
 	
 }
 
-use serde;
-
 impl serde::Serialize for RpcId {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: serde::Serializer,
-    {
-    	match self {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer,
+	{
+		match self {
 			&RpcId::Number(number) => serializer.serialize_u64(number), 
 			&RpcId::String(ref string) => serializer.serialize_str(string),
 		}
-    }
+	}
 }
 
-
-
-impl serde::Serialize for JsonRpcRequest {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-        where S: serde::Serializer
-    {
-    	// TODO: need to investigate if struct count = 4 is actually valid when id is missing
-    	// serializing to JSON seems to not be a problem, but there might be other issues
-        let mut state = try!(serializer.serialize_struct("JsonRpcRequest", 4));
-        try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
-        if let Some(ref id) = self.id {
-        	try!(serializer.serialize_struct_elt(&mut state, "id", id));
-		}
-        try!(serializer.serialize_struct_elt(&mut state, "method", &self.method));
-        try!(serializer.serialize_struct_elt(&mut state, "params", &self.params));
-        serializer.serialize_struct_end(state)
-    }
-}
 
 // TODO: review code below, probably a way to shorten this
 impl RpcId {
@@ -128,10 +124,66 @@ impl RpcId {
 	}
 }
 impl JsonRpcRequest {
+	
+	pub fn new(id_number : u64, method : String, params : Map<String, Value>) -> JsonRpcRequest {
+		JsonRpcRequest { 	
+			id : Some(RpcId::Number(id_number)),
+			method : method,
+			params : params,
+		} 
+	}
+	
 	pub fn to_value(&self) -> Value {
 		serde_json::to_value(&self)
 	}
 }
+
+
+
+impl serde::Serialize for JsonRpcRequest {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		// TODO: need to investigate if elem_count = 4 is actually valid when id is missing
+		// serializing to JSON seems to not be a problem, but there might be other issues
+		let elem_count = 4;
+		let mut state = try!(serializer.serialize_struct("JsonRpcRequest", elem_count)); 
+		{
+			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
+			if let Some(ref id) = self.id {
+				try!(serializer.serialize_struct_elt(&mut state, "id", id));
+			}
+			try!(serializer.serialize_struct_elt(&mut state, "method", &self.method));
+			try!(serializer.serialize_struct_elt(&mut state, "params", &self.params));
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
+impl serde::Serialize for JsonRpcResponse {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		let elem_count = 2;
+		let mut state = try!(serializer.serialize_struct("JsonRpcRequest", elem_count)); {
+			
+			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
+			match self.result_or_error {
+				//FIXME: test
+				JsonRpcResult_Or_Error::Result(ref value) => {
+					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
+				}
+				JsonRpcResult_Or_Error::Error(ref json_rpc_error) => {
+					//FIXME todo
+//					try!(serializer.serialize_struct_elt(&mut state, "result", &json_rpc_error)); 
+				}
+			}
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
+/* -----------------  ----------------- */
 
 
 pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
@@ -147,7 +199,7 @@ pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
 	parse_jsonrpc_request_json(&mut json_result)
 }
 
-pub fn parse_jsonrpc_request_json(request_json: &mut Value) -> JsonRpcResult<JsonRpcRequest> {    
+pub fn parse_jsonrpc_request_json(request_json: &mut Value) -> JsonRpcResult<JsonRpcRequest> {
 	
 	let mut json_request_map : &mut Map<String, Value> =
 	match request_json {
@@ -167,7 +219,7 @@ pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut Map<String, Value>
 	}
 	let id = try!(parse_jsonrpc_request_id(request_map.remove("id")));
 	let method = try!(helper.obtain_String(&mut request_map, "method"));
-	let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| unwrap_object(ObjectBuilder::new())));
+	let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| new_object()));
 	
 	let jsonrpc_request = JsonRpcRequest { id : id, method : method, params : params}; 
 	
@@ -189,8 +241,6 @@ pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId
 }
 
 
-use std::io;
-use serde_json::builder::ObjectBuilder;
 
 
 impl JsonRpcError {
@@ -215,19 +265,17 @@ impl JsonRpcError {
 
 /* -----------------  ----------------- */
 
-use std::collections::HashMap;
+pub type DispatcherFn = Fn(&mut io::Write, Map<String, Value>);
 
-pub type DispatcherFn = Fn(&mut JsonRpcStreams, Map<String, Value>);
-
-pub struct JsonRpcDispatcher {
+pub struct JsonRpcDispatcher<'a> {
 	pub dispatcher_map : HashMap<String, Box<DispatcherFn>>,
-	pub other : JsonRpcStreams,
+	pub output : &'a mut io::Write,
 }
 
-impl JsonRpcDispatcher {
+impl<'a> JsonRpcDispatcher<'a> {
 	
-	pub fn new() -> JsonRpcDispatcher {
-		JsonRpcDispatcher { dispatcher_map : HashMap::new() , other : JsonRpcStreams { } }
+	pub fn new(output : &'a mut io::Write) -> JsonRpcDispatcher<'a> {
+		JsonRpcDispatcher { dispatcher_map : HashMap::new() , output : output }
 	}
 	
 	pub fn add_notification<METHOD_PARAMS>(
@@ -249,33 +297,94 @@ impl JsonRpcDispatcher {
 		self.dispatcher_map.insert(method_name, handler_fn);
 	}
 	
-	pub fn add_request<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR>(
+	pub fn add_request<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
 		&mut self,
-		method : (&'static str, Box<Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>>)
+		method : (&'static str, Box<ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>>)
 	)
 		where 
-		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review
-		METHOD_RESULT: serde::Deserialize + 'static,
-		METHOD_ERROR: 'static,
+		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review why 'static
+		METHOD_RESULT: serde::Serialize + 'static,
+		METHOD_ERROR_DATA: serde::Serialize + 'static,
 	{
 		let method_name: String = method.0.to_string();
-		let method_fn: Box<Fn(METHOD_PARAMS) -> Result<METHOD_RESULT, METHOD_ERROR>> = method.1;
+		let method_fn: Box<ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>> = method.1;
 		
-		let handler_fn : Box<DispatcherFn> = Box::new(move |json_rpc_handler, params_map| { 
-			let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
-			let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
-			//FIXME : handle return
-			method_fn(params);
+		let handler_fn : Box<DispatcherFn> = Box::new(move |writer : &mut io::Write, params_map| {
+			Self::handle_request(writer, params_map, method_fn.as_ref()); 
 		});
 		
 		self.dispatcher_map.insert(method_name, handler_fn);
+	}
+	
+	pub fn handle_request<WRITE, METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
+		writer: WRITE, 
+		params_map: Map<String, Value>,
+		method_fn: &ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>
+	) 
+		where 
+		WRITE: io::Write,
+		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review why 'static
+		METHOD_RESULT: serde::Serialize + 'static,
+		METHOD_ERROR_DATA: serde::Serialize + 'static,
+	{
+		// FIXME: TODO asynchronous handling
+		let result_or_error = Self::handle_request2(params_map, method_fn);
+		
+		let json_response = JsonRpcResponse { 
+			id : RpcId::Number(1), // FIXME: ID
+			result_or_error : result_or_error, 
+		};
+		
+		// FIXME: review this intermediate step
+		let mut writer : Box<io::Write> = Box::new(writer);
+		// FIXME: result
+		serde_json::to_writer(&mut writer, &json_response);
+		// TODO: log
+	}
+	
+	pub fn handle_request2<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
+		params_map: Map<String, Value>,
+		method_fn: &ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>
+	) -> JsonRpcResult_Or_Error
+		where 
+		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review why 'static
+		METHOD_RESULT: serde::Serialize + 'static,
+		METHOD_ERROR_DATA: serde::Serialize + 'static,
+	{
+		let params_result : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
+		
+		let params = 
+		if let Ok(params) = params_result {
+			params
+		} else {
+			return JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams());
+		};
+		
+		let result = method_fn(params);
+		
+		match result {
+			Ok(ret) => {
+				let ret = serde_json::to_value(&ret);
+				return JsonRpcResult_Or_Error::Result(ret); 
+			} 
+			Err(error) => {
+				let error : ServiceError<METHOD_ERROR_DATA> = error; // FIXME cleanup syntax
+				let json_rpc_error = JsonRpcError { 
+					code : error.code as i64, // FIXME review truncation
+					message : error.message,
+					data : Some(serde_json::to_value(&error.data)),
+				};
+				
+				return JsonRpcResult_Or_Error::Error(json_rpc_error);
+			}
+		}
 	}
 	
 	pub fn dispatch(&mut self, request: JsonRpcRequest) -> JsonRpcResult<()> {
 		
 		if let Some(dispatcher_fn) = self.dispatcher_map.get(&request.method) 
 		{
-			dispatcher_fn(&mut self.other, request.params);
+			dispatcher_fn(&mut self.output, request.params);
 			Ok(())
 		} else {
 			Err(error_JSON_RPC_MethodNotFound())
@@ -284,20 +393,10 @@ impl JsonRpcDispatcher {
 	
 }
 
-pub struct JsonRpcStreams {
-	/* FIXME: review */
-}
-
-impl JsonRpcStreams {
-	
-}
-
 /* ----------------- Test ----------------- */
 
 #[test]
 fn parse_jsonrpc_request_json_Test() {
-	
-	use serde_json::builder::ObjectBuilder;
 	
 	let sample_params = unwrap_object(ObjectBuilder::new()
 		.insert("param", "2.0")
@@ -314,7 +413,7 @@ fn parse_jsonrpc_request_json_Test() {
 		.insert("params", sample_params.clone())
 		.build();
 	
-	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();    
+	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();
 	assert_eq!(result, error_JSON_RPC_InvalidRequest());
 	
 	// Test invalid JsonRpcRequest 2 - jsonrpc 1.0
@@ -325,7 +424,7 @@ fn parse_jsonrpc_request_json_Test() {
 		.insert("params", sample_params.clone())
 		.build();
 	
-	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();    
+	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();
 	assert_eq!(result, error_JSON_RPC_InvalidRequest());
 	
 	// Test basic JsonRpcRequest
@@ -343,7 +442,6 @@ fn parse_jsonrpc_request_json_Test() {
 		.insert("jsonrpc", "2.0")
 		.insert("id", 1)
 		.insert("method", "myMethod")
-//		.insert("params", sample_params.clone())
 		.build();
 	
 	let result = parse_jsonrpc_request_json(&mut request).unwrap();
@@ -355,89 +453,26 @@ fn parse_jsonrpc_request_json_Test() {
 	
 }
 
-/* ----------------- deserialize helpers ----------------- */
-
-pub fn unwrap_object(ob: ObjectBuilder) -> Map<String, Value> {
-	match ob.build() {
-		Value::Object(o) => o ,
-		_ => { panic!() },
-	}
-}
-
-// FIXME: parameterize trait 
-trait JsonDeserializerHelper {
+#[test]
+fn test_JsonRpcDispatcher() {
 	
-	fn new_request_deserialization_error(&self) -> JsonRpcError;
+	use std::collections::BTreeMap;
 	
-	fn obtain_Value(&mut self, mut json_map : &mut Map<String, Value>, key: & str) 
-		-> Result<Value, JsonRpcError> 
-	{
-		let value = json_map.remove(key);
-		match value {
-			Some(value) => { Ok(value) }, 
-			None => { return Err(self.new_request_deserialization_error()) }
-		}
-	}
+	let mut output : Vec<u8> = vec![];
+	let mut rpc = JsonRpcDispatcher::new(&mut output);
 	
-	fn obtain_Value_or(&mut self, mut json_map : &mut Map<String, Value>, key: & str, default: & Fn() -> Value) 
-		-> Value 
-	{
-		if let Some(value) = json_map.remove(key) {
-			value
-		} else {
-			default()
-		}
-	}
-	
-	fn as_String(&mut self, value: Value) -> Result<String, JsonRpcError> {
-		match value {
-			Value::String(string) => Ok(string),
-			_ => Err(self.new_request_deserialization_error()),
-		}
-	}
-	
-	fn as_Map(&mut self, value: Value) -> Result<Map<String, Value>, JsonRpcError> {
-		match value {
-			Value::Object(map) => Ok(map),
-			_ => Err(self.new_request_deserialization_error()),
-		}
-	}
-	
-	fn as_u32(&mut self, value: Value) -> Result<u32, JsonRpcError> {
-		match value {
-			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
-			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
-			_ => Err(self.new_request_deserialization_error()) ,
-		}
-	}
+	let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new()); 
+	assert_eq!(rpc.dispatch(request), Err(error_JSON_RPC_MethodNotFound()));
 	
 	
-	fn obtain_String(&mut self, json_map : &mut Map<String, Value>, key: &str) 
-		-> Result<String, JsonRpcError> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_String(value)
-	}
+	let handler : Box<Fn(Vec<u32>) -> Result<String, ServiceError<()>>> = Box::new(move |params| {
+		let params : Vec<u32> = params;
+		let len : usize = params.len();
+		let ret : String = len.to_string();
+		Ok(ret)
+	});
+	rpc.add_request(("my_method", handler));
 	
-	fn obtain_Map(&mut self, json_map : &mut Map<String, Value>, key: &str) 
-		-> Result<Map<String, Value>, JsonRpcError> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_Map(value)
-	}
-	
-	fn obtain_Map_or(&mut self, json_map : &mut Map<String, Value>, key: &str, default: & Fn() -> Map<String, Value>) 
-		-> Result<Map<String, Value>, JsonRpcError> 
-	{
-		let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
-		self.as_Map(value)
-	}
-	
-	fn obtain_u32(&mut self, json_map: &mut Map<String, Value>, key: &str) 
-		-> Result<u32, JsonRpcError> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_u32(value)
-	}
-
+	let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
+	assert_eq!(rpc.dispatch(request), Err(error_JSON_RPC_InvalidParams()));
 }
