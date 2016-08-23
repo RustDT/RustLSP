@@ -8,6 +8,9 @@ melnorme_util = { path = "../melnorme_util", version = "0.1.0" }
 serde = "0.8"
 serde_json = "0.8"
 
+[dev-dependencies]
+melnorme_util = { path = "../melnorme_util", features = ["test_utils"] }
+
 [lib]
 name = "melnorme_json_rpc"
 path = "src/json_rpc.rs"
