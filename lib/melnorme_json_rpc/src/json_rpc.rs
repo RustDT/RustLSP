@@ -384,10 +384,16 @@ impl<'a> JsonRpcEndpoint<'a> {
 		let method_fn: Box<Fn(METHOD_PARAMS)> = method.1;
 		
 		let handler_fn : Box<DispatcherFn> = Box::new(move |params_map| { 
-			let params : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
-			let params : METHOD_PARAMS = params.unwrap(); /* FIXME: */
-			method_fn(params);
-			None
+			let params_res : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
+			match params_res {
+				Ok(params) => { 
+					method_fn(params);
+					None
+				} 
+				Err(error) => {
+					return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams()));
+				}
+			}
 		});
 		
 		self.dispatcher_map.insert(method_name, handler_fn);
@@ -402,16 +408,39 @@ impl<'a> JsonRpcEndpoint<'a> {
 		METHOD_RESULT: serde::Serialize + 'static,
 		METHOD_ERROR_DATA: serde::Serialize + 'static,
 	{
+		let request_method = RpcRequest { method_fn : method.1 };
+		self.add_request2((method.0, request_method));
+	}
+	
+	pub fn add_request2<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
+		&mut self,
+		method: (&'static str, RpcRequest<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>)
+	)
+		where 
+		METHOD_PARAMS: serde::Deserialize + 'static,
+		METHOD_RESULT: serde::Serialize + 'static,
+		METHOD_ERROR_DATA: serde::Serialize + 'static,
+	{
 		let method_name: String = method.0.to_string();
-		let method_fn: Box<ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>> = method.1;
+		let request_method = method.1;
 		
 		let handler_fn : Box<DispatcherFn> = Box::new(move |params_map| {
-			Self::handle_request(params_map, method_fn.as_ref())
+			handle_request(params_map, request_method.method_fn.as_ref())
 		});
 		
 		self.dispatcher_map.insert(method_name, handler_fn);
 	}
-	
+}
+
+pub struct RpcRequest<
+	METHOD_PARAMS : serde::Deserialize + 'static, 
+	METHOD_RESULT : serde::Serialize + 'static, 
+	METHOD_ERROR_DATA : serde::Serialize + 'static
+>
+{
+	pub method_fn: Box<ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>>
+}
+
 	pub fn handle_request<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
 		params_map: Map<String, Value>,
 		method_fn: &ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>
@@ -449,8 +478,6 @@ impl<'a> JsonRpcEndpoint<'a> {
 			}
 		}
 	}
-	
-}
 
 /* ----------------- Test ----------------- */
 
