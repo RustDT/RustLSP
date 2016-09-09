@@ -378,7 +378,7 @@ impl<'a> JsonRpcEndpoint<'a> {
 		method: (&'static str, Box<Fn(METHOD_PARAMS)>)
 	)
 		where 
-		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review
+		METHOD_PARAMS: serde::Deserialize + 'static,
 	{
 		let method_name: String = method.0.to_string();
 		let method_fn: Box<Fn(METHOD_PARAMS)> = method.1;
@@ -398,7 +398,7 @@ impl<'a> JsonRpcEndpoint<'a> {
 		method: (&'static str, Box<ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>>)
 	)
 		where 
-		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review why 'static
+		METHOD_PARAMS: serde::Deserialize + 'static,
 		METHOD_RESULT: serde::Serialize + 'static,
 		METHOD_ERROR_DATA: serde::Serialize + 'static,
 	{
@@ -417,9 +417,9 @@ impl<'a> JsonRpcEndpoint<'a> {
 		method_fn: &ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>
 	) -> Option<JsonRpcResult_Or_Error>
 		where 
-		METHOD_PARAMS: serde::Deserialize + 'static, // FIXME review why 'static
-		METHOD_RESULT: serde::Serialize + 'static,
-		METHOD_ERROR_DATA: serde::Serialize + 'static,
+		METHOD_PARAMS: serde::Deserialize,
+		METHOD_RESULT: serde::Serialize,
+		METHOD_ERROR_DATA: serde::Serialize,
 	{
 		let params_result : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
 		
@@ -556,7 +556,6 @@ fn test_JsonRpcEndpoint() {
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params);
 		assert_equal(result, Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams())));
-		
 		
 		let params_value = match serde_json::to_value(&new_sample_params(10, 20)) {
 			Value::Object(object) => object, 
