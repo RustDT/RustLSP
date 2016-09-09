@@ -11,8 +11,11 @@
 #![allow(non_camel_case_types)]
 
 use json_rpc::service_util::*;
+use json_rpc::RpcRequest;
+use json_rpc::RpcNotification;
 
 use serde_json::Value;
+use serde;
 use std::collections::HashMap;
 
 
@@ -23,10 +26,26 @@ use std::collections::HashMap;
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
 
 pub type FnLanguageServerNotification<PARAMS> = 
-	(&'static str, Box<Fn(PARAMS)>);
+	(&'static str, RpcNotification<PARAMS>);
 pub type FnLanguageServerRequest<PARAMS, RET, ERR> = 
-	(&'static str, Box<Fn(PARAMS) -> LSResult<RET, ERR>>);
+	(&'static str, RpcRequest<PARAMS, RET, ERR>);
 
+
+fn notification<
+	PARAMS : serde::Deserialize + 'static, 
+>(name: &'static str, method_fn: Box<Fn(PARAMS)>) 
+-> (&'static str, RpcNotification<PARAMS>) {
+	(name, RpcNotification { method_fn : method_fn } )
+}
+
+fn request<
+	PARAMS : serde::Deserialize + 'static, 
+	RET: serde::Serialize + 'static, 
+	ERR : serde::Serialize + 'static
+>(name: &'static str, method_fn: Box<Fn(PARAMS) -> LSResult<RET, ERR>>) 
+-> (&'static str, RpcRequest<PARAMS, RET, ERR>) {
+	(name, RpcRequest { method_fn : method_fn } )
+}
 
 use std::rc::Rc;
 
@@ -393,7 +412,7 @@ pub struct TextDocumentPositionParams {
 pub fn request__Initialize(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<InitializeParams, InitializeResult, InitializeError> 
 {
-	("initialize", Box::new(move |params| {
+	request("initialize", Box::new(move |params| {
 		ls.initialize(params) 
 	}))
 }
@@ -594,7 +613,7 @@ pub struct ServerCapabilities {
 pub fn request__Shutdown(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<(), (), ()> 
 {
-	("shutdown", Box::new(move |params| {
+	request("shutdown", Box::new(move |params| {
 		ls.shutdown(params) 
 	}))
 }
@@ -605,7 +624,7 @@ pub fn request__Shutdown(ls : Rc<LanguageServer>)
 pub fn notification__Exit(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<()> 
 {
-	("exit", Box::new(move |params| {
+	notification("exit", Box::new(move |params| {
 		ls.exit(params) 
 	}))
 }
@@ -617,7 +636,7 @@ pub fn notification__Exit(ls : Rc<LanguageServer>)
 pub fn notification__ShowMessage(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<ShowMessageParams> 
 {
-	("window/showMessage", Box::new(move |params| {
+	notification("window/showMessage", Box::new(move |params| {
 		ls.showMessage(params) 
 	}))
 }
@@ -664,7 +683,7 @@ pub enum MessageType {
 pub fn notification__ShowMessageRequest(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<ShowMessageRequestParams> 
 {
-	("window/showMessageRequest", Box::new(move |params| {
+	notification("window/showMessageRequest", Box::new(move |params| {
 		ls.showMessageRequest(params) 
 	}))
 }
@@ -702,7 +721,7 @@ pub struct MessageActionItem {
 pub fn notification__LogMessage(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<LogMessageParams> 
 {
-	("window/logMessage", Box::new(move |params| {
+	notification("window/logMessage", Box::new(move |params| {
 		ls.logMessage(params) 
 	}))
 }
@@ -727,7 +746,7 @@ pub struct LogMessageParams {
 pub fn notification__TelemetryEvent(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<any> 
 {
-	("telemetry/event", Box::new(move |params| {
+	notification("telemetry/event", Box::new(move |params| {
 		ls.telemetryEvent(params) 
 	}))
 }
@@ -738,7 +757,7 @@ pub fn notification__TelemetryEvent(ls : Rc<LanguageServer>)
 pub fn notification__WorkspaceChangeConfiguration(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<DidChangeConfigurationParams> 
 {
-	("workspace/didChangeConfiguration", Box::new(move |params| {
+	notification("workspace/didChangeConfiguration", Box::new(move |params| {
 		ls.workspaceChangeConfiguration(params) 
 	}))
 }
@@ -761,7 +780,7 @@ pub struct DidChangeConfigurationParams {
 pub fn notification__DidOpenTextDocument(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<DidOpenTextDocumentParams> 
 {
-	("textDocument/didOpen", Box::new(move |params| {
+	notification("textDocument/didOpen", Box::new(move |params| {
 		ls.didOpenTextDocument(params) 
 	}))
 }
@@ -781,7 +800,7 @@ pub struct DidOpenTextDocumentParams {
 pub fn notification__DidChangeTextDocument(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<DidChangeTextDocumentParams> 
 {
-	("textDocument/didChange", Box::new(move |params| {
+	notification("textDocument/didChange", Box::new(move |params| {
 		ls.didChangeTextDocument(params) 
 	}))
 }
@@ -832,7 +851,7 @@ pub struct TextDocumentContentChangeEvent {
 pub fn notification__DidCloseTextDocument(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<DidCloseTextDocumentParams> 
 {
-	("textDocument/didClose", Box::new(move |params| {
+	notification("textDocument/didClose", Box::new(move |params| {
 		ls.didCloseTextDocument(params) 
 	}))
 }
@@ -851,7 +870,7 @@ pub struct DidCloseTextDocumentParams {
 pub fn notification__DidSaveTextDocument(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<DidSaveTextDocumentParams> 
 {
-	("textDocument/didSave", Box::new(move |params| {
+	notification("textDocument/didSave", Box::new(move |params| {
 		ls.didSaveTextDocument(params) 
 	}))
 }
@@ -871,7 +890,7 @@ pub struct DidSaveTextDocumentParams {
 pub fn notification__DidChangeWatchedFiles(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<DidChangeWatchedFilesParams> 
 {
-	("workspace/didChangeWatchedFiles", Box::new(move |params| {
+	notification("workspace/didChangeWatchedFiles", Box::new(move |params| {
 		ls.didChangeWatchedFiles(params) 
 	}))
 }
@@ -925,7 +944,7 @@ pub struct FileEvent {
 pub fn notification__PublishDiagnostics(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<PublishDiagnosticsParams> 
 {
-	("textDocument/publishDiagnostics", Box::new(move |params| {
+	notification("textDocument/publishDiagnostics", Box::new(move |params| {
 		ls.publishDiagnostics(params) 
 	}))
 }
@@ -953,7 +972,7 @@ pub fn request__Completion(ls : Rc<LanguageServer>)
 // result: CompletionItem[] | CompletionList FIXME
 	-> FnLanguageServerRequest<TextDocumentPositionParams, CompletionList, ()> 
 {
-	("textDocument/completion", Box::new(move |params| {
+	request("textDocument/completion", Box::new(move |params| {
 		ls.completion(params) 
 	}))
 }
@@ -1058,7 +1077,7 @@ pub enum CompletionItemKind {
 pub fn request__ResolveCompletionItem(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<CompletionItem, CompletionItem, ()>
 {
-	("completionItem/resolve", Box::new(move |params| {
+	request("completionItem/resolve", Box::new(move |params| {
 		ls.resolveCompletionItem(params) 
 	}))
 }
@@ -1071,7 +1090,7 @@ pub fn request__ResolveCompletionItem(ls : Rc<LanguageServer>)
 pub fn request__Hover(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<TextDocumentPositionParams, Hover, ()>
 {
-	("textDocument/hover", Box::new(move |params| {
+	request("textDocument/hover", Box::new(move |params| {
 		ls.hover(params) 
 	}))
 }
@@ -1103,7 +1122,7 @@ pub type MarkedString = string; /* FIXME: todo*/
 pub fn request__SignatureHelp(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<TextDocumentPositionParams, SignatureHelp, ()>
 {
-	("textDocument/signatureHelp", Box::new(move |params| {
+	request("textDocument/signatureHelp", Box::new(move |params| {
 		ls.signatureHelp(params) 
 	}))
 }
@@ -1184,7 +1203,7 @@ pub struct ParameterInformation {
 pub fn request__GotoDefinition(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<TextDocumentPositionParams, Vec<Location>, ()>
 {
-	("textDocument/definition", Box::new(move |params| {
+	request("textDocument/definition", Box::new(move |params| {
 		ls.gotoDefinition(params) 
 	}))
 }
@@ -1196,7 +1215,7 @@ pub fn request__GotoDefinition(ls : Rc<LanguageServer>)
 pub fn request__References(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<ReferenceParams, Vec<Location>, ()> 
 {
-	("textDocument/references", Box::new(move |params| {
+	request("textDocument/references", Box::new(move |params| {
 		ls.references(params) 
 	}))
 }
@@ -1224,7 +1243,7 @@ pub struct ReferenceContext {
 pub fn request__DocumentHighlight(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<TextDocumentPositionParams, DocumentHighlight, ()>
 {
-	("textDocument/documentHighlight", Box::new(move |params| {
+	request("textDocument/documentHighlight", Box::new(move |params| {
 		ls.documentHighlight(params) 
 	}))
 }
@@ -1275,7 +1294,7 @@ pub enum DocumentHighlightKind {
 pub fn request__DocumentSymbols(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<DocumentSymbolParams, Vec<SymbolInformation>, ()>
 {
-	("textDocument/documentSymbol", Box::new(move |params| {
+	request("textDocument/documentSymbol", Box::new(move |params| {
 		ls.documentSymbols(params) 
 	}))
 }
@@ -1347,7 +1366,7 @@ pub enum SymbolKind {
 pub fn request__WorkspaceSymbols(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<WorkspaceSymbolParams, Vec<SymbolInformation>, ()>
 {
-	("workspace/symbol", Box::new(move |params| {
+	request("workspace/symbol", Box::new(move |params| {
 		ls.workspaceSymbols(params) 
 	}))
 }
@@ -1371,7 +1390,7 @@ pub struct WorkspaceSymbolParams {
 pub fn request__CodeAction(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<CodeActionParams, Vec<Command>, ()>
 {
-	("textDocument/codeAction", Box::new(move |params| {
+	request("textDocument/codeAction", Box::new(move |params| {
 		ls.codeAction(params) 
 	}))
 }
@@ -1415,7 +1434,7 @@ pub struct CodeActionContext {
 pub fn request__CodeLens(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<CodeLensParams, Vec<CodeLens>, ()>
 {
-	("textDocument/codeLens", Box::new(move |params| {
+	request("textDocument/codeLens", Box::new(move |params| {
 		ls.codeLens(params) 
 	}))
 }
@@ -1463,7 +1482,7 @@ pub struct CodeLens {
 pub fn request__CodeLensResolve(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<CodeLens, CodeLens, ()> 
 {
-	("codeLens/resolve", Box::new(move |params| {
+	request("codeLens/resolve", Box::new(move |params| {
 		ls.codeLensResolve(params) 
 	}))
 }
@@ -1474,7 +1493,7 @@ pub fn request__CodeLensResolve(ls : Rc<LanguageServer>)
 pub fn request__Formatting(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<DocumentFormattingParams, Vec<TextEdit>, ()>
 {
-	("textDocument/formatting", Box::new(move |params| {
+	request("textDocument/formatting", Box::new(move |params| {
 		ls.formatting(params) 
 	}))
 }
@@ -1521,7 +1540,7 @@ pub struct FormattingOptions {
 pub fn request__RangeFormatting(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<DocumentRangeFormattingParams, Vec<TextEdit>, ()> 
 {
-	("textDocument/rangeFormatting", Box::new(move |params| {
+	request("textDocument/rangeFormatting", Box::new(move |params| {
 		ls.rangeFormatting(params) 
 	}))
 }
@@ -1551,7 +1570,7 @@ pub struct DocumentRangeFormattingParams {
 pub fn request__OnTypeFormatting(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<DocumentOnTypeFormattingParams, Vec<TextEdit>, ()> 
 {
-	("textDocument/onTypeFormatting", Box::new(move |params| {
+	request("textDocument/onTypeFormatting", Box::new(move |params| {
 		ls.onTypeFormatting(params) 
 	}))
 }
@@ -1585,7 +1604,7 @@ pub struct DocumentOnTypeFormattingParams {
 pub fn request__Rename(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<RenameParams, WorkspaceEdit, ()> 
 {
-	("textDocument/rename", Box::new(move |params| {
+	request("textDocument/rename", Box::new(move |params| {
 		ls.rename(params) 
 	}))
 }

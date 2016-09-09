@@ -63,40 +63,47 @@ impl<'a> Provider<String, GError> for LSPMessageProvider<'a> {
 pub fn initialize_methods(lsp_handler : &mut LSPServer) {
 	let ls = &lsp_handler.ls;
 	
-	lsp_handler.json_rpc.add_request(lsp::request__Initialize(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__Shutdown(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__Initialize(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__Shutdown(ls.clone()));
 	
-	lsp_handler.json_rpc.add_notification(lsp::notification__Exit(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__Exit(ls.clone()));
 	
-	lsp_handler.json_rpc.add_notification(lsp::notification__ShowMessage(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__ShowMessageRequest(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__LogMessage(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__TelemetryEvent(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__WorkspaceChangeConfiguration(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__DidOpenTextDocument(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__DidChangeTextDocument(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__DidCloseTextDocument(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__DidSaveTextDocument(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__DidChangeWatchedFiles(ls.clone()));
-	lsp_handler.json_rpc.add_notification(lsp::notification__PublishDiagnostics(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__ShowMessage(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__ShowMessageRequest(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__LogMessage(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__TelemetryEvent(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__WorkspaceChangeConfiguration(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__DidOpenTextDocument(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__DidChangeTextDocument(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__DidCloseTextDocument(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__DidSaveTextDocument(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__DidChangeWatchedFiles(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::notification__PublishDiagnostics(ls.clone()));
 	
-	lsp_handler.json_rpc.add_request(lsp::request__Completion(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__ResolveCompletionItem(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__Hover(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__SignatureHelp(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__GotoDefinition(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__References(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__DocumentHighlight(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__DocumentSymbols(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__WorkspaceSymbols(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__CodeAction(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__CodeLens(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__CodeLensResolve(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__Formatting(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__RangeFormatting(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__OnTypeFormatting(ls.clone()));
-	lsp_handler.json_rpc.add_request(lsp::request__Rename(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__Completion(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__ResolveCompletionItem(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__Hover(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__SignatureHelp(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__GotoDefinition(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__References(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__DocumentHighlight(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__DocumentSymbols(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__WorkspaceSymbols(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__CodeAction(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__CodeLens(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__CodeLensResolve(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__Formatting(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__RangeFormatting(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__OnTypeFormatting(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__Rename(ls.clone()));
 	
+}
+
+pub fn add_handler<REQUEST_HANDLER : HandleRpcRequest + 'static>(
+	endpoint : &mut JsonRpcEndpoint,
+	method: (&'static str, REQUEST_HANDLER)
+){
+	endpoint.add_rpc_handler(method.0, method.1);
 }
 
 /* ----------------- Parse content-length ----------------- */

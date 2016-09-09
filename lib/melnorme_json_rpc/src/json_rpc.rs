@@ -373,84 +373,106 @@ impl<'a> JsonRpcEndpoint<'a> {
 		}
 	}
 	
-	pub fn add_notification<METHOD_PARAMS>(
+	pub fn add_notification<
+		PARAMS : serde::Deserialize + 'static,
+	>(
 		&mut self,
-		method: (&'static str, Box<Fn(METHOD_PARAMS)>)
-	)
-		where 
-		METHOD_PARAMS: serde::Deserialize + 'static,
-	{
-		let method_name: String = method.0.to_string();
-		let method_fn: Box<Fn(METHOD_PARAMS)> = method.1;
-		
-		let handler_fn : Box<DispatcherFn> = Box::new(move |params_map| { 
-			let params_res : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
-			match params_res {
-				Ok(params) => { 
-					method_fn(params);
-					None
-				} 
-				Err(error) => {
-					return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams()));
-				}
-			}
-		});
-		
-		self.dispatcher_map.insert(method_name, handler_fn);
+		method_name: &'static str, 
+		method_fn: Box<Fn(PARAMS)>
+	) {
+		self.add_rpc_handler(method_name, RpcNotification { method_fn : method_fn });
 	}
 	
-	pub fn add_request<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
+	pub fn add_request<
+		PARAMS : serde::Deserialize + 'static, 
+		RET : serde::Serialize + 'static, 
+		RET_ERROR : serde::Serialize + 'static
+	>(
 		&mut self,
-		method: (&'static str, Box<ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>>)
-	)
-		where 
-		METHOD_PARAMS: serde::Deserialize + 'static,
-		METHOD_RESULT: serde::Serialize + 'static,
-		METHOD_ERROR_DATA: serde::Serialize + 'static,
-	{
-		let request_method = RpcRequest { method_fn : method.1 };
-		self.add_request2((method.0, request_method));
+		method_name: &'static str, 
+		method_fn: Box<ServiceHandler<PARAMS, RET, RET_ERROR>>
+	) {
+		self.add_rpc_handler(method_name, RpcRequest { method_fn : method_fn });
 	}
 	
-	pub fn add_request2<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
+	pub fn add_rpc_handler<REQUEST_HANDLER>(
 		&mut self,
-		method: (&'static str, RpcRequest<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>)
+		method_name: &'static str,
+		request_method: REQUEST_HANDLER
 	)
-		where 
-		METHOD_PARAMS: serde::Deserialize + 'static,
-		METHOD_RESULT: serde::Serialize + 'static,
-		METHOD_ERROR_DATA: serde::Serialize + 'static,
+		where REQUEST_HANDLER: HandleRpcRequest + 'static,
 	{
-		let method_name: String = method.0.to_string();
-		let request_method = method.1;
-		
 		let handler_fn : Box<DispatcherFn> = Box::new(move |params_map| {
-			handle_request(params_map, request_method.method_fn.as_ref())
+			request_method.handle_jsonrpc_request(params_map)
 		});
 		
-		self.dispatcher_map.insert(method_name, handler_fn);
+		self.dispatcher_map.insert(method_name.to_string(), handler_fn);
 	}
+}
+
+/* -----------------  ----------------- */
+
+pub trait HandleRpcRequest {
+	
+	fn handle_jsonrpc_request(&self, params_map: Map<String, Value>) -> Option<JsonRpcResult_Or_Error>;
+	
 }
 
 pub struct RpcRequest<
-	METHOD_PARAMS : serde::Deserialize + 'static, 
-	METHOD_RESULT : serde::Serialize + 'static, 
-	METHOD_ERROR_DATA : serde::Serialize + 'static
->
-{
-	pub method_fn: Box<ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>>
+	PARAMS : serde::Deserialize + 'static, 
+	RET: serde::Serialize + 'static, 
+	RET_ERROR : serde::Serialize + 'static
+> {
+	pub method_fn: Box<ServiceHandler<PARAMS, RET, RET_ERROR>>
 }
 
-	pub fn handle_request<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>(
+impl<
+	PARAMS : serde::Deserialize + 'static, 
+	RET : serde::Serialize + 'static, 
+	RET_ERROR : serde::Serialize + 'static
+> HandleRpcRequest for RpcRequest<PARAMS, RET, RET_ERROR> {
+	
+	fn handle_jsonrpc_request(&self, params_map: Map<String, Value>) -> Option<JsonRpcResult_Or_Error> {
+		handle_request(params_map, self.method_fn.as_ref())
+	}
+	
+}
+
+
+pub struct RpcNotification<
+	PARAMS : serde::Deserialize + 'static, 
+> {
+	pub method_fn: Box<Fn(PARAMS)>
+}
+impl<
+	PARAMS : serde::Deserialize + 'static, 
+> HandleRpcRequest for RpcNotification<PARAMS> {
+	
+	fn handle_jsonrpc_request(&self, params_map: Map<String, Value>) -> Option<JsonRpcResult_Or_Error> {
+		let params_res : Result<PARAMS, _> = serde_json::from_value(Value::Object(params_map));
+		match params_res {
+			Ok(params) => { 
+				(self.method_fn)(params);
+				None
+			} 
+			Err(error) => {
+				return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams()));
+			}
+		}
+	}
+	
+}
+
+	pub fn handle_request<PARAMS, RET, RET_ERROR>(
 		params_map: Map<String, Value>,
-		method_fn: &ServiceHandler<METHOD_PARAMS, METHOD_RESULT, METHOD_ERROR_DATA>
+		method_fn: &ServiceHandler<PARAMS, RET, RET_ERROR>
 	) -> Option<JsonRpcResult_Or_Error>
 		where 
-		METHOD_PARAMS: serde::Deserialize,
-		METHOD_RESULT: serde::Serialize,
-		METHOD_ERROR_DATA: serde::Serialize,
+		PARAMS : serde::Deserialize, 
+		RET : serde::Serialize, 
+		RET_ERROR : serde::Serialize
 	{
-		let params_result : Result<METHOD_PARAMS, _> = serde_json::from_value(Value::Object(params_map));
+		let params_result : Result<PARAMS, _> = serde_json::from_value(Value::Object(params_map));
 		
 		let params = 
 		if let Ok(params) = params_result {
@@ -467,7 +489,7 @@ pub struct RpcRequest<
 				return Some(JsonRpcResult_Or_Error::Result(ret)); 
 			} 
 			Err(error) => {
-				let error : ServiceError<METHOD_ERROR_DATA> = error; // FIXME cleanup syntax
+				let error : ServiceError<RET_ERROR> = error; // FIXME cleanup syntax
 				let json_rpc_error = JsonRpcError { 
 					code : error.code as i64, // FIXME review truncation
 					message : error.message,
@@ -578,7 +600,7 @@ fn test_JsonRpcEndpoint() {
 		let mut output : Vec<u8> = vec![];
 		let mut rpc = JsonRpcEndpoint::new(&mut output);
 		let handler = Box::new(sample_fn);
-		rpc.add_request(("my_method", handler));
+		rpc.add_request("my_method", handler);
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params);
