@@ -337,9 +337,13 @@ pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse
 
 impl JsonRpcEndpoint {
 	
-	pub fn new<T : io::Write + Send + 'static>(out_stream : Box<T>) -> JsonRpcEndpoint {
-		
-		let output_agent = OutputAgent::new(out_stream);
+	pub fn spawn_new<OUT, OUT_P>(out_stream_provider: OUT_P) 
+		-> JsonRpcEndpoint
+	where 
+		OUT: io::Write + 'static, 
+		OUT_P : FnOnce() ->Box<OUT> + Send + 'static 
+	{
+		let output_agent = OutputAgent::spawn_new(out_stream_provider);
 		
 		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output_agent : output_agent }
 	}
@@ -433,15 +437,6 @@ impl JsonRpcEndpoint {
 	}
 }
 
-impl Drop for JsonRpcEndpoint {
-	
-	fn drop(&mut self) {
-		assert!(self.is_shutdown());
-		// We shutdown ourselves, but I don't that a good style to do in drop,
-		// since shutdown should join with thread
-	}
-	
-}
 
 /* -----------------  ----------------- */
 
@@ -617,8 +612,8 @@ fn test_JsonRpcEndpoint() {
 	/* -----------------  ----------------- */
 	
 	{
-		let mut output : Vec<u8> = vec![];
-		let mut rpc = JsonRpcEndpoint::new(Box::new(output));
+		let output = new(vec![]);
+		let mut rpc = JsonRpcEndpoint::spawn_new(move || output);
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params);
@@ -629,8 +624,8 @@ fn test_JsonRpcEndpoint() {
 	}
 	
 	{
-		let mut output : Vec<u8> = vec![];
-		let mut rpc = JsonRpcEndpoint::new(Box::new(output));
+		let output = new(vec![]);
+		let mut rpc = JsonRpcEndpoint::spawn_new(move || output);
 		let handler = Box::new(sample_fn);
 		rpc.add_request("my_method", handler);
 		

@@ -6,8 +6,6 @@
 // except according to those terms.
 
 
-// WARNING: Rust newbie code ahead (-_-)'
-
 use core::*;
 
 use std::io;

@@ -26,17 +26,24 @@ use std::rc::Rc;
 
 /* -----------------  ----------------- */
 
-pub struct LSPServer<'a> {
+pub struct LSPServer {
 	
 	pub ls: Rc<LanguageServer>,
-	pub json_rpc : JsonRpcEndpoint<'a>,
+	pub json_rpc : JsonRpcEndpoint,
 	
 }
 
-impl<'a> LSPServer<'a> {
+impl LSPServer {
 	
-	pub fn start_new(ls: Rc<LanguageServer>, input: &mut io::BufRead, output : &mut io::Write) {
-		let mut server = LSPServer { ls : ls, json_rpc : JsonRpcEndpoint::new(output), };
+
+	pub fn start_new<OUT, OUT_P>(
+		ls: Rc<LanguageServer>, input: &mut io::BufRead, out_stream_provider: OUT_P
+	) 
+	where 
+		OUT: io::Write + 'static, 
+		OUT_P : FnOnce() ->Box<OUT> + Send + 'static 
+	{
+		let mut server = LSPServer { ls : ls, json_rpc : JsonRpcEndpoint::spawn_new(out_stream_provider), };
 		
 		initialize_methods(&mut server);
 		

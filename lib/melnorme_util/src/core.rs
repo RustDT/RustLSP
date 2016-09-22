@@ -6,13 +6,15 @@
 // except according to those terms.
 
 
-// WARNING: Rust newbie code ahead (-_-)'
-
 use std::convert;
 use std::io;
 
 use std::fmt;
 use std::result;
+
+pub fn new<T>(x: T) -> Box<T> {
+	Box::new(x)
+}
 
 
 pub type GError = Box<GErrorT>;

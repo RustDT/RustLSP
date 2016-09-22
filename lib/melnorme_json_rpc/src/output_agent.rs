@@ -7,12 +7,11 @@
 
 use std;
 
-//use util::core::GError;
+use util::core::*;
 
 use std::thread;
 use std::sync::mpsc;
 use std::io;
-
 
 /* ----------------- Output_Agent ----------------- */
 
@@ -38,12 +37,17 @@ pub struct OutputAgent {
 
 impl OutputAgent {
 	
-	pub fn new<T : io::Write + Send + 'static>(mut out_stream : Box<T> ) 
-		-> OutputAgent 
+	pub fn spawn_new<OUT, OUT_P>(out_stream_provider: OUT_P) 
+		-> OutputAgent
+	where 
+		OUT: io::Write + 'static, 
+		OUT_P : FnOnce() ->Box<OUT> + Send + 'static 
 	{
 		let (tx, rx) = mpsc::channel::<OutputAgentMessage>();
 		
 		let output_thread = thread::spawn(move || {
+			
+			let mut out_stream : Box<OUT> = out_stream_provider();
 			
 			loop {
 				let task_message = rx.recv();
@@ -107,6 +111,16 @@ impl OutputAgent {
 	
 }
 
+impl Drop for OutputAgent {
+	
+	fn drop(&mut self) {
+		assert!(self.is_shutdown());
+		// We shutdown ourselves, but I don't that a good style to do in drop,
+		// since shutdown is a blocking operation
+	}
+	
+}
+
 /* -----------------  ----------------- */
 
 #[cfg(test)]
@@ -115,8 +129,8 @@ use util::tests::*;
 #[test]
 fn test_OutputAgent() {
 	// FIXME: try to make Arc
-	let mut output : Vec<u8> = vec![];
-	let mut agent = OutputAgent::new(Box::new(output));
+	let output = new(vec![]);
+	let mut agent = OutputAgent::spawn_new(move || output);
 	
 	agent.submit_task(Box::new(| out_stream | { 
 		writeln!(out_stream, "Writing response.").unwrap();
@@ -126,4 +140,11 @@ fn test_OutputAgent() {
 	// Test re-entrance
 	agent.shutdown_and_join();
 //	assert_equal(String::new(), String::from_utf8(output).unwrap());
+
+	{
+		// Test with stdout
+		let mut agent = OutputAgent::spawn_new(|| Box::new(std::io::stdout()));
+		agent.shutdown_and_join();
+	}
+	
 }
