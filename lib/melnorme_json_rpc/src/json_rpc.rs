@@ -6,8 +6,6 @@
 // except according to those terms.
 
 
-// WARNING: Rust newbie code ahead (-_-)'
-
 #![allow(non_upper_case_globals)]
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
@@ -18,6 +16,7 @@ extern crate melnorme_util as util;
 
 pub mod json_util;
 pub mod service_util;
+pub mod output_agent;
 
 /* -----------------  ----------------- */
 
@@ -306,17 +305,51 @@ impl JsonRpcError {
 
 /* -----------------  ----------------- */
 
+use output_agent::OutputAgent;
+use output_agent::OutputAgentTask;
+
 pub type DispatcherFn = Fn(Map<String, Value>) -> Option<JsonRpcResult_Or_Error>;
 
-pub struct JsonRpcEndpoint<'a> {
+pub struct JsonRpcEndpoint {
 	pub dispatcher_map : HashMap<String, Box<DispatcherFn>>,
-	pub output : &'a mut io::Write,
+	pub output_agent : OutputAgent,
 }
 
-impl<'a> JsonRpcEndpoint<'a> {
+pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse) {
 	
-	pub fn new(output : &'a mut io::Write) -> JsonRpcEndpoint<'a> {
-		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output : output }
+	let task : OutputAgentTask = Box::new(move |mut out_stream| {
+		/* FIXME: log */ 
+		println!("Handle: {:?}", response);
+		
+		let res = serde_json::to_writer(&mut out_stream, &response);
+		
+		if let Err(error) = res {
+			// TODO log
+			// FIXME handle output stream write error by shutting down
+			writeln!(&mut std::io::stderr(), "Error writing RPC response: {}", error).expect(
+				"Failed writing to stderr");
+		}
+		
+	});
+	output_agent.submit_task(task);
+}
+	
+
+impl JsonRpcEndpoint {
+	
+	pub fn new<T : io::Write + Send + 'static>(out_stream : Box<T>) -> JsonRpcEndpoint {
+		
+		let output_agent = OutputAgent::new(out_stream);
+		
+		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output_agent : output_agent }
+	}
+	
+	pub fn is_shutdown(& self) -> bool {
+		self.output_agent.is_shutdown()
+	}
+	
+	pub fn shutdown(&mut self) {
+		self.output_agent.shutdown_and_join();
 	}
 	
 	pub fn read_incoming_messages<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER) 
@@ -334,31 +367,20 @@ impl<'a> JsonRpcEndpoint<'a> {
 				self.dispatch_request(rpc_request);
 			} 
 			Err(error) => {
-				// If we can't parse JsonRpcRequest, id is null
+				// If we can't parse JsonRpcRequest, send a sesponse with null id
 				let id = None;
-				Self::write_response(&mut self.output, &JsonRpcResponse::new_error(id, error)); 
+				post_response(&mut self.output_agent, JsonRpcResponse::new_error(id, error)); 
 			}
-		}
-	}
-	
-	pub fn write_response<T : io::Write, SER : serde::Serialize>(writer: &mut T, rpc_response: &SER) {
-		let res = serde_json::to_writer(writer, &rpc_response);
-		if let Err(error) = res {
-			// TODO log
-			// FIXME handle output stream write error by shutting down
-			writeln!(&mut std::io::stderr(), "Error writing RPC response: {}", error).expect(
-				"Failed writing to stderr");
 		}
 	}
 	
 	pub fn dispatch_request(&mut self, request: JsonRpcRequest) {
 		let id = request.id;
 		
-		// FIXME: TODO asynchronous handling
 		if let Some(result_or_error) = self.do_dispatch_request(&request.method, request.params) 
 		{
-			Self::write_response(&mut self.output, 
-				&JsonRpcResponse{ id: id, result_or_error : result_or_error }); 
+			let response = JsonRpcResponse{ id: id, result_or_error : result_or_error };
+			post_response(&mut self.output_agent, response);
 		}
 	}
 	
@@ -367,6 +389,7 @@ impl<'a> JsonRpcEndpoint<'a> {
 	{
 		if let Some(dispatcher_fn) = self.dispatcher_map.get(request_method) 
 		{
+			// FIXME: asynchronous operation 
 			return dispatcher_fn(request_params);
 		} else {
 			return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
@@ -408,6 +431,16 @@ impl<'a> JsonRpcEndpoint<'a> {
 		
 		self.dispatcher_map.insert(method_name.to_string(), handler_fn);
 	}
+}
+
+impl Drop for JsonRpcEndpoint {
+	
+	fn drop(&mut self) {
+		assert!(self.is_shutdown());
+		// We shutdown ourselves, but I don't that a good style to do in drop,
+		// since shutdown should join with thread
+	}
+	
 }
 
 /* -----------------  ----------------- */
@@ -564,12 +597,11 @@ fn parse_jsonrpc_request_json_Test() {
 
 #[cfg(test)]
 mod tests_sample_types;
-	
+
 #[test]
 fn test_JsonRpcEndpoint() {
 	
 	use std::collections::BTreeMap;
-//	use std::io::Write;
 	use util::tests::*;
 	use tests_sample_types::*;
 	
@@ -584,27 +616,30 @@ fn test_JsonRpcEndpoint() {
 	
 	/* -----------------  ----------------- */
 	
-	let mut output : Vec<u8> = vec![];
 	{
-		let mut rpc = JsonRpcEndpoint::new(&mut output);
+		let mut output : Vec<u8> = vec![];
+		let mut rpc = JsonRpcEndpoint::new(Box::new(output));
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
-		rpc.dispatch_request(request);
+		let result = rpc.do_dispatch_request(&request.method, request.params);
+		
+//		let expected = JsonRpcResponse::new_error(None, error_JSON_RPC_MethodNotFound());
+		assert_equal(&result, &Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound())));
+		rpc.shutdown();
 	}
-	let expected = serde_json::to_string(
-		&JsonRpcResponse::new_error(None, error_JSON_RPC_MethodNotFound())).unwrap();
-	let result = String::from_utf8(output).unwrap();
-	assert_equal(&result, &expected);
 	
 	{
 		let mut output : Vec<u8> = vec![];
-		let mut rpc = JsonRpcEndpoint::new(&mut output);
+		let mut rpc = JsonRpcEndpoint::new(Box::new(output));
 		let handler = Box::new(sample_fn);
 		rpc.add_request("my_method", handler);
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params);
 		assert_equal(result, Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams())));
+		
+		// FIXME: review
+//		assert_equal(String::new(), String::from_utf8(*output_).unwrap());
 		
 		let params_value = match serde_json::to_value(&new_sample_params(10, 20)) {
 			Value::Object(object) => object, 
@@ -615,5 +650,7 @@ fn test_JsonRpcEndpoint() {
 		let result = rpc.do_dispatch_request(&request.method, request.params);
 		assert_equal(result, Some(JsonRpcResult_Or_Error::Result(
 					Value::String("1020".to_string()))));
+		
+		rpc.shutdown();
 	}
 }
