@@ -41,7 +41,7 @@ impl LSPServer {
 	) 
 	where 
 		OUT: io::Write + 'static, 
-		OUT_P : FnOnce() ->Box<OUT> + Send + 'static 
+		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		let mut server = LSPServer { ls : ls, json_rpc : JsonRpcEndpoint::spawn_new(out_stream_provider), };
 		

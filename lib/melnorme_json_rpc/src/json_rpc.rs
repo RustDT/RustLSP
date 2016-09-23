@@ -341,7 +341,7 @@ impl JsonRpcEndpoint {
 		-> JsonRpcEndpoint
 	where 
 		OUT: io::Write + 'static, 
-		OUT_P : FnOnce() ->Box<OUT> + Send + 'static 
+		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		let output_agent = OutputAgent::spawn_new(out_stream_provider);
 		
@@ -612,7 +612,7 @@ fn test_JsonRpcEndpoint() {
 	/* -----------------  ----------------- */
 	
 	{
-		let output = new(vec![]);
+		let output = vec![];
 		let mut rpc = JsonRpcEndpoint::spawn_new(move || output);
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
@@ -624,7 +624,7 @@ fn test_JsonRpcEndpoint() {
 	}
 	
 	{
-		let output = new(vec![]);
+		let output = vec![];
 		let mut rpc = JsonRpcEndpoint::spawn_new(move || output);
 		let handler = Box::new(sample_fn);
 		rpc.add_request("my_method", handler);
