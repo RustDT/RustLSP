@@ -6,11 +6,7 @@
 // except according to those terms.
 
 
-// WARNING: Rust newbie code ahead (-_-)'
-
 #![allow(non_camel_case_types)]
-
-extern crate serde_json;
 
 use std::io::{self, Read, Write};
 
@@ -57,7 +53,7 @@ impl LSPServer {
 		let result = server.json_rpc.read_incoming_messages(LSPMessageProvider(input));
 		match result {
 			Err(error) => { 
-				writeln!(&mut io::stderr(), "Error reading/writing the connection streams: {}", error)
+				writeln!(&mut io::stderr(), "Error handling incoming the connection streams: {}", error)
 					.expect("Failed writing to stderr");
 			}
 			Ok(_) => { } 

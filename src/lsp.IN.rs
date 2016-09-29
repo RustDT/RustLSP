@@ -6,8 +6,6 @@
 // except according to those terms.
 
 
-// Note: Rust newbie code ahead (-_-)'
-
 #![allow(non_camel_case_types)]
 
 use json_rpc::service_util::*;
@@ -20,7 +18,7 @@ use std::collections::HashMap;
 
 
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
-// Last revision 03/08/2016
+// Last update 03/08/2016
 
 
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;

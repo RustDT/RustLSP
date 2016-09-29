@@ -6,8 +6,6 @@
 // except according to those terms.
 
 
-// Note: Rust newbie code ahead (-_-)'
-
 #![allow(non_camel_case_types)]
 
 use json_rpc::service_util::*;
