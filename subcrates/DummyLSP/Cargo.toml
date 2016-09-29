@@ -5,8 +5,8 @@ authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 
 [dependencies]
 rust_lsp = { path = "../.." }
-melnorme_util = { path = "../../lib/melnorme_util" }
-melnorme_json_rpc = { path = "../../lib/melnorme_json_rpc" }
+melnorme_util = { path = "../../subcrates/melnorme_util" }
+melnorme_json_rpc = { path = "../../subcrates/melnorme_json_rpc" }
 
 [[bin]]
 name = "dummy_lsp"
