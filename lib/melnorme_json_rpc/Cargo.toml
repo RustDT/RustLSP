@@ -13,4 +13,4 @@ melnorme_util = { path = "../melnorme_util", features = ["test_utils"] }
 
 [lib]
 name = "melnorme_json_rpc"
-path = "src/json_rpc.rs"
+path = "src/lib.rs"
