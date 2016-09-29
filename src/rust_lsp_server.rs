@@ -43,7 +43,14 @@ impl LSPServer {
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
-		let mut server = LSPServer { ls : ls, json_rpc : JsonRpcEndpoint::spawn_new(out_stream_provider), };
+		let jsonrpc_endpoint = JsonRpcEndpoint::start_with_provider(out_stream_provider);
+		Self::start_with_endpoint(ls, input, jsonrpc_endpoint)
+	}
+	
+	pub fn start_with_endpoint(
+		ls: Rc<LanguageServer>, input: &mut io::BufRead, jsonrpc_endpoint: JsonRpcEndpoint
+	) {
+		let mut server = LSPServer { ls : ls, json_rpc : jsonrpc_endpoint };
 		
 		initialize_methods(&mut server);
 		

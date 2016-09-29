@@ -12,7 +12,7 @@ use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::io;
 
-#[warn(unused_imports)]
+#[allow(unused_imports)]
 use util::core::*;
 
 /* ----------------- Output_Agent ----------------- */
@@ -39,43 +39,47 @@ pub struct OutputAgent {
 
 impl OutputAgent {
 	
-	pub fn spawn_new<OUT, OUT_P>(out_stream_provider: OUT_P) 
+	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P) 
 		-> OutputAgent
 	where 
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
+		Self::start(move |loop_runner: AgentLoopRunner| {
+			let mut out_stream : OUT = out_stream_provider();
+			
+			loop_runner.enter_agent_loop(&mut move |task| {
+				task(&mut out_stream); 
+			});
+		})
+	}
+	
+	pub fn start_with_task_runner<TASK_RUNNER, TASK_RUNNER_P>(task_runner_provider: TASK_RUNNER_P) 
+		-> OutputAgent
+	where 
+		TASK_RUNNER_P : FnOnce() -> TASK_RUNNER, 
+		TASK_RUNNER_P : Send + 'static,
+		TASK_RUNNER : FnMut(OutputAgentTask),
+	{
+		Self::start(move |loop_runner: AgentLoopRunner| {
+			let mut task_runner = task_runner_provider();
+			loop_runner.enter_agent_loop(&mut task_runner);
+		})
+	}
+	
+	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER) 
+		-> OutputAgent
+	where 
+		AGENT_RUNNER : FnOnce(AgentLoopRunner),
+		AGENT_RUNNER : Send + 'static,
+	{
 		let (tx, rx) = mpsc::channel::<OutputAgentMessage>();
 		
 		let output_thread = thread::spawn(move || {
-			
-			let mut out_stream : OUT = out_stream_provider();
-			
-			Self::run_agent_loop(&mut out_stream, rx);
+			agent_runner(AgentLoopRunner{ rx : rx });
         });
 		
 		OutputAgent { is_shutdown : false, task_queue : tx,  output_thread : Some(output_thread) } 	
-	}
-	
-	pub fn run_agent_loop<OUT : io::Write>(mut out_stream: OUT, rx: Receiver<OutputAgentMessage>) 
-	{
-		loop {
-			let task_message = rx.recv();
-			if let Err(err) = task_message {
-				// BM: Should we really panic if agent has not shutdown explicitly?
-				panic!("Error, task queue channel closed without explicit agent shutdown: {:?}", err);
-			}
-			let task_message = task_message.unwrap();
-			
-			match task_message {
-				OutputAgentMessage::Shutdown => { 
-					return; 
-				}
-				OutputAgentMessage::Task(task) => {
-					task(&mut out_stream);
-				}
-			}
-		}
 	}
 	
 	pub fn is_shutdown(&self) -> bool {
@@ -127,6 +131,45 @@ impl Drop for OutputAgent {
 	
 }
 
+pub struct AgentLoopRunner {
+	rx: Receiver<OutputAgentMessage>,
+}
+impl AgentLoopRunner {
+	
+	/// Enter agent loop, with given task runner
+	pub fn enter_agent_loop<TASK_RUNNER>(self, mut task_runner: &mut TASK_RUNNER,)
+	where
+		 TASK_RUNNER : FnMut(OutputAgentTask) 
+	{
+		let mut rx = self.rx;
+		Self::run_agent_loop(&mut rx, &mut task_runner);
+	}
+	
+	pub fn run_agent_loop<TASK_RUNNER>(rx: &mut Receiver<OutputAgentMessage>, mut task_runner: &mut TASK_RUNNER,)
+	where
+		 TASK_RUNNER : FnMut(OutputAgentTask) 
+	{
+		loop {
+			let task_message = rx.recv();
+			if let Err(err) = task_message {
+				// BM: Should we really panic if agent has not shutdown explicitly?
+				panic!("Error, task queue channel closed without explicit agent shutdown: {:?}", err);
+			}
+			let task_message = task_message.unwrap();
+			
+			match task_message {
+				OutputAgentMessage::Shutdown => { 
+					return; 
+				}
+				OutputAgentMessage::Task(task) => {
+					task_runner(task);
+				}
+			}
+		}
+	}
+}
+
+
 /* -----------------  ----------------- */
 
 
@@ -134,7 +177,7 @@ impl Drop for OutputAgent {
 fn test_OutputAgent() {
 	// FIXME: try to make Arc
 	let output = vec![];
-	let mut agent = OutputAgent::spawn_new(move || output);
+	let mut agent = OutputAgent::start_with_provider(move || output);
 	
 	agent.submit_task(new(| out_stream | { 
 		writeln!(out_stream, "Writing response.").unwrap();
@@ -150,21 +193,52 @@ fn test_OutputAgent() {
 // The following code we don't want to run, we just want to test that it compiles
 #[cfg(test)]
 pub fn test_OutputAgent_API() {
+	use std::sync::Arc;
 	use std::net::TcpStream;
+	use std::sync::Mutex;
 	use std::io::Read;
 	
-	let stdout : io::Stdout = io::stdout();
-	let stdout_lock : io::StdoutLock = stdout.lock();
 	
-	// Test with stdout
-	let mut agent = OutputAgent::spawn_new(|| std::io::stdout());
+	// Test with Stdout
+	let mut agent = OutputAgent::start_with_provider(|| std::io::stdout());
 	agent.shutdown_and_join();
 	
-	// Test with tcp		
-	let mut stream = TcpStream::connect("127.0.0.1:34254").unwrap();
-	let mut agent = OutputAgent::spawn_new(move || stream);
+	
+	// Test with StdoutLock
+	let mut agent = OutputAgent::start_with_task_runner(|| {
+		let stdout = io::stdout();
+		move |task: OutputAgentTask| {
+			task(&mut stdout.lock());
+		}
+	});
 	agent.shutdown_and_join();
 	
-	// FIXME: enable OutputAgent without moving stream
-//	stream.read_to_string(&mut String::new());
+
+	// Test with StdoutLock - lock entire loop
+	let mut agent = OutputAgent::start(|loop_runner| {
+		let stdout = io::stdout();
+		let mut stdoutlock = stdout.lock();
+		
+		loop_runner.enter_agent_loop(&mut |task: OutputAgentTask| {
+			task(&mut stdoutlock);
+		});
+	});
+	agent.shutdown_and_join();
+	
+	
+	// Test with tcp stream
+	let stream = Arc::new(Mutex::new(TcpStream::connect("127.0.0.1:34254").unwrap()));
+	let stream2 = stream.clone();
+	let task_runner = move |task : OutputAgentTask| {
+		let mut stream = stream2.lock().expect("Re-entered mutex lock");
+		task(&mut *stream);
+	};
+	
+	let mut agent = OutputAgent::start_with_task_runner(|| task_runner );
+	agent.shutdown_and_join();
+	
+	{
+		let mut stream = stream.lock().expect("Re-entered mutex lock");
+		stream.read_to_string(&mut String::new()).expect("failed to read stream");
+	}
 }

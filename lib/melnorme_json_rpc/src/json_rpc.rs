@@ -307,6 +307,7 @@ impl JsonRpcError {
 
 use output_agent::OutputAgent;
 use output_agent::OutputAgentTask;
+use output_agent::AgentLoopRunner;
 
 pub type DispatcherFn = Fn(Map<String, Value>) -> Option<JsonRpcResult_Or_Error>;
 
@@ -337,14 +338,23 @@ pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse
 
 impl JsonRpcEndpoint {
 	
-	pub fn spawn_new<OUT, OUT_P>(out_stream_provider: OUT_P) 
+	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER) 
+		-> JsonRpcEndpoint
+	where 
+		AGENT_RUNNER : FnOnce(AgentLoopRunner),
+		AGENT_RUNNER : Send + 'static,
+	{
+		let output_agent = OutputAgent::start(agent_runner);
+		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output_agent : output_agent }
+	}
+	
+	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P) 
 		-> JsonRpcEndpoint
 	where 
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
-		let output_agent = OutputAgent::spawn_new(out_stream_provider);
-		
+		let output_agent = OutputAgent::start_with_provider(out_stream_provider);
 		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output_agent : output_agent }
 	}
 	
@@ -613,7 +623,7 @@ fn test_JsonRpcEndpoint() {
 	
 	{
 		let output = vec![];
-		let mut rpc = JsonRpcEndpoint::spawn_new(move || output);
+		let mut rpc = JsonRpcEndpoint::start_with_provider(move || output);
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params);
@@ -625,7 +635,7 @@ fn test_JsonRpcEndpoint() {
 	
 	{
 		let output = vec![];
-		let mut rpc = JsonRpcEndpoint::spawn_new(move || output);
+		let mut rpc = JsonRpcEndpoint::start_with_provider(move || output);
 		let handler = Box::new(sample_fn);
 		rpc.add_request("my_method", handler);
 		
