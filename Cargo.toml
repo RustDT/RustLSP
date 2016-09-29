@@ -22,3 +22,7 @@ path = "src/lib.rs"
 name = "dummy_lsp"
 path = "src/dummy_lsp.rs"
 test = false
+
+[features]
+default = []
+gen_sources = []
