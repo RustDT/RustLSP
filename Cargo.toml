@@ -6,7 +6,7 @@ build = "build.rs"
 
 
 [build-dependencies]
-serde_codegen = "0.8"
+serde_codegen = { version = "0.8", optional = true }
 
 [dependencies]
 melnorme_util = { path = "lib/melnorme_util" }
@@ -18,11 +18,6 @@ serde_json = "0.8"
 name = "rust_lsp"
 path = "src/lib.rs"
 
-[[bin]]
-name = "dummy_lsp"
-path = "src/dummy_lsp.rs"
-test = false
-
 [features]
 default = []
-gen_sources = []
+gen_sources = [ "serde_codegen" ]

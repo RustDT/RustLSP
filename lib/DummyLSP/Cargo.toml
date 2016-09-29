@@ -1,0 +1,14 @@
+[package]
+name = "dummy_lsp"
+version = "0.1.0"
+authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
+
+[dependencies]
+rust_lsp = { path = "../.." }
+melnorme_util = { path = "../../lib/melnorme_util" }
+melnorme_json_rpc = { path = "../../lib/melnorme_json_rpc" }
+
+[[bin]]
+name = "dummy_lsp"
+path = "src/main.rs"
+test = false
