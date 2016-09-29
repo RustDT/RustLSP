@@ -5,10 +5,10 @@
 // This file may not be copied, modified, or distributed
 // except according to those terms.
 
-extern crate rust_lsp;
+pub extern crate rust_lsp;
 extern crate melnorme_json_rpc as json_rpc;
 
-use json_rpc::service_util::*;
+use json_rpc::service_util::ServiceError;
 use rust_lsp::lsp::*;
 
 pub struct DummyLanguageServer {
@@ -32,7 +32,8 @@ impl DummyLanguageServer {
 impl LanguageServer for DummyLanguageServer {
 	
 	fn initialize(&self, _: InitializeParams) -> LSResult<InitializeResult, InitializeError> {
-		Ok(InitializeResult { capabilities : ServerCapabilities::default() })
+		let capabilities = ServerCapabilities::default();
+		Ok(InitializeResult { capabilities : capabilities })
 	}
 	fn shutdown(&self, _: ()) -> LSResult<(), ()> {
 		Ok(())
