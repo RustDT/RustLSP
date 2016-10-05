@@ -239,7 +239,16 @@ fn test_convert() {
 
 
 
-/* -----------------  ----------------- */
+/* -----------------  Sync and Rc util ----------------- */
+
+
+use std::sync::Arc;
+use std::sync::Mutex;
+
+pub fn newArcMutex<T>(x: T) -> Arc<Mutex<T>> {
+	Arc::new(Mutex::new(x))
+}
+
 
 use std::rc::Rc;
 use std::cell::RefCell;

@@ -34,9 +34,9 @@ use std::result::Result;
 use service_util::ServiceError;
 use service_util::ServiceHandler;
 use service_util::Provider;
+use service_util::Handler;
 
 use json_util::*;
-
 
 /* ----------------- JSON RPC ----------------- */
 
@@ -318,19 +318,21 @@ pub struct JsonRpcEndpoint {
 
 pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse) {
 	
-	let task : OutputAgentTask = Box::new(move |mut out_stream| {
-		/* FIXME: log */ 
-		println!("Handle: {:?}", response);
+	let task : OutputAgentTask = Box::new(move |mut response_handler| {
+		/* FIXME: log , review expect */ 
+		writeln!(&mut io::stderr(), "Response: {:?}", response).expect("Failed writing to stderr");
 		
-		let res = serde_json::to_writer(&mut out_stream, &response);
+		let response_str = serde_json::to_string(&response).unwrap_or_else(|error| -> String { 
+			panic!("Failed to serialize to JSON, should be impossible: {}", error);
+		});
 		
-		if let Err(error) = res {
+		let write_res = response_handler.supply(&response_str);
+		if let Err(error) = write_res {
 			// TODO log
 			// FIXME handle output stream write error by shutting down
-			writeln!(&mut std::io::stderr(), "Error writing RPC response: {}", error).expect(
-				"Failed writing to stderr");
-		}
-		
+			writeln!(&mut io::stderr(), "Error writing RPC response: {}", error)
+				.expect("Failed writing to stderr");
+		};
 	});
 	output_agent.submit_task(task);
 }
@@ -351,7 +353,7 @@ impl JsonRpcEndpoint {
 	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P) 
 		-> JsonRpcEndpoint
 	where 
-		OUT: io::Write + 'static, 
+		OUT: Handler<String, GError> + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		let output_agent = OutputAgent::start_with_provider(out_stream_provider);
@@ -609,6 +611,7 @@ fn test_JsonRpcEndpoint() {
 	use std::collections::BTreeMap;
 	use util::tests::*;
 	use tests_sample_types::*;
+	use output_agent::IoWriteHandler;
 	
 	pub fn sample_fn(params: Point) -> Result<String, ServiceError<()>> {
 		let x_str : String = params.x.to_string();
@@ -623,7 +626,7 @@ fn test_JsonRpcEndpoint() {
 	
 	{
 		let output = vec![];
-		let mut rpc = JsonRpcEndpoint::start_with_provider(move || output);
+		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output));
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params);
@@ -635,7 +638,7 @@ fn test_JsonRpcEndpoint() {
 	
 	{
 		let output = vec![];
-		let mut rpc = JsonRpcEndpoint::start_with_provider(move || output);
+		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output));
 		let handler = Box::new(sample_fn);
 		rpc.add_request("my_method", handler);
 		

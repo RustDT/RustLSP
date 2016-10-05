@@ -23,3 +23,15 @@ pub fn assert_equal<T>(left: T, right: T)
 	}
 	assert_eq!(left, right);
 }
+
+
+use std::sync::Arc;
+use std::sync::Mutex; 
+
+pub fn unwrap_Arc<T : std::fmt::Debug>(arc: Arc<T>) -> T {
+	Arc::try_unwrap(arc).unwrap()
+}
+
+pub fn unwrap_ArcMutex<T : std::fmt::Debug>(arc: Arc<Mutex<T>>) -> T {
+	unwrap_Arc(arc).into_inner().unwrap()
+}

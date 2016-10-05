@@ -12,6 +12,10 @@ pub trait Provider<VALUE, ERR> {
 	fn obtain_next(&mut self) -> result::Result<VALUE, ERR>;
 }
 
+pub trait Handler<VALUE, ERR> {
+	fn supply(&mut self, msg: &str) -> Result<(), ERR>;
+}
+
 pub struct ServiceError<DATA> {
 	pub code : u32,
 	pub message : String,

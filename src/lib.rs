@@ -7,4 +7,5 @@ extern crate serde_json;
 extern crate serde;
 
 pub mod lsp;
+pub mod lsp_transport;
 pub mod lsp_server;

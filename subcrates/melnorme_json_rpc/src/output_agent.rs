@@ -15,9 +15,11 @@ use std::io;
 #[allow(unused_imports)]
 use util::core::*;
 
+use service_util::Handler;
+
 /* ----------------- Output_Agent ----------------- */
 
-pub type OutputAgentTask = Box<Fn(&mut io::Write) + Send>;
+pub type OutputAgentTask = Box<Fn(&mut Handler<String, GError>) + Send>;
 
 pub enum OutputAgentMessage {
 	Shutdown,
@@ -42,7 +44,7 @@ impl OutputAgent {
 	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P) 
 		-> OutputAgent
 	where 
-		OUT: io::Write + 'static, 
+		OUT: Handler<String, GError> + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		Self::start(move |loop_runner: AgentLoopRunner| {
@@ -172,23 +174,49 @@ impl AgentLoopRunner {
 
 /* -----------------  ----------------- */
 
+/// Handle a message simply by writing to a io::Write
+pub struct IoWriteHandler<T: io::Write>(pub T);
+
+impl<T : io::Write> Handler<String, GError> for IoWriteHandler<T> {
+	fn supply(&mut self, msg: &str) -> Result<(), GError> {
+		try!(self.0.write_all(msg.as_bytes()));
+		Ok(())
+	}
+}
 
 #[test]
 fn test_OutputAgent() {
-	// FIXME: try to make Arc
-	let output = vec![];
-	let mut agent = OutputAgent::start_with_provider(move || output);
 	
-	agent.submit_task(new(| out_stream | { 
-		writeln!(out_stream, "Writing response.").unwrap();
+	use util::tests::*;
+	
+	let output = vec![];
+	let mut agent = OutputAgent::start_with_provider(move || IoWriteHandler(output));
+	
+	agent.submit_task(new(|msg_writer| {
+		msg_writer.supply("First responde.").unwrap();
 	}));
 	
 	agent.shutdown_and_join();
 	// Test re-entrance
 	agent.shutdown_and_join();
-//	assert_equal(String::new(), String::from_utf8(output).unwrap());
+	
+	
+	let output = newArcMutex(vec![] as Vec<u8>);
+	let output2 = output.clone();
+	let mut agent = OutputAgent::start_with_task_runner(|| {
+		move |task: OutputAgentTask| {
+			let mut lock : std::sync::MutexGuard<Vec<u8>> = output2.lock().unwrap();
+			task(&mut IoWriteHandler(&mut *lock));
+		}
+	});
+	agent.submit_task(new(|msg_writer| {
+		msg_writer.supply("First response.").unwrap();
+	}));
+	
+	agent.shutdown_and_join();
+	
+	assert_equal(String::from_utf8(unwrap_ArcMutex(output)).unwrap(), "First response.".to_string());
 }
-
 
 // The following code we don't want to run, we just want to test that it compiles
 #[cfg(test)]
@@ -200,7 +228,7 @@ pub fn test_OutputAgent_API() {
 	
 	
 	// Test with Stdout
-	let mut agent = OutputAgent::start_with_provider(|| std::io::stdout());
+	let mut agent = OutputAgent::start_with_provider(|| IoWriteHandler(std::io::stdout()));
 	agent.shutdown_and_join();
 	
 	
@@ -208,7 +236,7 @@ pub fn test_OutputAgent_API() {
 	let mut agent = OutputAgent::start_with_task_runner(|| {
 		let stdout = io::stdout();
 		move |task: OutputAgentTask| {
-			task(&mut stdout.lock());
+			task(&mut IoWriteHandler(stdout.lock()));
 		}
 	});
 	agent.shutdown_and_join();
@@ -220,7 +248,7 @@ pub fn test_OutputAgent_API() {
 		let mut stdoutlock = stdout.lock();
 		
 		loop_runner.enter_agent_loop(&mut |task: OutputAgentTask| {
-			task(&mut stdoutlock);
+			task(&mut IoWriteHandler(&mut stdoutlock));
 		});
 	});
 	agent.shutdown_and_join();
@@ -231,7 +259,7 @@ pub fn test_OutputAgent_API() {
 	let stream2 = stream.clone();
 	let task_runner = move |task : OutputAgentTask| {
 		let mut stream = stream2.lock().expect("Re-entered mutex lock");
-		task(&mut *stream);
+		task(&mut IoWriteHandler(&mut *stream));
 	};
 	
 	let mut agent = OutputAgent::start_with_task_runner(|| task_runner );
