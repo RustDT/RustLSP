@@ -6,7 +6,7 @@
 // except according to those terms.
 
 
-use std::io::{self, Read, Write};
+use std::io::{self, Read};
 
 use util::core::*;
 
@@ -15,7 +15,7 @@ use util::core::*;
 
 const CONTENT_LENGTH: &'static str = "Content-Length:";
 	
-pub fn parse_transport_message<R : io::BufRead>(mut reader: R) -> GResult<String>
+pub fn parse_transport_message<R : io::BufRead>(reader: &mut R) -> GResult<String>
 {
 	
 	let mut content_length : u32 = 0; 
@@ -51,13 +51,38 @@ fn parse_transport_message__test() {
 	use std::io::BufReader;
 	
 	let string = String::from("Content-Length: 10 \r\n\r\n1234567890abcdef");
-	assert_eq!(parse_transport_message(BufReader::new(string.as_bytes())).unwrap(), "1234567890");
+	assert_eq!(parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap(), "1234567890");
 
 	let string = String::from("Content-Length: 13 \r\nBlaah-Blah\r\n\r\n1234\n567\r\n890abcdef");
-	assert_eq!(parse_transport_message(BufReader::new(string.as_bytes())).unwrap(), "1234\n567\r\n890");
+	// Perhaps this case should result in an error.
+	assert_eq!(parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap(), "1234\n567\r\n890");
 	
 	// Test no-content	
 	let string = String::from("\r\n\r\n1234567890abcdef");
-	let err : GError = parse_transport_message(BufReader::new(string.as_bytes())).unwrap_err();
+	let err : GError = parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap_err();
 	assert_eq!(format!("{}", err), "Content-Length: not defined or invalid.");
+}
+
+pub fn write_transport_message<WRITE : io::Write>(message: & str, out: &mut WRITE) -> GResult<()>
+{
+//	let out : &mut io::Write = out;
+	try!(out.write_all(CONTENT_LENGTH.as_bytes()));
+	try!(out.write(&[' ' as u8]));
+	let contents = message.as_bytes();
+	try!(out.write_all(contents.len().to_string().as_bytes()));
+	try!(out.write_all("\r\n\r\n".as_bytes()));
+	try!(out.write_all(message.as_bytes()));
+	try!(out.flush());
+	Ok(())
+}
+
+
+#[test]
+fn write_transport_message__test() {
+	use util::tests::*;
+
+	let mut out : Vec<u8> = vec!['x' as u8];
+	write_transport_message(&"1234\n67", &mut out).unwrap();
+	
+	assert_equal(String::from_utf8(out).unwrap(), "xContent-Length: 7\r\n\r\n1234\n67".to_string());
 }

@@ -8,10 +8,11 @@
 
 #![allow(non_camel_case_types)]
 
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 
 use util::core::*;
 use json_rpc::service_util::Provider;
+use json_rpc::service_util::Handler;
 
 use json_rpc::*;
 
@@ -22,6 +23,23 @@ use lsp::*;
 use std::rc::Rc;
 
 /* -----------------  ----------------- */
+
+struct LSPMessageProvider<'a>(&'a mut io::BufRead);
+
+impl<'a> Provider<String, GError> for LSPMessageProvider<'a> {
+	fn obtain_next(&mut self) -> GResult<String> {
+		lsp_transport::parse_transport_message(&mut self.0)
+	}
+}
+
+struct LSPMessageWriter<T: io::Write>(pub T);
+
+impl<T: io::Write> Handler<String, GError> for LSPMessageWriter<T> {
+	fn supply(&mut self, msg: &str) -> Result<(), GError> {
+		lsp_transport::write_transport_message(msg, &mut self.0)
+	}
+}
+
 
 pub struct LSPServer {
 	
@@ -40,7 +58,7 @@ impl LSPServer {
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		let jsonrpc_endpoint = JsonRpcEndpoint::start_with_provider(|| {
-			output_agent::IoWriteHandler(out_stream_provider())
+			LSPMessageWriter(out_stream_provider())
 		});
 		Self::start_with_endpoint(ls, input, jsonrpc_endpoint)
 	}
@@ -62,14 +80,6 @@ impl LSPServer {
 		}
 	}
 	
-}
-
-struct LSPMessageProvider<'a>(&'a mut io::BufRead);
-
-impl<'a> Provider<String, GError> for LSPMessageProvider<'a> {
-	fn obtain_next(&mut self) -> GResult<String> {
-		lsp_transport::parse_transport_message::<&mut _>(self.0)
-	}
 }
 
 pub fn initialize_methods(lsp_handler : &mut LSPServer) {
