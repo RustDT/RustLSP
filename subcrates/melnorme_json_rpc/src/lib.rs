@@ -37,6 +37,7 @@ use service_util::Provider;
 use service_util::Handler;
 
 use json_util::*;
+use std::fmt;
 
 /* ----------------- JSON RPC ----------------- */
 
@@ -98,8 +99,8 @@ impl JsonRpcResponse {
 
 /* -----------------  ----------------- */
 
-pub fn error_JSON_RPC_ParseError() -> JsonRpcError { 
-	JsonRpcError::new(-32700, "Invalid JSON was received by the server.".to_string())
+pub fn error_JSON_RPC_ParseError<T: fmt::Display>(error: T) -> JsonRpcError { 
+	JsonRpcError::new(-32700, format!("Invalid JSON was received by the server: {}", error).to_string())
 }
 pub fn error_JSON_RPC_InvalidRequest() -> JsonRpcError { 
 	JsonRpcError::new(-32600, "The JSON sent is not a valid Request object.".to_string())
@@ -107,8 +108,8 @@ pub fn error_JSON_RPC_InvalidRequest() -> JsonRpcError {
 pub fn error_JSON_RPC_MethodNotFound() -> JsonRpcError { 
 	JsonRpcError::new(-32601, "The method does not exist / is not available.".to_string())
 }
-pub fn error_JSON_RPC_InvalidParams() -> JsonRpcError { 
-	JsonRpcError::new(-32602, "Invalid method parameter(s).".to_string())
+pub fn error_JSON_RPC_InvalidParams<T: fmt::Display>(error: T) -> JsonRpcError { 
+	JsonRpcError::new(-32602, format!("Invalid method parameter(s): {}", error).to_string())
 }
 pub fn error_JSON_RPC_InternalError() -> JsonRpcError { 
 	JsonRpcError::new(-32603, "Internal JSON-RPC error.".to_string())
@@ -233,7 +234,7 @@ pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
 	{
 		Ok(ok) => { ok } 
 		Err(error) => { 
-			return Err(error_JSON_RPC_ParseError());
+			return Err(error_JSON_RPC_ParseError(error));
 		}
 	};
 	
@@ -496,7 +497,7 @@ impl<
 				None
 			} 
 			Err(error) => {
-				return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams()));
+				return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams(error)));
 			}
 		}
 	}
@@ -515,10 +516,13 @@ impl<
 		let params_result : Result<PARAMS, _> = serde_json::from_value(Value::Object(params_map));
 		
 		let params = 
-		if let Ok(params) = params_result {
-			params
-		} else {
-			return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams()));
+		match params_result {
+			Ok(params) => { 
+				params 
+			} 
+			Err(error) => { 
+				return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams(error)));
+			}
 		};
 		
 		let result = method_fn(params);
@@ -543,6 +547,46 @@ impl<
 
 /* ----------------- Test ----------------- */
 
+mod tests_sample_types;
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use util::tests::*;
+	use tests_sample_types::*;
+	
+	use serde_json::builder::ObjectBuilder;
+	use json_util::*;
+	use service_util::*;
+
+
+	pub fn sample_fn(params: Point) -> Result<String, ServiceError<()>> {
+		let x_str : String = params.x.to_string();
+		let y_str : String = params.y.to_string();
+		Ok(x_str + &y_str)
+	}
+	pub fn new_sample_params(x: i32, y: i32) -> Point {
+		Point { x : x, y : y }
+	}
+	
+	fn check_error(result: JsonRpcError, expected: JsonRpcError) {
+		assert_starts_with(&result.message, &expected.message);
+		assert_eq!(result, JsonRpcError { message : result.message.clone(), .. expected }); 
+	}
+	
+	fn check_request(result: JsonRpcResult_Or_Error, expected: JsonRpcResult_Or_Error) {
+		if let JsonRpcResult_Or_Error::Error(error) = result {
+			
+			if let JsonRpcResult_Or_Error::Error(expected_error) = expected {
+				check_error(error.clone(), expected_error.clone());
+			}
+			
+		} else {
+			assert_equal(&result, &expected);
+		}
+	}
+
+
 #[test]
 fn parse_jsonrpc_request_json_Test() {
 	
@@ -552,7 +596,7 @@ fn parse_jsonrpc_request_json_Test() {
 	);
 	
 	// Test invalid JSON
-	assert_eq!(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_ParseError());
+	check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_ParseError(""));
 	
 	// Test invalid JsonRpcRequest
 	let mut invalid_request = ObjectBuilder::new()
@@ -602,37 +646,22 @@ fn parse_jsonrpc_request_json_Test() {
 }
 
 
-#[cfg(test)]
-mod tests_sample_types;
-
 #[test]
 fn test_JsonRpcEndpoint() {
 	
 	use std::collections::BTreeMap;
-	use util::tests::*;
-	use tests_sample_types::*;
 	use output_agent::IoWriteHandler;
-	
-	pub fn sample_fn(params: Point) -> Result<String, ServiceError<()>> {
-		let x_str : String = params.x.to_string();
-		let y_str : String = params.y.to_string();
-		Ok(x_str + &y_str)
-	}
-	pub fn new_sample_params(x: i32, y: i32) -> Point {
-		Point { x : x, y : y }
-	}
-	
-	/* -----------------  ----------------- */
+	use serde_json::Value;
+	use serde_json;
 	
 	{
 		let output = vec![];
 		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output));
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
-		let result = rpc.do_dispatch_request(&request.method, request.params);
+		let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
 		
-//		let expected = JsonRpcResponse::new_error(None, error_JSON_RPC_MethodNotFound());
-		assert_equal(&result, &Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound())));
+		check_request(result, JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
 		rpc.shutdown();
 	}
 	
@@ -643,11 +672,8 @@ fn test_JsonRpcEndpoint() {
 		rpc.add_request("my_method", handler);
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
-		let result = rpc.do_dispatch_request(&request.method, request.params);
-		assert_equal(result, Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams())));
-		
-		// FIXME: review
-//		assert_equal(String::new(), String::from_utf8(*output_).unwrap());
+		let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
+		check_request(result, JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams("missing field")));
 		
 		let params_value = match serde_json::to_value(&new_sample_params(10, 20)) {
 			Value::Object(object) => object, 
@@ -655,10 +681,12 @@ fn test_JsonRpcEndpoint() {
 		};
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), params_value);
-		let result = rpc.do_dispatch_request(&request.method, request.params);
-		assert_equal(result, Some(JsonRpcResult_Or_Error::Result(
-					Value::String("1020".to_string()))));
+		let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
+		check_request(result, JsonRpcResult_Or_Error::Result(
+					Value::String("1020".to_string())));
 		
 		rpc.shutdown();
 	}
+}
+
 }

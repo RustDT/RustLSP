@@ -24,6 +24,17 @@ pub fn assert_equal<T>(left: T, right: T)
 	assert_eq!(left, right);
 }
 
+pub fn assert_starts_with(string: &str, prefix: &str)
+{
+	if !string.starts_with(prefix) {
+		println!("\n========= String doesn't start with:");
+		println!("{:?}", prefix);
+		println!("{:?}", string);
+		println!("====");
+		assert!(false);
+	}
+}
+
 
 use std::sync::Arc;
 use std::sync::Mutex; 

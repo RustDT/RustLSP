@@ -126,9 +126,10 @@ impl OutputAgent {
 impl Drop for OutputAgent {
 	
 	fn drop(&mut self) {
-		assert!(self.is_shutdown());
-		// We shutdown ourselves, but I don't that a good style to do in drop,
-		// since shutdown is a blocking operation
+		if !thread::panicking() {
+			// User must have taken care of shutdown itself, otherwise thread is leaked.
+			assert!(self.is_shutdown());
+		}
 	}
 	
 }
