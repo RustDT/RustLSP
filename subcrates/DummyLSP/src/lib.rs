@@ -42,7 +42,9 @@ impl LanguageServer for DummyLanguageServer {
 	}
 	
 	fn showMessage(&self, _: ShowMessageParams) {}
-	fn showMessageRequest(&self, _: ShowMessageRequestParams) {}
+	fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()> { 
+		Err(DummyLanguageServer::error_not_available(()))
+	}
 	fn logMessage(&self, _: LogMessageParams) {}
 	fn telemetryEvent(&self, _: any) {}
 	fn workspaceChangeConfiguration(&self, _: DidChangeConfigurationParams) {}

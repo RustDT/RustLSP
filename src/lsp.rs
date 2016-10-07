@@ -18,7 +18,8 @@ use std::collections::HashMap;
 
 
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
-// Last revision 03/08/2016
+// Last update 07/10/2016 at commit: 
+// https://github.com/Microsoft/language-server-protocol/commit/8fd7e96205a7750eb8440040c247f4a6533b238f
 
 
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
@@ -53,7 +54,8 @@ pub trait LanguageServer {
     -> LSResult<(), ()>;
     fn exit(&self, params: ());
     fn showMessage(&self, params: ShowMessageParams);
-    fn showMessageRequest(&self, params: ShowMessageRequestParams);
+    fn showMessageRequest(&self, params: ShowMessageRequestParams)
+    -> LSResult<MessageActionItem, ()>;
     fn logMessage(&self, params: LogMessageParams);
     fn telemetryEvent(&self, params: any);
     fn workspaceChangeConfiguration(&self,
@@ -114,7 +116,8 @@ pub type number_or_string = string;
  /* FIXME: */
 pub type any = Value;
 
-/// Position in a text document expressed as zero-based line and character offset.
+/// Position in a text document expressed as zero-based line and character offset. 
+/// A position is between two characters like an 'insert' cursor in a editor.
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
     /**
@@ -492,7 +495,8 @@ const _IMPL_SERIALIZE_FOR_Position: () =
             }
         }
     };
-///A range in a text document expressed as (zero-based) start and end positions.
+/// A range in a text document expressed as (zero-based) start and end positions. 
+/// A range is comparable to a selection in an editor. Therefore the end position is exclusive.
 #[derive(Debug, Copy, Clone)]
 pub struct Range {
     /**
@@ -1418,8 +1422,11 @@ const _IMPL_SERIALIZE_FOR_DiagnosticSeverity: () =
             }
         }
     };
-/// Represents a reference to a command. Provides a title which will be used to represent a command in the UI and, 
-/// optionally, an array of arguments which will be passed to the command handler function when invoked.
+/**
+ Represents a reference to a command. Provides a title which will be used to represent a command in the UI. 
+ Commands are identitifed using a string identifier and the protocol currently doesn't specify a set of 
+ well known commands. So executing a command requires some tool extension code.
+*/
 #[derive(Debug, Clone)]
 pub struct Command {
     /**
@@ -2956,6 +2963,10 @@ pub struct InitializeParams {
      */
     pub rootPath: string,
     /**
+     * User provided initialization options.
+     */
+    pub initializationOptions: Option<any>,
+    /**
      * The capabilities provided by the client (editor)
      */
     pub capabilities: ClientCapabilities,
@@ -2971,7 +2982,13 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
              __D: _serde::de::Deserializer {
                 {
                     #[allow(non_camel_case_types)]
-                    enum __Field { __field0, __field1, __field2, __ignore, }
+                    enum __Field {
+                        __field0,
+                        __field1,
+                        __field2,
+                        __field3,
+                        __ignore,
+                    }
                     impl _serde::de::Deserialize for __Field {
                         #[inline]
                         fn deserialize<__D>(deserializer: &mut __D)
@@ -2994,6 +3011,7 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                         0usize => { Ok(__Field::__field0) }
                                         1usize => { Ok(__Field::__field1) }
                                         2usize => { Ok(__Field::__field2) }
+                                        3usize => { Ok(__Field::__field3) }
                                         _ => Ok(__Field::__ignore),
                                     }
                                 }
@@ -3007,8 +3025,11 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                         "rootPath" => {
                                             Ok(__Field::__field1)
                                         }
-                                        "capabilities" => {
+                                        "initializationOptions" => {
                                             Ok(__Field::__field2)
+                                        }
+                                        "capabilities" => {
+                                            Ok(__Field::__field3)
                                         }
                                         _ => Ok(__Field::__ignore),
                                     }
@@ -3023,8 +3044,11 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                         b"rootPath" => {
                                             Ok(__Field::__field1)
                                         }
-                                        b"capabilities" => {
+                                        b"initializationOptions" => {
                                             Ok(__Field::__field2)
+                                        }
+                                        b"capabilities" => {
+                                            Ok(__Field::__field3)
                                         }
                                         _ => Ok(__Field::__ignore),
                                     }
@@ -3068,17 +3092,28 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                     };
                                 let __field2 =
                                     match try!(visitor . visit :: <
-                                               ClientCapabilities > (  )) {
+                                               Option<any> > (  )) {
                                         Some(value) => { value }
                                         None => {
                                             try!(visitor . end (  ));
                                             return Err(_serde::de::Error::invalid_length(2usize));
                                         }
                                     };
+                                let __field3 =
+                                    match try!(visitor . visit :: <
+                                               ClientCapabilities > (  )) {
+                                        Some(value) => { value }
+                                        None => {
+                                            try!(visitor . end (  ));
+                                            return Err(_serde::de::Error::invalid_length(3usize));
+                                        }
+                                    };
                                 try!(visitor . end (  ));
                                 Ok(InitializeParams{processId: __field0,
                                                     rootPath: __field1,
-                                                    capabilities: __field2,})
+                                                    initializationOptions:
+                                                        __field2,
+                                                    capabilities: __field3,})
                             }
                         }
                         #[inline]
@@ -3090,7 +3125,8 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                             {
                                 let mut __field0: Option<number> = None;
                                 let mut __field1: Option<string> = None;
-                                let mut __field2: Option<ClientCapabilities> =
+                                let mut __field2: Option<Option<any>> = None;
+                                let mut __field3: Option<ClientCapabilities> =
                                     None;
                                 while let Some(key) =
                                           try!(visitor . visit_key :: <
@@ -3119,9 +3155,20 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                         __Field::__field2 => {
                                             if __field2.is_some() {
                                                 return Err(<__V::Error as
-                                                               _serde::de::Error>::duplicate_field("capabilities"));
+                                                               _serde::de::Error>::duplicate_field("initializationOptions"));
                                             }
                                             __field2 =
+                                                Some(try!(visitor .
+                                                          visit_value :: <
+                                                          Option<any> > (
+                                                          )));
+                                        }
+                                        __Field::__field3 => {
+                                            if __field3.is_some() {
+                                                return Err(<__V::Error as
+                                                               _serde::de::Error>::duplicate_field("capabilities"));
+                                            }
+                                            __field3 =
                                                 Some(try!(visitor .
                                                           visit_value :: <
                                                           ClientCapabilities >
@@ -3154,16 +3201,26 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                         Some(__field2) => __field2,
                                         None =>
                                         try!(visitor . missing_field (
+                                             "initializationOptions" )),
+                                    };
+                                let __field3 =
+                                    match __field3 {
+                                        Some(__field3) => __field3,
+                                        None =>
+                                        try!(visitor . missing_field (
                                              "capabilities" )),
                                     };
                                 Ok(InitializeParams{processId: __field0,
                                                     rootPath: __field1,
-                                                    capabilities: __field2,})
+                                                    initializationOptions:
+                                                        __field2,
+                                                    capabilities: __field3,})
                             }
                         }
                     }
                     const FIELDS: &'static [&'static str] =
-                        &["processId", "rootPath", "capabilities"];
+                        &["processId", "rootPath", "initializationOptions",
+                          "capabilities"];
                     deserializer.deserialize_struct("InitializeParams",
                                                     FIELDS,
                                                     __Visitor::<__D>(::std::marker::PhantomData))
@@ -3183,7 +3240,7 @@ const _IMPL_SERIALIZE_FOR_InitializeParams: () =
                 {
                     let mut state =
                         try!(_serializer . serialize_struct (
-                             "InitializeParams" , 0 + 1 + 1 + 1 ));
+                             "InitializeParams" , 0 + 1 + 1 + 1 + 1 ));
                     if !false {
                         try!(_serializer . serialize_struct_elt (
                              & mut state , "processId" , &self.processId ));
@@ -3191,6 +3248,11 @@ const _IMPL_SERIALIZE_FOR_InitializeParams: () =
                     if !false {
                         try!(_serializer . serialize_struct_elt (
                              & mut state , "rootPath" , &self.rootPath ));
+                    }
+                    if !false {
+                        try!(_serializer . serialize_struct_elt (
+                             & mut state , "initializationOptions" ,
+                             &self.initializationOptions ));
                     }
                     if !false {
                         try!(_serializer . serialize_struct_elt (
@@ -5816,10 +5878,10 @@ const _IMPL_SERIALIZE_FOR_MessageType: () =
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
-pub fn notification__ShowMessageRequest(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<ShowMessageRequestParams> {
-    notification("window/showMessageRequest",
-                 Box::new(move |params| { ls.showMessageRequest(params) }))
+pub fn request__ShowMessageRequest(ls: Rc<LanguageServer>)
+ -> FnLanguageServerRequest<ShowMessageRequestParams, MessageActionItem, ()> {
+    request("window/showMessageRequest",
+            Box::new(move |params| { ls.showMessageRequest(params) }))
 }
 #[derive(Debug, Clone)]
 pub struct ShowMessageRequestParams {
@@ -8437,11 +8499,15 @@ const _IMPL_SERIALIZE_FOR_PublishDiagnosticsParams: () =
         }
     };
 /**
- * The Completion request is sent from the client to the server to compute completion items at a given cursor position.
- * Completion items are presented in the IntelliSense user interface. If computing full completion items is expensive,
- * servers can additionally provide a handler for the completion item resolve request. 
- * This request is sent when a completion item is selected in the user interface. 
- */
+ The Completion request is sent from the client to the server to compute completion items at a given cursor position. 
+ Completion items are presented in the IntelliSense user interface. If computing full completion items is expensive, 
+ servers can additionally provide a handler for the completion item resolve request ('completionItem/resolve'). 
+ This request is sent when a completion item is selected in the user interface. A typically use case is for example: 
+ the 'textDocument/completion' request doesn't fill in the documentation property for returned completion items 
+ since it is expensive to compute. When the item is selected in the user interface then a 'completionItem/resolve' 
+ request is sent with the selected completion item as a param. The returned completion item should have the 
+ documentation property filled in.
+*/
 pub fn request__Completion(ls: Rc<LanguageServer>)
  -> FnLanguageServerRequest<TextDocumentPositionParams, CompletionList, ()> {
     request("textDocument/completion",
@@ -10975,9 +11041,14 @@ const _IMPL_SERIALIZE_FOR_ReferenceContext: () =
         }
     };
 /**
- * The document highlight request is sent from the client to the server to resolve a document highlights 
- * for a given text document position. 
- */
+ The document highlight request is sent from the client to the server to resolve a document highlights 
+ for a given text document position. 
+ For programming languages this usually highlights all references to the symbol scoped to this file. 
+ However we kept 'textDocument/documentHighlight' and 'textDocument/references' separate requests since 
+ the first one is allowed to be more fuzzy. 
+ Symbol matches usually have a DocumentHighlightKind of Read or Write whereas fuzzy or textual matches 
+ use Textas the kind.
+*/
 pub fn request__DocumentHighlight(ls: Rc<LanguageServer>)
  ->
      FnLanguageServerRequest<TextDocumentPositionParams, DocumentHighlight,

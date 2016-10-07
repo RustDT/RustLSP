@@ -18,7 +18,8 @@ use std::collections::HashMap;
 
 
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
-// Last update 03/08/2016
+// Last update 07/10/2016 at commit: 
+// https://github.com/Microsoft/language-server-protocol/commit/8fd7e96205a7750eb8440040c247f4a6533b238f
 
 
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
@@ -54,7 +55,7 @@ pub trait LanguageServer {
 	fn shutdown(&self, params: ()) -> LSResult<(), ()>;
 	fn exit(&self, params: ());
 	fn showMessage(&self, params: ShowMessageParams);
-	fn showMessageRequest(&self, params: ShowMessageRequestParams);
+	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()>;
 	fn logMessage(&self, params: LogMessageParams);
 	fn telemetryEvent(&self, params: any);
 	fn workspaceChangeConfiguration(&self, params: DidChangeConfigurationParams);
@@ -99,7 +100,8 @@ pub type number = u64;
 pub type number_or_string = string; /* FIXME: */
 pub type any = Value;
 
-/// Position in a text document expressed as zero-based line and character offset.
+/// Position in a text document expressed as zero-based line and character offset. 
+/// A position is between two characters like an 'insert' cursor in a editor.
 #[derive(Clone, Copy, Serialize, Deserialize, Debug)]
 pub struct Position {
     /**
@@ -113,7 +115,8 @@ pub struct Position {
     pub character: number,
 }
 
-///A range in a text document expressed as (zero-based) start and end positions.
+/// A range in a text document expressed as (zero-based) start and end positions. 
+/// A range is comparable to a selection in an editor. Therefore the end position is exclusive.
 #[derive(Clone, Copy, Serialize, Deserialize, Debug)]
 pub struct Range {
     /**
@@ -191,8 +194,11 @@ pub enum DiagnosticSeverity {
     Hint = 4
 }
 
-/// Represents a reference to a command. Provides a title which will be used to represent a command in the UI and, 
-/// optionally, an array of arguments which will be passed to the command handler function when invoked.
+/**
+ Represents a reference to a command. Provides a title which will be used to represent a command in the UI. 
+ Commands are identitifed using a string identifier and the protocol currently doesn't specify a set of 
+ well known commands. So executing a command requires some tool extension code.
+*/
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Command {
     /**
@@ -337,6 +343,11 @@ pub struct InitializeParams {
      * if no folder is open.
      */
     pub rootPath: string,
+    
+    /**
+     * User provided initialization options.
+     */
+    pub initializationOptions: Option<any>,
 
     /**
      * The capabilities provided by the client (editor)
@@ -587,10 +598,10 @@ pub enum MessageType {
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
-pub fn notification__ShowMessageRequest(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<ShowMessageRequestParams> 
+pub fn request__ShowMessageRequest(ls : Rc<LanguageServer>) 
+	-> FnLanguageServerRequest<ShowMessageRequestParams, MessageActionItem, ()> 
 {
-	notification("window/showMessageRequest", Box::new(move |params| {
+	request("window/showMessageRequest", Box::new(move |params| {
 		ls.showMessageRequest(params) 
 	}))
 }
@@ -870,11 +881,15 @@ pub struct PublishDiagnosticsParams {
 }
 
 /**
- * The Completion request is sent from the client to the server to compute completion items at a given cursor position.
- * Completion items are presented in the IntelliSense user interface. If computing full completion items is expensive,
- * servers can additionally provide a handler for the completion item resolve request. 
- * This request is sent when a completion item is selected in the user interface. 
- */
+ The Completion request is sent from the client to the server to compute completion items at a given cursor position. 
+ Completion items are presented in the IntelliSense user interface. If computing full completion items is expensive, 
+ servers can additionally provide a handler for the completion item resolve request ('completionItem/resolve'). 
+ This request is sent when a completion item is selected in the user interface. A typically use case is for example: 
+ the 'textDocument/completion' request doesn't fill in the documentation property for returned completion items 
+ since it is expensive to compute. When the item is selected in the user interface then a 'completionItem/resolve' 
+ request is sent with the selected completion item as a param. The returned completion item should have the 
+ documentation property filled in.
+*/
 pub fn request__Completion(ls : Rc<LanguageServer>) 
 // result: CompletionItem[] | CompletionList FIXME
 	-> FnLanguageServerRequest<TextDocumentPositionParams, CompletionList, ()> 
@@ -1144,9 +1159,14 @@ pub struct ReferenceContext {
 
 
 /**
- * The document highlight request is sent from the client to the server to resolve a document highlights 
- * for a given text document position. 
- */
+ The document highlight request is sent from the client to the server to resolve a document highlights 
+ for a given text document position. 
+ For programming languages this usually highlights all references to the symbol scoped to this file. 
+ However we kept 'textDocument/documentHighlight' and 'textDocument/references' separate requests since 
+ the first one is allowed to be more fuzzy. 
+ Symbol matches usually have a DocumentHighlightKind of Read or Write whereas fuzzy or textual matches 
+ use Textas the kind.
+*/
 pub fn request__DocumentHighlight(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerRequest<TextDocumentPositionParams, DocumentHighlight, ()>
 {

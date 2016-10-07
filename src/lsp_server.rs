@@ -91,7 +91,7 @@ pub fn initialize_methods(lsp_handler : &mut LSPServer) {
 	add_handler(&mut lsp_handler.json_rpc, lsp::notification__Exit(ls.clone()));
 	
 	add_handler(&mut lsp_handler.json_rpc, lsp::notification__ShowMessage(ls.clone()));
-	add_handler(&mut lsp_handler.json_rpc, lsp::notification__ShowMessageRequest(ls.clone()));
+	add_handler(&mut lsp_handler.json_rpc, lsp::request__ShowMessageRequest(ls.clone()));
 	add_handler(&mut lsp_handler.json_rpc, lsp::notification__LogMessage(ls.clone()));
 	add_handler(&mut lsp_handler.json_rpc, lsp::notification__TelemetryEvent(ls.clone()));
 	add_handler(&mut lsp_handler.json_rpc, lsp::notification__WorkspaceChangeConfiguration(ls.clone()));
