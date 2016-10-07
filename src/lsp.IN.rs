@@ -336,13 +336,13 @@ pub struct InitializeParams {
      * The process Id of the parent process that started
      * the server.
      */
-    pub processId: number,
+    pub processId: Option<number>, // XXX: LSP protocol is ambiguous if it can be null
 
     /**
      * The rootPath of the workspace. Is null
      * if no folder is open.
      */
-    pub rootPath: string,
+    pub rootPath: Option<string>, // XXX: LSP protocol is ambiguous if it can be null
     
     /**
      * User provided initialization options.

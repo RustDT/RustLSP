@@ -224,7 +224,9 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                           /* ========================= Protocol Structures ========================= */
 
 
+                           // XXX: LSP protocol is ambiguous if it can be null
 
+                           // XXX: LSP protocol is ambiguous if it can be null
 
 
 
@@ -2956,12 +2958,12 @@ pub struct InitializeParams {
      * The process Id of the parent process that started
      * the server.
      */
-    pub processId: number,
+    pub processId: Option<number>,
     /**
      * The rootPath of the workspace. Is null
      * if no folder is open.
      */
-    pub rootPath: string,
+    pub rootPath: Option<string>,
     /**
      * User provided initialization options.
      */
@@ -3073,8 +3075,8 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                          __V: _serde::de::SeqVisitor {
                             {
                                 let __field0 =
-                                    match try!(visitor . visit :: < number > (
-                                                )) {
+                                    match try!(visitor . visit :: <
+                                               Option<number> > (  )) {
                                         Some(value) => { value }
                                         None => {
                                             try!(visitor . end (  ));
@@ -3082,8 +3084,8 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                         }
                                     };
                                 let __field1 =
-                                    match try!(visitor . visit :: < string > (
-                                                )) {
+                                    match try!(visitor . visit :: <
+                                               Option<string> > (  )) {
                                         Some(value) => { value }
                                         None => {
                                             try!(visitor . end (  ));
@@ -3123,8 +3125,10 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                                    __V::Error> where
                          __V: _serde::de::MapVisitor {
                             {
-                                let mut __field0: Option<number> = None;
-                                let mut __field1: Option<string> = None;
+                                let mut __field0: Option<Option<number>> =
+                                    None;
+                                let mut __field1: Option<Option<string>> =
+                                    None;
                                 let mut __field2: Option<Option<any>> = None;
                                 let mut __field3: Option<ClientCapabilities> =
                                     None;
@@ -3140,7 +3144,8 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                             __field0 =
                                                 Some(try!(visitor .
                                                           visit_value :: <
-                                                          number > (  )));
+                                                          Option<number> > (
+                                                          )));
                                         }
                                         __Field::__field1 => {
                                             if __field1.is_some() {
@@ -3150,7 +3155,8 @@ const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
                                             __field1 =
                                                 Some(try!(visitor .
                                                           visit_value :: <
-                                                          string > (  )));
+                                                          Option<string> > (
+                                                          )));
                                         }
                                         __Field::__field2 => {
                                             if __field2.is_some() {
