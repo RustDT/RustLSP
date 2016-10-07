@@ -52,9 +52,9 @@ fn parse_transport_message__test() {
 	
 	let string = String::from("Content-Length: 10 \r\n\r\n1234567890abcdef");
 	assert_eq!(parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap(), "1234567890");
-
-	let string = String::from("Content-Length: 13 \r\nBlaah-Blah\r\n\r\n1234\n567\r\n890abcdef");
-	// Perhaps this case should result in an error.
+	
+	// Allow other header fields
+	let string = String::from("Content-Length: 13 \r\nContent-Blah\r\n\r\n1234\n567\r\n890abcdef");
 	assert_eq!(parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap(), "1234\n567\r\n890");
 	
 	// Test no-content	
