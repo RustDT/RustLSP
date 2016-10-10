@@ -10,24 +10,31 @@ use serde_json::Map;
 use serde_json::Value;
 use serde_json::builder::ObjectBuilder;
 
+pub type JsonObject = Map<String, Value>;
+
 /* ----------------- deserialize helpers ----------------- */
 
-pub fn new_object() -> Map<String, Value> {
+pub fn new_object() -> JsonObject {
 	BTreeMap::new()
 }
 
-pub fn unwrap_object(ob: ObjectBuilder) -> Map<String, Value> {
-	match ob.build() {
+pub fn unwrap_object_builder(ob: ObjectBuilder) -> JsonObject {
+	unwrap_object(ob.build())
+}
+
+pub fn unwrap_object(value: Value) -> JsonObject {
+	match value {
 		Value::Object(o) => o ,
 		_ => { panic!() },
 	}
 }
 
+
 pub trait JsonDeserializerHelper<ERR> {
 	
 	fn new_request_deserialization_error(&self) -> ERR;
 	
-	fn obtain_Value(&mut self, mut json_map : &mut Map<String, Value>, key: & str) 
+	fn obtain_Value(&mut self, mut json_map : &mut JsonObject, key: & str) 
 		-> Result<Value, ERR> 
 	{
 		let value = json_map.remove(key);
@@ -37,7 +44,7 @@ pub trait JsonDeserializerHelper<ERR> {
 		}
 	}
 	
-	fn obtain_Value_or(&mut self, mut json_map : &mut Map<String, Value>, key: & str, default: & Fn() -> Value) 
+	fn obtain_Value_or(&mut self, mut json_map : &mut JsonObject, key: & str, default: & Fn() -> Value) 
 		-> Value 
 	{
 		if let Some(value) = json_map.remove(key) {
@@ -54,7 +61,7 @@ pub trait JsonDeserializerHelper<ERR> {
 		}
 	}
 	
-	fn as_Map(&mut self, value: Value) -> Result<Map<String, Value>, ERR> {
+	fn as_Map(&mut self, value: Value) -> Result<JsonObject, ERR> {
 		match value {
 			Value::Object(map) => Ok(map),
 			_ => Err(self.new_request_deserialization_error()),
@@ -70,28 +77,28 @@ pub trait JsonDeserializerHelper<ERR> {
 	}
 	
 	
-	fn obtain_String(&mut self, json_map : &mut Map<String, Value>, key: &str) 
+	fn obtain_String(&mut self, json_map : &mut JsonObject, key: &str) 
 		-> Result<String, ERR> 
 	{
 		let value = try!(self.obtain_Value(json_map, key));
 		self.as_String(value)
 	}
 	
-	fn obtain_Map(&mut self, json_map : &mut Map<String, Value>, key: &str) 
-		-> Result<Map<String, Value>, ERR> 
+	fn obtain_Map(&mut self, json_map : &mut JsonObject, key: &str) 
+		-> Result<JsonObject, ERR> 
 	{
 		let value = try!(self.obtain_Value(json_map, key));
 		self.as_Map(value)
 	}
 	
-	fn obtain_Map_or(&mut self, json_map : &mut Map<String, Value>, key: &str, default: & Fn() -> Map<String, Value>) 
-		-> Result<Map<String, Value>, ERR> 
+	fn obtain_Map_or(&mut self, json_map : &mut JsonObject, key: &str, default: & Fn() -> JsonObject) 
+		-> Result<JsonObject, ERR> 
 	{
 		let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
 		self.as_Map(value)
 	}
 	
-	fn obtain_u32(&mut self, json_map: &mut Map<String, Value>, key: &str) 
+	fn obtain_u32(&mut self, json_map: &mut JsonObject, key: &str) 
 		-> Result<u32, ERR> 
 	{
 		let value = try!(self.obtain_Value(json_map, key));

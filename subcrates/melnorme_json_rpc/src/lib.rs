@@ -51,7 +51,7 @@ pub struct JsonRpcRequest {
 	//pub jsonrpc : String, 
 	pub id : Option<RpcId>,
 	pub method : String,
-	pub params : Map<String, Value>,
+	pub params : JsonObject,
 }
 
 /// A JSON RPC response, version 2.0
@@ -189,18 +189,19 @@ impl serde::Serialize for JsonRpcResponse {
 	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
 		where S: serde::Serializer
 	{
-		let elem_count = 2;
-		let mut state = try!(serializer.serialize_struct("JsonRpcRequest", elem_count));
+		let elem_count = 3;
+		let mut state = try!(serializer.serialize_struct("JsonRpcResponse", elem_count));
 		{
 			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
+			if let Some(ref id) = self.id {
+				try!(serializer.serialize_struct_elt(&mut state, "id", id));
+			}
 			match self.result_or_error {
-				//FIXME: test
 				JsonRpcResult_Or_Error::Result(ref value) => {
 					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
 				}
 				JsonRpcResult_Or_Error::Error(ref json_rpc_error) => {
-					/* FIXME: BUG here "result" */
-					try!(serializer.serialize_struct_elt(&mut state, "result", &json_rpc_error)); 
+					try!(serializer.serialize_struct_elt(&mut state, "error", &json_rpc_error)); 
 				}
 			}
 		}
@@ -588,9 +589,9 @@ mod tests {
 
 
 #[test]
-fn parse_jsonrpc_request_json_Test() {
+fn test_parse_JsonRpcRequest() {
 	
-	let sample_params = unwrap_object(ObjectBuilder::new()
+	let sample_params = unwrap_object_builder(ObjectBuilder::new()
 		.insert("param", "2.0")
 		.insert("foo", 123)
 	);
@@ -640,8 +641,52 @@ fn parse_jsonrpc_request_json_Test() {
 	assert_eq!(result, JsonRpcRequest { 
 			id : Some(RpcId::Number(1)), 
 			method : "myMethod".to_string(), 
-			params : unwrap_object(ObjectBuilder::new())
+			params : unwrap_object_builder(ObjectBuilder::new())
 	});
+	
+}
+
+#[test]
+fn test_JsonRpcResponse_serialize() {
+	use serde_json;
+	use serde_json::Value;
+	
+	fn sample_json_obj(foo: u32) -> Value {
+		ObjectBuilder::new().insert("foo", foo).build()
+	}
+	
+	let response = JsonRpcResponse::new_result(None, sample_json_obj(100));
+	let response_str = serde_json::to_string(&response).unwrap();
+	let response = unwrap_object(serde_json::from_str(&response_str).unwrap());
+	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("result", sample_json_obj(100))
+	));
+	
+	
+	let response = JsonRpcResponse::new_result(Some(RpcId::Number(123)), sample_json_obj(200));
+	let response_str = serde_json::to_string(&response).unwrap();
+	let response = unwrap_object(serde_json::from_str(&response_str).unwrap());
+	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("id", 123)
+		.insert("result", sample_json_obj(200))
+	));
+	
+	let response = JsonRpcResponse::new_error(Some(RpcId::String("321".to_string())), JsonRpcError{
+		code: 5, message: "msg".to_string(), data: Some(sample_json_obj(300))
+	});
+	let response_str = serde_json::to_string(&response).unwrap();
+	let response = unwrap_object(serde_json::from_str(&response_str).unwrap());
+	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("id", "321")
+		.insert("error", unwrap_object_builder(ObjectBuilder::new()
+			.insert("code", 5)
+			.insert("message", "msg")
+			.insert("data", sample_json_obj(300))
+		))
+	));
 	
 }
 
