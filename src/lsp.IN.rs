@@ -253,6 +253,11 @@ pub struct WorkspaceEdit {
  */
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TextDocumentIdentifier {
+// !!!!!! Note: 
+// In the spec VersionedTextDocumentIdentifier extends TextDocumentIdentifier
+// This modelled by "mixing-in" TextDocumentIdentifier in VersionedTextDocumentIdentifier,
+// so any changes to this type must be effected in subt-type as well.
+
     /**
      * The text document's URI.
      */
@@ -272,13 +277,13 @@ pub struct TextDocumentItem {
     /**
      * The text document's language identifier.
      */
-    pub languageId: string,
+    pub languageId: Option<string>,
 
     /**
      * The version number of this document (it will strictly increase after each
      * change, including undo/redo).
      */
-    pub version: number,
+    pub version: Option<number>,
 
     /**
      * The content of the opened text document.
@@ -291,9 +296,13 @@ pub struct TextDocumentItem {
  */
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct VersionedTextDocumentIdentifier 
-//extends TextDocumentIdentifier  FIXME review this
+//extends TextDocumentIdentifier 
 {
-	pub extends: TextDocumentIdentifier,
+	// This field was "mixed-in" from TextDocumentIdentifier
+    /**
+     * The text document's URI.
+     */
+    pub uri: string,
 	
     /**
      * The version number of this document.
@@ -306,6 +315,11 @@ pub struct VersionedTextDocumentIdentifier
  */
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct TextDocumentPositionParams {
+// !!!!!! Note: 
+// In the spec ReferenceParams extends TextDocumentPositionParams
+// This modelled by "mixing-in" TextDocumentPositionParams in ReferenceParams,
+// so any changes to this type must be effected in subt-type as well.
+	
     /**
      * The text document.
      */
@@ -1144,8 +1158,22 @@ pub fn request__References(ls : Rc<LanguageServer>)
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ReferenceParams 
-//extends TextDocumentPositionParams FIXME
+//extends TextDocumentPositionParams 
 {
+	
+	// This field was "mixed-in" from TextDocumentIdentifier
+    /**
+     * The text document.
+     */
+    pub textDocument: TextDocumentIdentifier, 
+
+	// This field was "mixed-in" from TextDocumentIdentifier
+    /**
+     * The position inside the text document.
+     */
+    pub position: Position,
+	
+	
     pub context: ReferenceContext,
 }
 
