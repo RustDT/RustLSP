@@ -57,7 +57,7 @@ impl LSPServer {
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
-		let mut handler = new(MapMethodHandler::new());
+		let mut handler = new(MapRpcRequestHandler::new());
 		initialize_methods(ls.clone(), &mut handler);
 		
 		let jsonrpc_endpoint = JsonRpcEndpoint::start_with_provider(|| {
@@ -83,7 +83,7 @@ impl LSPServer {
 	
 }
 
-pub fn initialize_methods(ls: Rc<LanguageServer>, handler: &mut MapMethodHandler) {
+pub fn initialize_methods(ls: Rc<LanguageServer>, handler: &mut MapRpcRequestHandler) {
 	
 	handler.add_handler(lsp::request__Initialize(ls.clone()));
 	handler.add_handler(lsp::request__Shutdown(ls.clone()));

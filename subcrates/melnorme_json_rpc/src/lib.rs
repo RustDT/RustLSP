@@ -111,10 +111,8 @@ use output_agent::OutputAgent;
 use output_agent::OutputAgentTask;
 use output_agent::AgentLoopRunner;
 
-pub type DispatcherFn = Fn(JsonObject) -> Option<JsonRpcResult_Or_Error>;
-
 pub struct JsonRpcEndpoint {
-	pub method_handler : Box<MethodHandler>,
+	pub request_handler : Box<RpcRequestHandler>,
 	pub output_agent : Arc<Mutex<OutputAgent>>,
 }
 
@@ -122,24 +120,24 @@ pub struct JsonRpcEndpoint {
 
 impl JsonRpcEndpoint {
 	
-	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER, method_handler: Box<MethodHandler>) 
+	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER, request_handler: Box<RpcRequestHandler>) 
 		-> JsonRpcEndpoint
 	where 
 		AGENT_RUNNER : FnOnce(AgentLoopRunner),
 		AGENT_RUNNER : Send + 'static,
 	{
 		let output_agent = OutputAgent::start(agent_runner);
-		JsonRpcEndpoint { method_handler: method_handler, output_agent : newArcMutex(output_agent) }
+		JsonRpcEndpoint { request_handler: request_handler, output_agent : newArcMutex(output_agent) }
 	}
 	
-	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P, method_handler: Box<MethodHandler>) 
+	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P, request_handler: Box<RpcRequestHandler>) 
 		-> JsonRpcEndpoint
 	where 
 		OUT: Handler<String, GError> + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		let output_agent = OutputAgent::start_with_provider(out_stream_provider);
-		JsonRpcEndpoint { method_handler: method_handler, output_agent : newArcMutex(output_agent) }
+		JsonRpcEndpoint { request_handler: request_handler, output_agent : newArcMutex(output_agent) }
 	}
 	
 	pub fn is_shutdown(& self) -> bool {
@@ -174,27 +172,27 @@ impl JsonRpcEndpoint {
 	
 	pub fn handle_request(&mut self, request: JsonRpcRequest) {
 		let completable = JsonRpcRequestCompletable::new(request.id, self.output_agent.clone());
-		self.method_handler.invoke_method2(&request.method, request.params, completable); 
+		self.request_handler.handle_request(&request.method, request.params, completable); 
 	}
 	
 }
 
 /* -----------------  ----------------- */
 
-pub trait MethodHandler {
+pub trait RpcRequestHandler {
 	
-	fn invoke_method2(&mut self, request_method: &String, request_params: JsonObject, 
+	fn handle_request(&mut self, request_method: &String, request_params: JsonObject, 
 		completable: JsonRpcRequestCompletable); 
 }
 
-pub struct MapMethodHandler {
-	pub method_handlers : HashMap<String, Box<DispatcherFn>>,
+pub struct MapRpcRequestHandler {
+	pub method_handlers : HashMap<String, Box<MethodHandler>>,
 }
 
-impl MapMethodHandler {
+impl MapRpcRequestHandler {
 	
-	pub fn new() -> MapMethodHandler {
-		 MapMethodHandler { method_handlers : HashMap::new() }
+	pub fn new() -> MapRpcRequestHandler {
+		 MapRpcRequestHandler { method_handlers : HashMap::new() }
 	}
 	
 	pub fn add_notification<
@@ -219,23 +217,19 @@ impl MapMethodHandler {
 		self.add_rpc_handler(method_name, RpcRequest { method_fn : method_fn });
 	}
 	
-	pub fn add_handler<REQUEST_HANDLER : HandleRpcRequest + 'static>(
+	pub fn add_handler<METHOD_HANDLER : MethodHandler + 'static>(
 		&mut self,
-		method: (&'static str, REQUEST_HANDLER)
+		method: (&'static str, METHOD_HANDLER)
 	) {
 		self.add_rpc_handler(method.0, method.1);
 	}
 	
-	pub fn add_rpc_handler<REQUEST_HANDLER: HandleRpcRequest + 'static>(
+	pub fn add_rpc_handler<METHOD_HANDLER: MethodHandler + 'static>(
 		&mut self,
 		method_name: &'static str,
-		request_method: REQUEST_HANDLER
+		method_handler: METHOD_HANDLER
 	) {
-		let handler_fn : Box<DispatcherFn> = Box::new(move |params_map| {
-			request_method.handle_jsonrpc_request(params_map)
-		});
-		
-		self.method_handlers.insert(method_name.to_string(), handler_fn);
+		self.method_handlers.insert(method_name.to_string(), new(method_handler));
 	}
 	
 	fn invoke_method(&mut self, request_method: &String, request_params: JsonObject) 
@@ -244,7 +238,7 @@ impl MapMethodHandler {
 		if let Some(dispatcher_fn) = self.method_handlers.get(request_method) 
 		{
 			// FIXME: asynchronous operation 
-			return dispatcher_fn(request_params);
+			return dispatcher_fn.handle_invocation(request_params);
 		} else {
 			return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
 		}
@@ -252,9 +246,9 @@ impl MapMethodHandler {
 	
 }
 
-impl MethodHandler for MapMethodHandler {
+impl RpcRequestHandler for MapRpcRequestHandler {
 	
-	fn invoke_method2(&mut self, request_method: &String, request_params: JsonObject, 
+	fn handle_request(&mut self, request_method: &String, request_params: JsonObject, 
 		completable: JsonRpcRequestCompletable) 
 	{
 		let method_result = self.invoke_method(request_method, request_params);
@@ -265,9 +259,9 @@ impl MethodHandler for MapMethodHandler {
 
 /* -----------------  ----------------- */
 
-pub trait HandleRpcRequest {
+pub trait MethodHandler {
 	
-	fn handle_jsonrpc_request(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error>;
+	fn handle_invocation(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error>;
 	
 }
 
@@ -283,9 +277,9 @@ impl<
 	PARAMS : serde::Deserialize, 
 	RET : serde::Serialize,
 	RET_ERROR : serde::Serialize,
-> HandleRpcRequest for RpcRequest<PARAMS, RET, RET_ERROR> {
+> MethodHandler for RpcRequest<PARAMS, RET, RET_ERROR> {
 	
-	fn handle_jsonrpc_request(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
+	fn handle_invocation(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
 		handle_request(params_map, self.method_fn.as_ref())
 	}
 	
@@ -300,9 +294,9 @@ pub struct RpcNotification<
 
 impl<
 	PARAMS : serde::Deserialize, 
-> HandleRpcRequest for RpcNotification<PARAMS> {
+> MethodHandler for RpcNotification<PARAMS> {
 	
-	fn handle_jsonrpc_request(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
+	fn handle_invocation(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
 		let params_res : Result<PARAMS, _> = serde_json::from_value(Value::Object(params_map));
 		match params_res {
 			Ok(params) => { 
@@ -472,7 +466,7 @@ mod _tests {
 		
 		{
 			// Test handle unknown method
-			let mut method_handler = new(MapMethodHandler::new());
+			let mut method_handler = new(MapRpcRequestHandler::new());
 			
 			let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 			let result = method_handler.invoke_method(&request.method, request.params).unwrap();
@@ -481,7 +475,7 @@ mod _tests {
 		}
 		
 		let output = vec![];
-		let mut method_handler = new(MapMethodHandler::new());
+		let mut method_handler = new(MapRpcRequestHandler::new());
 		method_handler.add_request("my_method", Box::new(sample_fn));
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
