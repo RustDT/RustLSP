@@ -22,9 +22,7 @@ pub mod output_agent;
 
 use util::core::*;
 
-use serde_json::Map;
 use serde_json::Value;
-use serde_json::builder::ObjectBuilder;
 
 use std::io;
 use std::io::Write;
@@ -151,7 +149,7 @@ impl RpcId {
 }
 impl JsonRpcRequest {
 	
-	pub fn new(id_number : u64, method : String, params : Map<String, Value>) -> JsonRpcRequest {
+	pub fn new(id_number : u64, method : String, params : JsonObject) -> JsonRpcRequest {
 		JsonRpcRequest { 	
 			id : Some(RpcId::Number(id_number)),
 			method : method,
@@ -184,6 +182,62 @@ impl serde::Serialize for JsonRpcRequest {
 		serializer.serialize_struct_end(state)
 	}
 }
+
+
+/* -----------------  ----------------- */
+
+
+pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
+	let mut json_result : Value = 
+	match serde_json::from_str(message) 
+	{
+		Ok(ok) => { ok } 
+		Err(error) => { 
+			return Err(error_JSON_RPC_ParseError(error));
+		}
+	};
+	
+	let mut json_request_map : &mut JsonObject =
+	match json_result {
+		Value::Object(ref mut map) => map ,
+		_ => { return Err(error_JSON_RPC_InvalidRequest()) },
+	};
+	
+	parse_jsonrpc_request_jsonObject(&mut json_request_map)
+}
+
+pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> JsonRpcResult<JsonRpcRequest> {
+	
+	let mut helper = JsonRequestDeserializerHelper { };
+	
+	let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
+	if jsonrpc != "2.0" {
+		return Err(error_JSON_RPC_InvalidRequest())
+	}
+	let id = try!(parse_jsonrpc_request_id(request_map.remove("id")));
+	let method = try!(helper.obtain_String(&mut request_map, "method"));
+	let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| new_object()));
+	
+	let jsonrpc_request = JsonRpcRequest { id : id, method : method, params : params}; 
+	
+	Ok(jsonrpc_request)
+}
+
+pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId>> {
+	let id : Value = match id {
+		None => return Ok(None),
+		Some(id) => id,
+	};
+	match id {
+		Value::I64(number) => Ok(Some(RpcId::Number(number as u64))), // FIXME truncation
+		Value::U64(number) => Ok(Some(RpcId::Number(number))),
+		Value::String(string) => Ok(Some(RpcId::String(string))),
+		Value::Null => Ok(None),
+		_ => Err(error_JSON_RPC_InvalidRequest()),
+	}
+}
+
+/* ----------------- Response ----------------- */
 
 impl serde::Serialize for JsonRpcResponse {
 	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -228,90 +282,11 @@ impl serde::Serialize for JsonRpcError {
 
 /* -----------------  ----------------- */
 
-
-pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
-	let mut json_result : Value = match 
-		serde_json::from_str(message) 
-	{
-		Ok(ok) => { ok } 
-		Err(error) => { 
-			return Err(error_JSON_RPC_ParseError(error));
-		}
-	};
-	
-	parse_jsonrpc_request_json(&mut json_result)
-}
-
-pub fn parse_jsonrpc_request_json(request_json: &mut Value) -> JsonRpcResult<JsonRpcRequest> {
-	
-	let mut json_request_map : &mut Map<String, Value> =
-	match request_json {
-		&mut Value::Object(ref mut map) => map ,
-		_ => { return Err(error_JSON_RPC_InvalidRequest()) },
-	};
-	parse_jsonrpc_request_jsonObject(&mut json_request_map)
-}
-
-pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut Map<String, Value>) -> JsonRpcResult<JsonRpcRequest> {
-	
-	let mut helper = JsonRequestDeserializerHelper { };
-	
-	let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
-	if jsonrpc != "2.0" {
-		return Err(error_JSON_RPC_InvalidRequest())
-	}
-	let id = try!(parse_jsonrpc_request_id(request_map.remove("id")));
-	let method = try!(helper.obtain_String(&mut request_map, "method"));
-	let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| new_object()));
-	
-	let jsonrpc_request = JsonRpcRequest { id : id, method : method, params : params}; 
-	
-	Ok(jsonrpc_request)
-}
-
-pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId>> {
-	let id : Value = match id {
-		None => return Ok(None),
-		Some(id) => id,
-	};
-	match id {
-		Value::I64(number) => Ok(Some(RpcId::Number(number as u64))), // FIXME truncation
-		Value::U64(number) => Ok(Some(RpcId::Number(number))),
-		Value::String(string) => Ok(Some(RpcId::String(string))),
-		Value::Null => Ok(None),
-		_ => Err(error_JSON_RPC_InvalidRequest()),
-	}
-}
-
-
-
-impl JsonRpcError {
-	
-	pub fn to_string(&self) -> String {
-		let value = ObjectBuilder::new()
-			.insert("code", self.code)
-			.insert("message", &self.message)
-			.build()
-		;
-		// TODO: test
-		return serde_json::to_string(&value).unwrap();
-	}
-	
-	pub fn write_out(&self, out: &mut io::Write) -> io::Result<()> {
-		try!(out.write_all(self.to_string().as_bytes()));
-		Ok(())
-	}
-	
-}
-
-
-/* -----------------  ----------------- */
-
 use output_agent::OutputAgent;
 use output_agent::OutputAgentTask;
 use output_agent::AgentLoopRunner;
 
-pub type DispatcherFn = Fn(Map<String, Value>) -> Option<JsonRpcResult_Or_Error>;
+pub type DispatcherFn = Fn(JsonObject) -> Option<JsonRpcResult_Or_Error>;
 
 pub struct JsonRpcEndpoint {
 	pub dispatcher_map : HashMap<String, Box<DispatcherFn>>,
@@ -382,17 +357,17 @@ impl JsonRpcEndpoint {
 	pub fn handle_message(&mut self, message: &str) {
 		match parse_jsonrpc_request(message) {
 			Ok(rpc_request) => { 
-				self.dispatch_request(rpc_request);
+				self.handle_request(rpc_request);
 			} 
 			Err(error) => {
-				// If we can't parse JsonRpcRequest, send a sesponse with null id
+				// If we can't parse JsonRpcRequest, send an error response with null id
 				let id = None;
 				post_response(&mut self.output_agent, JsonRpcResponse::new_error(id, error)); 
 			}
 		}
 	}
 	
-	pub fn dispatch_request(&mut self, request: JsonRpcRequest) {
+	pub fn handle_request(&mut self, request: JsonRpcRequest) {
 		let id = request.id;
 		
 		if let Some(result_or_error) = self.do_dispatch_request(&request.method, request.params) 
@@ -402,7 +377,7 @@ impl JsonRpcEndpoint {
 		}
 	}
 	
-	pub fn do_dispatch_request(&mut self, request_method: &String, request_params: Map<String, Value>) 
+	pub fn do_dispatch_request(&mut self, request_method: &String, request_params: JsonObject) 
 		-> Option<JsonRpcResult_Or_Error> 
 	{
 		if let Some(dispatcher_fn) = self.dispatcher_map.get(request_method) 
@@ -456,25 +431,25 @@ impl JsonRpcEndpoint {
 
 pub trait HandleRpcRequest {
 	
-	fn handle_jsonrpc_request(&self, params_map: Map<String, Value>) -> Option<JsonRpcResult_Or_Error>;
+	fn handle_jsonrpc_request(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error>;
 	
 }
 
 pub struct RpcRequest<
-	PARAMS : serde::Deserialize + 'static, 
-	RET: serde::Serialize + 'static, 
-	RET_ERROR : serde::Serialize + 'static
+	PARAMS : serde::Deserialize, 
+	RET: serde::Serialize,
+	RET_ERROR : serde::Serialize,
 > {
 	pub method_fn: Box<ServiceHandler<PARAMS, RET, RET_ERROR>>
 }
 
 impl<
-	PARAMS : serde::Deserialize + 'static, 
-	RET : serde::Serialize + 'static, 
-	RET_ERROR : serde::Serialize + 'static
+	PARAMS : serde::Deserialize, 
+	RET : serde::Serialize,
+	RET_ERROR : serde::Serialize,
 > HandleRpcRequest for RpcRequest<PARAMS, RET, RET_ERROR> {
 	
-	fn handle_jsonrpc_request(&self, params_map: Map<String, Value>) -> Option<JsonRpcResult_Or_Error> {
+	fn handle_jsonrpc_request(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
 		handle_request(params_map, self.method_fn.as_ref())
 	}
 	
@@ -482,15 +457,16 @@ impl<
 
 
 pub struct RpcNotification<
-	PARAMS : serde::Deserialize + 'static, 
+	PARAMS : serde::Deserialize, 
 > {
 	pub method_fn: Box<Fn(PARAMS)>
 }
+
 impl<
-	PARAMS : serde::Deserialize + 'static, 
+	PARAMS : serde::Deserialize, 
 > HandleRpcRequest for RpcNotification<PARAMS> {
 	
-	fn handle_jsonrpc_request(&self, params_map: Map<String, Value>) -> Option<JsonRpcResult_Or_Error> {
+	fn handle_jsonrpc_request(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
 		let params_res : Result<PARAMS, _> = serde_json::from_value(Value::Object(params_map));
 		match params_res {
 			Ok(params) => { 
@@ -505,8 +481,9 @@ impl<
 	
 }
 
+
 	pub fn handle_request<PARAMS, RET, RET_ERROR>(
-		params_map: Map<String, Value>,
+		params_map: JsonObject,
 		method_fn: &ServiceHandler<PARAMS, RET, RET_ERROR>
 	) -> Option<JsonRpcResult_Or_Error>
 		where 
@@ -556,6 +533,7 @@ mod tests {
 	use util::tests::*;
 	use tests_sample_types::*;
 	
+	use serde_json;
 	use serde_json::builder::ObjectBuilder;
 	use json_util::*;
 	use service_util::*;
@@ -600,24 +578,24 @@ fn test_parse_JsonRpcRequest() {
 	check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_ParseError(""));
 	
 	// Test invalid JsonRpcRequest
-	let mut invalid_request = ObjectBuilder::new()
+	let invalid_request = ObjectBuilder::new()
 		.insert("jsonrpc", "2.0")
 		.insert("id", 1)
 		.insert("params", sample_params.clone())
 		.build();
 	
-	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();
+	let result = parse_jsonrpc_request(&serde_json::to_string(&invalid_request).unwrap()).unwrap_err();
 	assert_eq!(result, error_JSON_RPC_InvalidRequest());
 	
 	// Test invalid JsonRpcRequest 2 - jsonrpc 1.0
-	let mut invalid_request = ObjectBuilder::new()
+	let invalid_request = ObjectBuilder::new()
 		.insert("jsonrpc", "1.0")
 		.insert("id", 1)
 		.insert("method", "my method")
 		.insert("params", sample_params.clone())
 		.build();
 	
-	let result = parse_jsonrpc_request_json(&mut invalid_request).unwrap_err();
+	let result = parse_jsonrpc_request(&serde_json::to_string(&invalid_request).unwrap()).unwrap_err();
 	assert_eq!(result, error_JSON_RPC_InvalidRequest());
 	
 	// Test basic JsonRpcRequest
@@ -627,17 +605,17 @@ fn test_parse_JsonRpcRequest() {
 		params: sample_params.clone() 
 	}; 
 	
-	let result = parse_jsonrpc_request_json(&mut request.to_value()).unwrap();
+	let result = parse_jsonrpc_request(&serde_json::to_string(&request).unwrap()).unwrap();
 	assert_eq!(request, result);
 	
 	// Test basic JsonRpcRequest, no params
-	let mut request = ObjectBuilder::new()
+	let request = ObjectBuilder::new()
 		.insert("jsonrpc", "2.0")
 		.insert("id", 1)
 		.insert("method", "myMethod")
 		.build();
 	
-	let result = parse_jsonrpc_request_json(&mut request).unwrap();
+	let result = parse_jsonrpc_request(&serde_json::to_string(&request).unwrap()).unwrap();
 	assert_eq!(result, JsonRpcRequest { 
 			id : Some(RpcId::Number(1)), 
 			method : "myMethod".to_string(), 
