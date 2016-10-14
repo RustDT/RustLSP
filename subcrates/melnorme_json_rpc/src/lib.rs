@@ -649,143 +649,142 @@ mod tests {
 	}
 
 
-#[test]
-fn test_parse_JsonRpcRequest() {
-	
-	let sample_params = unwrap_object_builder(ObjectBuilder::new()
-		.insert("param", "2.0")
-		.insert("foo", 123)
-	);
-	
-	// Test invalid JSON
-	check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_ParseError(""));
-	
-	// Test invalid JsonRpcRequest
-	let invalid_request = ObjectBuilder::new()
-		.insert("jsonrpc", "2.0")
-		.insert("id", 1)
-		.insert("params", sample_params.clone())
-		.build();
-	
-	let result = parse_jsonrpc_request(&serde_json::to_string(&invalid_request).unwrap()).unwrap_err();
-	assert_eq!(result, error_JSON_RPC_InvalidRequest());
-	
-	// Test invalid JsonRpcRequest 2 - jsonrpc 1.0
-	let invalid_request = ObjectBuilder::new()
-		.insert("jsonrpc", "1.0")
-		.insert("id", 1)
-		.insert("method", "my method")
-		.insert("params", sample_params.clone())
-		.build();
-	
-	let result = parse_jsonrpc_request(&to_json(&invalid_request)).unwrap_err();
-	assert_eq!(result, error_JSON_RPC_InvalidRequest());
-	
-	// Test basic JsonRpcRequest
-	let request = JsonRpcRequest { 
-		id : Some(RpcId::Number(1)), 
-		method: "myMethod".to_string(), 
-		params: sample_params.clone() 
-	}; 
-	
-	let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
-	assert_eq!(request, result);
-	
-	// Test basic JsonRpcRequest, no params
-	let request = ObjectBuilder::new()
-		.insert("jsonrpc", "2.0")
-		.insert("id", 1)
-		.insert("method", "myMethod")
-		.build();
-	let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
-	assert_eq!(result, JsonRpcRequest { 
+	#[test]
+	fn test_parse_JsonRpcRequest() {
+		
+		let sample_params = unwrap_object_builder(ObjectBuilder::new()
+			.insert("param", "2.0")
+			.insert("foo", 123)
+		);
+		
+		// Test invalid JSON
+		check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_ParseError(""));
+		
+		// Test invalid JsonRpcRequest
+		let invalid_request = ObjectBuilder::new()
+			.insert("jsonrpc", "2.0")
+			.insert("id", 1)
+			.insert("params", sample_params.clone())
+			.build();
+		
+		let result = parse_jsonrpc_request(&serde_json::to_string(&invalid_request).unwrap()).unwrap_err();
+		assert_eq!(result, error_JSON_RPC_InvalidRequest());
+		
+		// Test invalid JsonRpcRequest 2 - jsonrpc 1.0
+		let invalid_request = ObjectBuilder::new()
+			.insert("jsonrpc", "1.0")
+			.insert("id", 1)
+			.insert("method", "my method")
+			.insert("params", sample_params.clone())
+			.build();
+		
+		let result = parse_jsonrpc_request(&to_json(&invalid_request)).unwrap_err();
+		assert_eq!(result, error_JSON_RPC_InvalidRequest());
+		
+		// Test basic JsonRpcRequest
+		let request = JsonRpcRequest { 
 			id : Some(RpcId::Number(1)), 
-			method : "myMethod".to_string(), 
-			params : unwrap_object_builder(ObjectBuilder::new())
-	});
-	
-	// Test JsonRpcRequest for notification
-	let request = ObjectBuilder::new()
-		.insert("jsonrpc", "2.0")
-		.insert("method", "myNotification")
-		.build();
-	let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
-	assert_eq!(result, JsonRpcRequest { 
-//			id : Some(RpcId::Null), // Test null id 
-			id : None, // Test null id
-			method : "myNotification".to_string(), 
-			params : unwrap_object_builder(ObjectBuilder::new())
-	});
-	
-}
-
-#[test]
-fn test_JsonRpcResponse_serialize() {
-	
-	fn sample_json_obj(foo: u32) -> Value {
-		ObjectBuilder::new().insert("foo", foo).build()
-	}
-	
-	let response = JsonRpcResponse::new_result(RpcId::Null, sample_json_obj(100));
-	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
-		.insert("jsonrpc", "2.0")
-		.insert("id", RpcId::Null)
-		.insert("result", sample_json_obj(100))
-	));
-	
-	
-	let response = JsonRpcResponse::new_result(RpcId::Number(123), sample_json_obj(200));
-	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
-		.insert("jsonrpc", "2.0")
-		.insert("id", 123)
-		.insert("result", sample_json_obj(200))
-	));
-	
-	let response = JsonRpcResponse::new_result(RpcId::Null, sample_json_obj(200));
-	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
-		.insert("jsonrpc", "2.0")
-		.insert("id", Value::Null)
-		.insert("result", sample_json_obj(200))
-	));
-	
-	let response = JsonRpcResponse::new_error(RpcId::String("321".to_string()), JsonRpcError{
-		code: 5, message: "msg".to_string(), data: Some(sample_json_obj(300))
-	});
-	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
-		.insert("jsonrpc", "2.0")
-		.insert("id", "321")
-		.insert("error", unwrap_object_builder(ObjectBuilder::new()
-			.insert("code", 5)
-			.insert("message", "msg")
-			.insert("data", sample_json_obj(300))
-		))
-	));
-	
-}
-
-
-#[test]
-fn test_JsonRpcEndpoint() {
-	
-	use std::collections::BTreeMap;
-	use output_agent::IoWriteHandler;
-	use serde_json::Value;
-	use serde_json;
-	
-	{
-		let output = vec![];
-		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output), new(MapMethodHandler::new()));
+			method: "myMethod".to_string(), 
+			params: sample_params.clone() 
+		}; 
 		
-		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
-		let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
+		let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
+		assert_eq!(request, result);
 		
-		check_request(result, JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
-		rpc.shutdown();
+		// Test basic JsonRpcRequest, no params
+		let request = ObjectBuilder::new()
+			.insert("jsonrpc", "2.0")
+			.insert("id", 1)
+			.insert("method", "myMethod")
+			.build();
+		let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
+		assert_eq!(result, JsonRpcRequest { 
+				id : Some(RpcId::Number(1)), 
+				method : "myMethod".to_string(), 
+				params : unwrap_object_builder(ObjectBuilder::new())
+		});
+		
+		// Test JsonRpcRequest for notification
+		let request = ObjectBuilder::new()
+			.insert("jsonrpc", "2.0")
+			.insert("method", "myNotification")
+			.build();
+		let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
+		assert_eq!(result, JsonRpcRequest { 
+				id : None, // Test null id
+				method : "myNotification".to_string(), 
+				params : unwrap_object_builder(ObjectBuilder::new())
+		});
+		
 	}
+
+	#[test]
+	fn test_JsonRpcResponse_serialize() {
+		
+		fn sample_json_obj(foo: u32) -> Value {
+			ObjectBuilder::new().insert("foo", foo).build()
+		}
+		
+		let response = JsonRpcResponse::new_result(RpcId::Null, sample_json_obj(100));
+		let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
+		assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+			.insert("jsonrpc", "2.0")
+			.insert("id", RpcId::Null)
+			.insert("result", sample_json_obj(100))
+		));
+		
+		
+		let response = JsonRpcResponse::new_result(RpcId::Number(123), sample_json_obj(200));
+		let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
+		assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+			.insert("jsonrpc", "2.0")
+			.insert("id", 123)
+			.insert("result", sample_json_obj(200))
+		));
+		
+		let response = JsonRpcResponse::new_result(RpcId::Null, sample_json_obj(200));
+		let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
+		assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+			.insert("jsonrpc", "2.0")
+			.insert("id", Value::Null)
+			.insert("result", sample_json_obj(200))
+		));
+		
+		let response = JsonRpcResponse::new_error(RpcId::String("321".to_string()), JsonRpcError{
+			code: 5, message: "msg".to_string(), data: Some(sample_json_obj(300))
+		});
+		let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
+		assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+			.insert("jsonrpc", "2.0")
+			.insert("id", "321")
+			.insert("error", unwrap_object_builder(ObjectBuilder::new()
+				.insert("code", 5)
+				.insert("message", "msg")
+				.insert("data", sample_json_obj(300))
+			))
+		));
+		
+	}
+
+
+	#[test]
+	fn test_JsonRpcEndpoint() {
+		
+		use std::collections::BTreeMap;
+		use output_agent::IoWriteHandler;
+		use serde_json::Value;
+		use serde_json;
+		
+		{
+			let output = vec![];
+			let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output), new(MapMethodHandler::new()));
+			
+			let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
+			let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
+			
+			check_request(result, JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
+			rpc.shutdown();
+		}
 	
 		let output = vec![];
 		let mut method_handler = new(MapMethodHandler::new());
@@ -825,6 +824,6 @@ fn test_JsonRpcEndpoint() {
 		rpc.handle_request(request);
 		
 		rpc.shutdown();
-}
+	}
 
 }
