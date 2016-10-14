@@ -79,10 +79,16 @@ pub struct JsonRpcError {
 	pub data : Option<Value>,
 }
 
-impl JsonRpcError {
+/* ----------------- Impls ----------------- */
+
+impl JsonRpcRequest {
 	
-	pub fn new(code: i64, message: String) -> JsonRpcError {
-		JsonRpcError { code : code, message : message, data : None }
+	pub fn new(id_number : u64, method : String, params : JsonObject) -> JsonRpcRequest {
+		JsonRpcRequest { 	
+			id : Some(RpcId::Number(id_number)),
+			method : method,
+			params : params,
+		} 
 	}
 	
 }
@@ -99,7 +105,13 @@ impl JsonRpcResponse {
 	
 }
 
-/* -----------------  ----------------- */
+impl JsonRpcError {
+	
+	pub fn new(code: i64, message: String) -> JsonRpcError {
+		JsonRpcError { code : code, message : message, data : None }
+	}
+	
+}
 
 pub fn error_JSON_RPC_ParseError<T: fmt::Display>(error: T) -> JsonRpcError { 
 	JsonRpcError::new(-32700, format!("Invalid JSON was received by the server: {}", error).to_string())
@@ -118,20 +130,8 @@ pub fn error_JSON_RPC_InternalError() -> JsonRpcError {
 }
 
 
+/* -----------------  ----------------- */
 
-pub type JsonRpcResult<T> = Result<T, JsonRpcError>;
-
-struct JsonRequestDeserializerHelper {
-	
-}
-
-impl JsonDeserializerHelper<JsonRpcError> for JsonRequestDeserializerHelper {
-	
-	fn new_request_deserialization_error(&self) -> JsonRpcError {
-		return error_JSON_RPC_InvalidRequest();
-	}
-	
-}
 
 impl serde::Serialize for RpcId {
 	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -146,26 +146,6 @@ impl serde::Serialize for RpcId {
 }
 
 
-// TODO: review code below, probably a way to shorten this
-impl RpcId {
-	pub fn to_value(&self) -> Value {
-		serde_json::to_value(&self)
-	}
-}
-impl JsonRpcRequest {
-	
-	pub fn new(id_number : u64, method : String, params : JsonObject) -> JsonRpcRequest {
-		JsonRpcRequest { 	
-			id : Some(RpcId::Number(id_number)),
-			method : method,
-			params : params,
-		} 
-	}
-	
-	pub fn to_value(&self) -> Value {
-		serde_json::to_value(&self)
-	}
-}
 
 
 impl serde::Serialize for JsonRpcRequest {
@@ -188,9 +168,58 @@ impl serde::Serialize for JsonRpcRequest {
 	}
 }
 
+impl serde::Serialize for JsonRpcResponse {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		let elem_count = 3;
+		let mut state = try!(serializer.serialize_struct("JsonRpcResponse", elem_count));
+		{
+			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
+			try!(serializer.serialize_struct_elt(&mut state, "id", &self.id));
+			
+			match self.result_or_error {
+				JsonRpcResult_Or_Error::Result(ref value) => {
+					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
+				}
+				JsonRpcResult_Or_Error::Error(ref json_rpc_error) => {
+					try!(serializer.serialize_struct_elt(&mut state, "error", &json_rpc_error)); 
+				}
+			}
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
+impl serde::Serialize for JsonRpcError {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		let elem_count = 3;
+		let mut state = try!(serializer.serialize_struct("JsonRpcError", elem_count)); 
+		{
+			try!(serializer.serialize_struct_elt(&mut state, "code", self.code));
+			try!(serializer.serialize_struct_elt(&mut state, "message", &self.message));
+			if let Some(ref data) = self.data {
+				try!(serializer.serialize_struct_elt(&mut state, "data", data));
+			}
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
 
 /* -----------------  ----------------- */
 
+struct JsonRequestDeserializerHelper;
+
+impl JsonDeserializerHelper<JsonRpcError> for JsonRequestDeserializerHelper {
+	
+	fn new_request_deserialization_error(&self) -> JsonRpcError {
+		return error_JSON_RPC_InvalidRequest();
+	}
+	
+}
 
 pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
 	let mut json_result : Value = 
@@ -242,7 +271,7 @@ pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId
 	}
 }
 
-/* -----------------  ----------------- */
+/* -----------------  JsonRpcEndpoint  ----------------- */
 
 use output_agent::OutputAgent;
 use output_agent::OutputAgentTask;
@@ -254,6 +283,8 @@ pub struct JsonRpcEndpoint {
 	pub method_handler : Box<MethodHandler>,
 	pub output_agent : Arc<Mutex<OutputAgent>>,
 }
+
+pub type JsonRpcResult<T> = Result<T, JsonRpcError>;
 
 
 impl JsonRpcEndpoint {
@@ -557,46 +588,6 @@ pub fn post_response(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcRe
 	}; 
 	// If res is error, panic here, outside of thread lock
 	res.expect("Output agent is shutdown or thread panicked!");
-}
-
-impl serde::Serialize for JsonRpcResponse {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer
-	{
-		let elem_count = 3;
-		let mut state = try!(serializer.serialize_struct("JsonRpcResponse", elem_count));
-		{
-			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
-			try!(serializer.serialize_struct_elt(&mut state, "id", &self.id));
-			
-			match self.result_or_error {
-				JsonRpcResult_Or_Error::Result(ref value) => {
-					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
-				}
-				JsonRpcResult_Or_Error::Error(ref json_rpc_error) => {
-					try!(serializer.serialize_struct_elt(&mut state, "error", &json_rpc_error)); 
-				}
-			}
-		}
-		serializer.serialize_struct_end(state)
-	}
-}
-
-impl serde::Serialize for JsonRpcError {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer
-	{
-		let elem_count = 3;
-		let mut state = try!(serializer.serialize_struct("JsonRpcError", elem_count)); 
-		{
-			try!(serializer.serialize_struct_elt(&mut state, "code", self.code));
-			try!(serializer.serialize_struct_elt(&mut state, "message", &self.message));
-			if let Some(ref data) = self.data {
-				try!(serializer.serialize_struct_elt(&mut state, "data", data));
-			}
-		}
-		serializer.serialize_struct_end(state)
-	}
 }
 
 /* ----------------- Test ----------------- */
