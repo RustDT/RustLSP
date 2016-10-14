@@ -237,49 +237,6 @@ pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId
 	}
 }
 
-/* ----------------- Response ----------------- */
-
-impl serde::Serialize for JsonRpcResponse {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer
-	{
-		let elem_count = 3;
-		let mut state = try!(serializer.serialize_struct("JsonRpcResponse", elem_count));
-		{
-			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
-			if let Some(ref id) = self.id {
-				try!(serializer.serialize_struct_elt(&mut state, "id", id));
-			}
-			match self.result_or_error {
-				JsonRpcResult_Or_Error::Result(ref value) => {
-					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
-				}
-				JsonRpcResult_Or_Error::Error(ref json_rpc_error) => {
-					try!(serializer.serialize_struct_elt(&mut state, "error", &json_rpc_error)); 
-				}
-			}
-		}
-		serializer.serialize_struct_end(state)
-	}
-}
-
-impl serde::Serialize for JsonRpcError {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer
-	{
-		let elem_count = 3;
-		let mut state = try!(serializer.serialize_struct("JsonRpcError", elem_count)); 
-		{
-			try!(serializer.serialize_struct_elt(&mut state, "code", self.code));
-			try!(serializer.serialize_struct_elt(&mut state, "message", &self.message));
-			if let Some(ref data) = self.data {
-				try!(serializer.serialize_struct_elt(&mut state, "data", data));
-			}
-		}
-		serializer.serialize_struct_end(state)
-	}
-}
-
 /* -----------------  ----------------- */
 
 use output_agent::OutputAgent;
@@ -289,52 +246,37 @@ use output_agent::AgentLoopRunner;
 pub type DispatcherFn = Fn(JsonObject) -> Option<JsonRpcResult_Or_Error>;
 
 pub struct JsonRpcEndpoint {
-	pub dispatcher_map : HashMap<String, Box<DispatcherFn>>,
+	pub method_handler : Box<MethodHandler>,
 	pub output_agent : OutputAgent,
 }
 
-pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse) {
+pub trait MethodHandler {
 	
-	let task : OutputAgentTask = Box::new(move |mut response_handler| {
-		/* FIXME: log , review expect */ 
-		writeln!(&mut io::stderr(), "Response: {:?}", response).expect("Failed writing to stderr");
-		
-		let response_str = serde_json::to_string(&response).unwrap_or_else(|error| -> String { 
-			panic!("Failed to serialize to JSON, should be impossible: {}", error);
-		});
-		
-		let write_res = response_handler.supply(&response_str);
-		if let Err(error) = write_res {
-			// TODO log
-			// FIXME handle output stream write error by shutting down
-			writeln!(&mut io::stderr(), "Error writing RPC response: {}", error)
-				.expect("Failed writing to stderr");
-		};
-	});
-	output_agent.submit_task(task);
+	fn handle_method(&mut self, request_method: &String, request_params: JsonObject) 
+		-> Option<JsonRpcResult_Or_Error>; 
 }
-	
+
 
 impl JsonRpcEndpoint {
 	
-	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER) 
+	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER, method_handler: Box<MethodHandler>) 
 		-> JsonRpcEndpoint
 	where 
 		AGENT_RUNNER : FnOnce(AgentLoopRunner),
 		AGENT_RUNNER : Send + 'static,
 	{
 		let output_agent = OutputAgent::start(agent_runner);
-		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output_agent : output_agent }
+		JsonRpcEndpoint { method_handler: method_handler, output_agent : output_agent }
 	}
 	
-	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P) 
+	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P, method_handler: Box<MethodHandler>) 
 		-> JsonRpcEndpoint
 	where 
 		OUT: Handler<String, GError> + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		let output_agent = OutputAgent::start_with_provider(out_stream_provider);
-		JsonRpcEndpoint { dispatcher_map : HashMap::new() , output_agent : output_agent }
+		JsonRpcEndpoint { method_handler: method_handler, output_agent : output_agent }
 	}
 	
 	pub fn is_shutdown(& self) -> bool {
@@ -380,13 +322,19 @@ impl JsonRpcEndpoint {
 	pub fn do_dispatch_request(&mut self, request_method: &String, request_params: JsonObject) 
 		-> Option<JsonRpcResult_Or_Error> 
 	{
-		if let Some(dispatcher_fn) = self.dispatcher_map.get(request_method) 
-		{
-			// FIXME: asynchronous operation 
-			return dispatcher_fn(request_params);
-		} else {
-			return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
-		}
+		self.method_handler.handle_method(request_method, request_params)
+	}
+	
+}
+
+pub struct MapMethodHandler {
+	pub method_handlers : HashMap<String, Box<DispatcherFn>>,
+}
+
+impl MapMethodHandler {
+	
+	pub fn new() -> MapMethodHandler {
+		 MapMethodHandler { method_handlers : HashMap::new() }
 	}
 	
 	pub fn add_notification<
@@ -411,21 +359,42 @@ impl JsonRpcEndpoint {
 		self.add_rpc_handler(method_name, RpcRequest { method_fn : method_fn });
 	}
 	
-	pub fn add_rpc_handler<REQUEST_HANDLER>(
+	pub fn add_handler<REQUEST_HANDLER : HandleRpcRequest + 'static>(
+		&mut self,
+		method: (&'static str, REQUEST_HANDLER)
+	) {
+		self.add_rpc_handler(method.0, method.1);
+	}
+	
+	pub fn add_rpc_handler<REQUEST_HANDLER: HandleRpcRequest + 'static>(
 		&mut self,
 		method_name: &'static str,
 		request_method: REQUEST_HANDLER
-	)
-		where REQUEST_HANDLER: HandleRpcRequest + 'static,
-	{
+	) {
 		let handler_fn : Box<DispatcherFn> = Box::new(move |params_map| {
 			request_method.handle_jsonrpc_request(params_map)
 		});
 		
-		self.dispatcher_map.insert(method_name.to_string(), handler_fn);
+		self.method_handlers.insert(method_name.to_string(), handler_fn);
 	}
+	
 }
 
+impl MethodHandler for MapMethodHandler {
+	
+	fn handle_method(&mut self, request_method: &String, request_params: JsonObject) 
+		-> Option<JsonRpcResult_Or_Error>
+	{
+		if let Some(dispatcher_fn) = self.method_handlers.get(request_method) 
+		{
+			// FIXME: asynchronous operation 
+			return dispatcher_fn(request_params);
+		} else {
+			return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
+		}
+	}
+	
+}
 
 /* -----------------  ----------------- */
 
@@ -523,6 +492,70 @@ impl<
 		}
 	}
 
+/* ----------------- Response ----------------- */
+
+pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse) {
+	
+	let task : OutputAgentTask = Box::new(move |mut response_handler| {
+		/* FIXME: log , review expect */ 
+		writeln!(&mut io::stderr(), "Response: {:?}", response).expect("Failed writing to stderr");
+		
+		let response_str = serde_json::to_string(&response).unwrap_or_else(|error| -> String { 
+			panic!("Failed to serialize to JSON, should be impossible: {}", error);
+		});
+		
+		let write_res = response_handler.supply(&response_str);
+		if let Err(error) = write_res {
+			// TODO log
+			// FIXME handle output stream write error by shutting down
+			writeln!(&mut io::stderr(), "Error writing RPC response: {}", error)
+				.expect("Failed writing to stderr");
+		};
+	});
+	output_agent.submit_task(task);
+}
+
+impl serde::Serialize for JsonRpcResponse {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		let elem_count = 3;
+		let mut state = try!(serializer.serialize_struct("JsonRpcResponse", elem_count));
+		{
+			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
+			if let Some(ref id) = self.id {
+				try!(serializer.serialize_struct_elt(&mut state, "id", id));
+			}
+			match self.result_or_error {
+				JsonRpcResult_Or_Error::Result(ref value) => {
+					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
+				}
+				JsonRpcResult_Or_Error::Error(ref json_rpc_error) => {
+					try!(serializer.serialize_struct_elt(&mut state, "error", &json_rpc_error)); 
+				}
+			}
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
+impl serde::Serialize for JsonRpcError {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		let elem_count = 3;
+		let mut state = try!(serializer.serialize_struct("JsonRpcError", elem_count)); 
+		{
+			try!(serializer.serialize_struct_elt(&mut state, "code", self.code));
+			try!(serializer.serialize_struct_elt(&mut state, "message", &self.message));
+			if let Some(ref data) = self.data {
+				try!(serializer.serialize_struct_elt(&mut state, "data", data));
+			}
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
 /* ----------------- Test ----------------- */
 
 mod tests_sample_types;
@@ -530,6 +563,7 @@ mod tests_sample_types;
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use util::core::*;
 	use util::tests::*;
 	use tests_sample_types::*;
 	
@@ -679,7 +713,7 @@ fn test_JsonRpcEndpoint() {
 	
 	{
 		let output = vec![];
-		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output));
+		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output), new(MapMethodHandler::new()));
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
@@ -690,9 +724,10 @@ fn test_JsonRpcEndpoint() {
 	
 	{
 		let output = vec![];
-		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output));
-		let handler = Box::new(sample_fn);
-		rpc.add_request("my_method", handler);
+		let mut method_handler = new(MapMethodHandler::new());
+		method_handler.add_request("my_method", Box::new(sample_fn));
+		
+		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output), method_handler);
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), BTreeMap::new());
 		let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
