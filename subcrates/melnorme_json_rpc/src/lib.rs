@@ -29,13 +29,16 @@ use std::io::Write;
 use std::collections::HashMap;
 use std::result::Result;
 
+use std::fmt;
+use std::sync::Arc;
+use std::sync::Mutex;
+
 use service_util::ServiceError;
 use service_util::ServiceHandler;
 use service_util::Provider;
 use service_util::Handler;
 
 use json_util::*;
-use std::fmt;
 
 /* ----------------- JSON RPC ----------------- */
 
@@ -247,13 +250,7 @@ pub type DispatcherFn = Fn(JsonObject) -> Option<JsonRpcResult_Or_Error>;
 
 pub struct JsonRpcEndpoint {
 	pub method_handler : Box<MethodHandler>,
-	pub output_agent : OutputAgent,
-}
-
-pub trait MethodHandler {
-	
-	fn handle_method(&mut self, request_method: &String, request_params: JsonObject) 
-		-> Option<JsonRpcResult_Or_Error>; 
+	pub output_agent : Arc<Mutex<OutputAgent>>,
 }
 
 
@@ -266,7 +263,7 @@ impl JsonRpcEndpoint {
 		AGENT_RUNNER : Send + 'static,
 	{
 		let output_agent = OutputAgent::start(agent_runner);
-		JsonRpcEndpoint { method_handler: method_handler, output_agent : output_agent }
+		JsonRpcEndpoint { method_handler: method_handler, output_agent : newArcMutex(output_agent) }
 	}
 	
 	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P, method_handler: Box<MethodHandler>) 
@@ -276,15 +273,15 @@ impl JsonRpcEndpoint {
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		let output_agent = OutputAgent::start_with_provider(out_stream_provider);
-		JsonRpcEndpoint { method_handler: method_handler, output_agent : output_agent }
+		JsonRpcEndpoint { method_handler: method_handler, output_agent : newArcMutex(output_agent) }
 	}
 	
 	pub fn is_shutdown(& self) -> bool {
-		self.output_agent.is_shutdown()
+		self.output_agent.lock().unwrap().is_shutdown()
 	}
 	
 	pub fn shutdown(&mut self) {
-		self.output_agent.shutdown_and_join();
+		self.output_agent.lock().unwrap().shutdown_and_join();
 	}
 	
 	pub fn read_incoming_messages<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER) 
@@ -312,10 +309,12 @@ impl JsonRpcEndpoint {
 	pub fn handle_request(&mut self, request: JsonRpcRequest) {
 		let id = request.id;
 		
+		let completable = JsonRpcRequestCompletable { completed : false, output_agent : self.output_agent.clone() };
+		
 		if let Some(result_or_error) = self.do_dispatch_request(&request.method, request.params) 
 		{
 			let response = JsonRpcResponse{ id: id, result_or_error : result_or_error };
-			post_response(&mut self.output_agent, response);
+			completable.provide_result(response);
 		}
 	}
 	
@@ -325,6 +324,14 @@ impl JsonRpcEndpoint {
 		self.method_handler.handle_method(request_method, request_params)
 	}
 	
+}
+
+/* -----------------  ----------------- */
+
+pub trait MethodHandler {
+	
+	fn handle_method(&mut self, request_method: &String, request_params: JsonObject) 
+		-> Option<JsonRpcResult_Or_Error>; 
 }
 
 pub struct MapMethodHandler {
@@ -494,7 +501,28 @@ impl<
 
 /* ----------------- Response ----------------- */
 
-pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse) {
+pub struct JsonRpcRequestCompletable {
+	completed : bool,
+	output_agent: Arc<Mutex<OutputAgent>>,
+}
+
+impl JsonRpcRequestCompletable {
+	
+	pub fn provide_result(self, response: JsonRpcResponse) {
+		assert!(!self.completed);
+		post_response(&self.output_agent, response);
+	}
+	
+}
+
+impl Drop for JsonRpcRequestCompletable {
+	
+	fn drop(&mut self) {
+		assert!(self.completed);
+	}
+}
+
+pub fn post_response(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcResponse) {
 	
 	let task : OutputAgentTask = Box::new(move |mut response_handler| {
 		/* FIXME: log , review expect */ 
@@ -512,7 +540,12 @@ pub fn post_response(output_agent : &mut OutputAgent, response : JsonRpcResponse
 				.expect("Failed writing to stderr");
 		};
 	});
-	output_agent.submit_task(task);
+	
+	let res = {
+		output_agent.lock().unwrap().try_submit_task(task)
+	}; 
+	// If res is error, panic here, outside of thread lock
+	res.expect("Output agent is shutdown or thread panicked!");
 }
 
 impl serde::Serialize for JsonRpcResponse {

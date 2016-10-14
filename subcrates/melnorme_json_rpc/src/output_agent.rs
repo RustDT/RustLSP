@@ -10,6 +10,7 @@ use std;
 use std::thread;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::sync::mpsc::SendError;
 use std::io;
 
 #[allow(unused_imports)]
@@ -30,8 +31,13 @@ const ERR_SEND_TASK_FAILED : &'static str
 	= "Failed to send task, Agent receive channel is closed.";
 
 /**
- * Actor-like, dedicated worker thread that handles writing to an output stream.
- * Accepts tasks as messages, which are executed by the agent.
+
+Actor-like, dedicated worker thread that handles writing to an output stream.
+Accepts tasks as messages, which are executed by the agent.
+
+Note that the OutputAgent type is not meant to be Sync, it is meant to be synchronized externally,
+or more typically, used by one controlling thread only. 
+
  */
 pub struct OutputAgent {
 	is_shutdown : bool,
@@ -88,17 +94,20 @@ impl OutputAgent {
 		self.is_shutdown
 	}
 	
-	pub fn submit_task(& self, task : OutputAgentTask) {
+	pub fn try_submit_task(& self, task : OutputAgentTask) -> Result<(), SendError<OutputAgentMessage>> {
 		self.task_queue.send(OutputAgentMessage::Task(task))
-			.expect(ERR_SEND_TASK_FAILED);
+	}
+	
+	pub fn submit_task(& self, task : OutputAgentTask) {
+		assert!(!self.is_shutdown);
+		self.try_submit_task(task).expect(ERR_SEND_TASK_FAILED);
 	}
 	
 	pub fn request_shutdown(&mut self) {
 		if !self.is_shutdown {
 			self.is_shutdown = true;
 			// send shutdown message
-			self.task_queue.send(OutputAgentMessage::Shutdown)
-				.expect(ERR_SEND_TASK_FAILED);
+			self.task_queue.send(OutputAgentMessage::Shutdown).ok();
 		}
 	}
 	
