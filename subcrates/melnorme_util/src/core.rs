@@ -238,6 +238,35 @@ fn test_convert() {
 }
 
 
+/* -----------------  lifecycle / dispose  ----------------- */
+
+
+pub struct FinishedFlag(pub bool);
+
+impl FinishedFlag {
+	
+	pub fn is_finished(&self) -> bool {
+		return self.0
+	}
+	
+	/// Set this flag as finished. Can only be invoked once.
+	pub fn finish(&mut self) {
+		assert!(!self.is_finished());
+		self.set_finished();
+	}
+	
+	pub fn set_finished(&mut self) {
+		self.0 = true;
+	}
+	
+}
+
+impl Drop for FinishedFlag {
+	
+	fn drop(&mut self) {
+		assert!(self.is_finished());
+	}
+}
 
 /* -----------------  Sync and Rc util ----------------- */
 

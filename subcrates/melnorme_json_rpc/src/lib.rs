@@ -43,7 +43,7 @@ use json_util::*;
 /* ----------------- JSON RPC ----------------- */
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum RpcId { Number(u64), String(String), }
+pub enum RpcId { Number(u64), String(String), Null, }
 
 #[derive(Debug, PartialEq, Clone)]
 /// A JSON RPC request, version 2.0
@@ -59,6 +59,7 @@ pub struct JsonRpcRequest {
 /// Only one of 'result' or 'error' is defined
 #[derive(Debug, PartialEq, Clone)]
 pub struct JsonRpcResponse {
+	// FIXME review this member, remove Option
 	pub id : Option<RpcId>,
 //	pub result : Option<Value>,
 //	pub error: Option<JsonRpcError>,
@@ -137,6 +138,7 @@ impl serde::Serialize for RpcId {
 		where S: serde::Serializer,
 	{
 		match self {
+			&RpcId::Null => serializer.serialize_none(),
 			&RpcId::Number(number) => serializer.serialize_u64(number), 
 			&RpcId::String(ref string) => serializer.serialize_str(string),
 		}
@@ -309,13 +311,9 @@ impl JsonRpcEndpoint {
 	pub fn handle_request(&mut self, request: JsonRpcRequest) {
 		let id = request.id;
 		
-		let completable = JsonRpcRequestCompletable { completed : false, output_agent : self.output_agent.clone() };
-		
-		if let Some(result_or_error) = self.do_dispatch_request(&request.method, request.params) 
-		{
-			let response = JsonRpcResponse{ id: id, result_or_error : result_or_error };
-			completable.provide_result(response);
-		}
+		let completable = JsonRpcRequestCompletable::new(id, self.output_agent.clone());
+		let rpc_result = self.do_dispatch_request(&request.method, request.params); 
+		completable.provide_result(rpc_result);
 	}
 	
 	pub fn do_dispatch_request(&mut self, request_method: &String, request_params: JsonObject) 
@@ -502,24 +500,33 @@ impl<
 /* ----------------- Response ----------------- */
 
 pub struct JsonRpcRequestCompletable {
-	completed : bool,
+	completion_flag: FinishedFlag,
+	id: Option<RpcId>,
 	output_agent: Arc<Mutex<OutputAgent>>,
 }
 
 impl JsonRpcRequestCompletable {
 	
-	pub fn provide_result(self, response: JsonRpcResponse) {
-		assert!(!self.completed);
-		post_response(&self.output_agent, response);
+	pub fn new(id: Option<RpcId>, output_agent: Arc<Mutex<OutputAgent>>) -> JsonRpcRequestCompletable {
+		
+		// From the spec: `A Notification is a Request object without an "id" member.`
+		
+		let completable = id.is_some(); 
+		
+		JsonRpcRequestCompletable{ completion_flag : FinishedFlag(completable), id : id, output_agent: output_agent } 
 	}
 	
-}
-
-impl Drop for JsonRpcRequestCompletable {
-	
-	fn drop(&mut self) {
-		assert!(self.completed);
+	pub fn provide_result(mut self, rpc_result: Option<JsonRpcResult_Or_Error>) {
+		if let Some(rpc_result) = rpc_result {
+			self.completion_flag.finish();
+			
+			let response = JsonRpcResponse{ id : self.id, result_or_error : rpc_result };
+			post_response(&self.output_agent, response);
+		} else {
+			self.completion_flag.set_finished();
+		}
 	}
+	
 }
 
 pub fn post_response(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcResponse) {
@@ -600,7 +607,9 @@ mod tests {
 	use util::tests::*;
 	use tests_sample_types::*;
 	
+	use serde;
 	use serde_json;
+	use serde_json::Value;
 	use serde_json::builder::ObjectBuilder;
 	use json_util::*;
 	use service_util::*;
@@ -613,6 +622,10 @@ mod tests {
 	}
 	pub fn new_sample_params(x: i32, y: i32) -> Point {
 		Point { x : x, y : y }
+	}
+	
+	fn to_json<T: serde::Serialize>(value: &T) -> String {
+		serde_json::to_string(value).unwrap()
 	}
 	
 	fn check_error(result: JsonRpcError, expected: JsonRpcError) {
@@ -662,7 +675,7 @@ fn test_parse_JsonRpcRequest() {
 		.insert("params", sample_params.clone())
 		.build();
 	
-	let result = parse_jsonrpc_request(&serde_json::to_string(&invalid_request).unwrap()).unwrap_err();
+	let result = parse_jsonrpc_request(&to_json(&invalid_request)).unwrap_err();
 	assert_eq!(result, error_JSON_RPC_InvalidRequest());
 	
 	// Test basic JsonRpcRequest
@@ -672,7 +685,7 @@ fn test_parse_JsonRpcRequest() {
 		params: sample_params.clone() 
 	}; 
 	
-	let result = parse_jsonrpc_request(&serde_json::to_string(&request).unwrap()).unwrap();
+	let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
 	assert_eq!(request, result);
 	
 	// Test basic JsonRpcRequest, no params
@@ -681,11 +694,23 @@ fn test_parse_JsonRpcRequest() {
 		.insert("id", 1)
 		.insert("method", "myMethod")
 		.build();
-	
-	let result = parse_jsonrpc_request(&serde_json::to_string(&request).unwrap()).unwrap();
+	let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
 	assert_eq!(result, JsonRpcRequest { 
 			id : Some(RpcId::Number(1)), 
 			method : "myMethod".to_string(), 
+			params : unwrap_object_builder(ObjectBuilder::new())
+	});
+	
+	// Test JsonRpcRequest for notification
+	let request = ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("method", "myNotification")
+		.build();
+	let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
+	assert_eq!(result, JsonRpcRequest { 
+//			id : Some(RpcId::Null), // Test null id 
+			id : None, // Test null id
+			method : "myNotification".to_string(), 
 			params : unwrap_object_builder(ObjectBuilder::new())
 	});
 	
@@ -693,16 +718,13 @@ fn test_parse_JsonRpcRequest() {
 
 #[test]
 fn test_JsonRpcResponse_serialize() {
-	use serde_json;
-	use serde_json::Value;
 	
 	fn sample_json_obj(foo: u32) -> Value {
 		ObjectBuilder::new().insert("foo", foo).build()
 	}
 	
 	let response = JsonRpcResponse::new_result(None, sample_json_obj(100));
-	let response_str = serde_json::to_string(&response).unwrap();
-	let response = unwrap_object(serde_json::from_str(&response_str).unwrap());
+	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
 	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
 		.insert("jsonrpc", "2.0")
 		.insert("result", sample_json_obj(100))
@@ -710,19 +732,25 @@ fn test_JsonRpcResponse_serialize() {
 	
 	
 	let response = JsonRpcResponse::new_result(Some(RpcId::Number(123)), sample_json_obj(200));
-	let response_str = serde_json::to_string(&response).unwrap();
-	let response = unwrap_object(serde_json::from_str(&response_str).unwrap());
+	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
 	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
 		.insert("jsonrpc", "2.0")
 		.insert("id", 123)
 		.insert("result", sample_json_obj(200))
 	));
 	
+	let response = JsonRpcResponse::new_result(Some(RpcId::Null), sample_json_obj(200));
+	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
+	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+		.insert("jsonrpc", "2.0")
+		.insert("id", Value::Null)
+		.insert("result", sample_json_obj(200))
+	));
+	
 	let response = JsonRpcResponse::new_error(Some(RpcId::String("321".to_string())), JsonRpcError{
 		code: 5, message: "msg".to_string(), data: Some(sample_json_obj(300))
 	});
-	let response_str = serde_json::to_string(&response).unwrap();
-	let response = unwrap_object(serde_json::from_str(&response_str).unwrap());
+	let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
 	assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
 		.insert("jsonrpc", "2.0")
 		.insert("id", "321")
@@ -755,7 +783,6 @@ fn test_JsonRpcEndpoint() {
 		rpc.shutdown();
 	}
 	
-	{
 		let output = vec![];
 		let mut method_handler = new(MapMethodHandler::new());
 		method_handler.add_request("my_method", Box::new(sample_fn));
@@ -772,12 +799,24 @@ fn test_JsonRpcEndpoint() {
 		};
 		
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), params_value);
-		let result = rpc.do_dispatch_request(&request.method, request.params).unwrap();
+		let result = rpc.do_dispatch_request(&request.method, request.params.clone()).unwrap();
 		check_request(result, JsonRpcResult_Or_Error::Result(
-					Value::String("1020".to_string())));
+			Value::String("1020".to_string()))
+		);
+		
+		// Test JsonRpcRequestCompletable
+		let completable = JsonRpcRequestCompletable::new(None, rpc.output_agent.clone());
+		completable.provide_result(None);
+		
+		// Test request with no id
+		let request = JsonRpcRequest { 	
+			id : None,
+			method : "my_method".into(),
+			params : request.params.clone(),
+		}; 
+		rpc.handle_request(request);
 		
 		rpc.shutdown();
-	}
 }
 
 }
