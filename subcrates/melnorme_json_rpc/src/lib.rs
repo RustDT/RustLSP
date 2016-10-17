@@ -197,14 +197,13 @@ impl JsonRpcRequestCompletable {
 		
 		// From the spec: `A Notification is a Request object without an "id" member.`
 		
-		let finished = !id.is_some(); 
-		
-		JsonRpcRequestCompletable{ completion_flag : FinishedFlag(finished), id : id, output_agent: output_agent } 
+		JsonRpcRequestCompletable{ completion_flag : FinishedFlag(false), id : id, output_agent: output_agent } 
 	}
 	
-	pub fn provide_result(mut self, rpc_result: Option<JsonRpcResult_Or_Error>) {
+	pub fn complete(mut self, rpc_result: Option<JsonRpcResult_Or_Error>) {
+		self.completion_flag.finish();
+		
 		if let Some(rpc_result) = rpc_result {
-			self.completion_flag.finish();
 			
 			let response =
 			if let Some(id) = self.id {
@@ -214,8 +213,6 @@ impl JsonRpcRequestCompletable {
 			};
 			
 			post_response(&self.output_agent, response);
-		} else {
-			self.completion_flag.set_finished();
 		}
 	}
 	
@@ -316,7 +313,7 @@ impl RpcRequestHandler for MapRpcRequestHandler {
 		completable: JsonRpcRequestCompletable) 
 	{
 		let method_result = self.invoke_method(request_method, request_params);
-		completable.provide_result(method_result);
+		completable.complete(method_result);
 	}
 	
 }
@@ -372,7 +369,6 @@ impl<
 	}
 	
 }
-
 
 	pub fn handle_request<PARAMS, RET, RET_ERROR>(
 		params_map: JsonObject,
@@ -497,11 +493,11 @@ mod _tests {
 		
 		// Test JsonRpcRequestCompletable - missing id for notification method
 		let completable = JsonRpcRequestCompletable::new(None, rpc.output_agent.clone());
-		completable.provide_result(None);
+		completable.complete(None);
 		
 		// Test JsonRpcRequestCompletable - missing id for regular method
 		let completable = JsonRpcRequestCompletable::new(None, rpc.output_agent.clone());
-		completable.provide_result(Some(JsonRpcResult_Or_Error::Result(Value::String("1020".to_string()))));
+		completable.complete(Some(JsonRpcResult_Or_Error::Result(Value::String("1020".to_string()))));
 		// test again using handle_request
 		// TODO review this code
 		let request = JsonRpcRequest { 	
