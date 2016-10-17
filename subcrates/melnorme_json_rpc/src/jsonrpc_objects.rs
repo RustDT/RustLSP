@@ -93,8 +93,8 @@ impl JsonRpcError {
 pub fn error_JSON_RPC_ParseError<T: fmt::Display>(error: T) -> JsonRpcError { 
 	JsonRpcError::new(-32700, format!("Invalid JSON was received by the server: {}", error).to_string())
 }
-pub fn error_JSON_RPC_InvalidRequest() -> JsonRpcError { 
-	JsonRpcError::new(-32600, "The JSON sent is not a valid Request object.".to_string())
+pub fn error_JSON_RPC_InvalidRequest<T: fmt::Display>(error: T) -> JsonRpcError { 
+	JsonRpcError::new(-32600, format!("The JSON sent is not a valid Request object: {}", error).to_string())
 }
 pub fn error_JSON_RPC_MethodNotFound() -> JsonRpcError { 
 	JsonRpcError::new(-32601, "The method does not exist / is not available.".to_string())
@@ -210,7 +210,7 @@ pub mod tests {
 	}
 	
 	#[test]
-	fn test_parse_JsonRpcRequest() {
+	fn test__parse_jsonrpc_request() {
 		
 		let sample_params = unwrap_object_builder(ObjectBuilder::new()
 			.insert("param", "2.0")
@@ -220,26 +220,35 @@ pub mod tests {
 		// Test invalid JSON
 		check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_ParseError(""));
 		
-		// Test invalid JsonRpcRequest
-		let invalid_request = ObjectBuilder::new()
-			.insert("jsonrpc", "2.0")
-			.insert("id", 1)
-			.insert("params", sample_params.clone())
-			.build();
+		assert_equal(
+			parse_jsonrpc_request("{ }"),
+			Err(error_JSON_RPC_InvalidRequest("Property `jsonrpc` is missing."))
+		);
+		assert_equal(
+			parse_jsonrpc_request(r#"{ "jsonrpc": "1.0" }"#),
+			Err(error_JSON_RPC_InvalidRequest(r#"Property `jsonrpc` is not "2.0". "#))
+		);
 		
-		let result = parse_jsonrpc_request(&serde_json::to_string(&invalid_request).unwrap()).unwrap_err();
-		assert_eq!(result, error_JSON_RPC_InvalidRequest());
+		assert_equal(
+			parse_jsonrpc_request(r#"{ "jsonrpc": "2.0" }"#),
+			Err(error_JSON_RPC_InvalidRequest("Property `method` is missing."))
+		);
+		assert_equal(
+			parse_jsonrpc_request(r#"{ "jsonrpc": "2.0", "method":null }"#),
+			Err(error_JSON_RPC_InvalidRequest("Value `null` is not a String."))
+		);
 		
-		// Test invalid JsonRpcRequest 2 - jsonrpc 1.0
-		let invalid_request = ObjectBuilder::new()
-			.insert("jsonrpc", "1.0")
-			.insert("id", 1)
-			.insert("method", "my method")
-			.insert("params", sample_params.clone())
-			.build();
+		assert_equal(
+			parse_jsonrpc_request(r#"{ "jsonrpc": "2.0", "method":"xxx" }"#),
+//			Err(error_JSON_RPC_InvalidRequest("Property `params` is missing."))
+			Ok(JsonRpcRequest { id : None, method : "xxx".into(), params : JsonObject::new(), })
+		);
 		
-		let result = parse_jsonrpc_request(&to_json(&invalid_request)).unwrap_err();
-		assert_eq!(result, error_JSON_RPC_InvalidRequest());
+		// Test valid request with params = null
+		assert_equal(
+			parse_jsonrpc_request(r#"{ "jsonrpc": "2.0", "method":"xxx", "params":null }"#),
+			Ok(JsonRpcRequest { id : None, method : "xxx".into(), params : JsonObject::new(), }) 
+		);
 		
 		// Test basic JsonRpcRequest
 		let request = JsonRpcRequest { 

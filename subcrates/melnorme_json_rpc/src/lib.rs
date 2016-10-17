@@ -47,16 +47,17 @@ struct JsonRequestDeserializerHelper;
 
 impl JsonDeserializerHelper<JsonRpcError> for JsonRequestDeserializerHelper {
 	
-	fn new_request_deserialization_error(&self) -> JsonRpcError {
-		return error_JSON_RPC_InvalidRequest();
+	fn new_error(&self, error_message: &str) -> JsonRpcError {
+		return error_JSON_RPC_InvalidRequest(error_message.to_string());
 	}
 	
 }
 
-pub type JsonRpcResult<T> = Result<T, JsonRpcError>;
+pub type JsonRpcParseResult<T> = Result<T, JsonRpcError>;
 
-pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
-	let mut json_result : Value = 
+
+pub fn parse_jsonrpc_request(message: &str) -> JsonRpcParseResult<JsonRpcRequest> {
+	let json_value : Value = 
 	match serde_json::from_str(message) 
 	{
 		Ok(ok) => { ok } 
@@ -65,33 +66,29 @@ pub fn parse_jsonrpc_request(message: &str) -> JsonRpcResult<JsonRpcRequest> {
 		}
 	};
 	
-	let mut json_request_map : &mut JsonObject =
-	match json_result {
-		Value::Object(ref mut map) => map ,
-		_ => { return Err(error_JSON_RPC_InvalidRequest()) },
-	};
-	
-	parse_jsonrpc_request_jsonObject(&mut json_request_map)
+	let mut helper = JsonRequestDeserializerHelper { };
+	let mut json_request_obj : JsonObject = try!(helper.as_Object(json_value));
+		
+	parse_jsonrpc_request_jsonObject(&mut json_request_obj)
 }
 
-pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> JsonRpcResult<JsonRpcRequest> {
-	
+pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> JsonRpcParseResult<JsonRpcRequest> {
 	let mut helper = JsonRequestDeserializerHelper { };
 	
 	let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
 	if jsonrpc != "2.0" {
-		return Err(error_JSON_RPC_InvalidRequest())
+		return Err(error_JSON_RPC_InvalidRequest(r#"Property `jsonrpc` is not "2.0". "#))
 	}
 	let id = try!(parse_jsonrpc_request_id(request_map.remove("id")));
 	let method = try!(helper.obtain_String(&mut request_map, "method"));
-	let params = try!(helper.obtain_Map_or(&mut request_map, "params", &|| new_object()));
+	let params = try!(helper.obtain_Object_or(&mut request_map, "params", &|| new_object()));
 	
 	let jsonrpc_request = JsonRpcRequest { id : id, method : method, params : params}; 
 	
 	Ok(jsonrpc_request)
 }
 
-pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId>> {
+pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcParseResult<Option<RpcId>> {
 	let id : Value = match id {
 		None => return Ok(None),
 		Some(id) => id,
@@ -101,7 +98,7 @@ pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcResult<Option<RpcId
 		Value::U64(number) => Ok(Some(RpcId::Number(number))),
 		Value::String(string) => Ok(Some(RpcId::String(string))),
 		Value::Null => Ok(None),
-		_ => Err(error_JSON_RPC_InvalidRequest()),
+		_ => Err(error_JSON_RPC_InvalidRequest("Property `id` not a String or integer.")),
 	}
 }
 
@@ -209,7 +206,8 @@ impl JsonRpcRequestCompletable {
 			if let Some(id) = self.id {
 				JsonRpcResponse{ id : id, result_or_error : rpc_result }
 			} else {
-				JsonRpcResponse::new_error(RpcId::Null, error_JSON_RPC_InvalidRequest())
+				JsonRpcResponse::new_error(RpcId::Null, 
+					error_JSON_RPC_InvalidRequest("Property `id` not provided for request."))
 			};
 			
 			post_response(&self.output_agent, response);
@@ -392,7 +390,7 @@ impl<
 mod tests_sample_types;
 
 #[cfg(test)]
-mod _tests {
+mod tests_ {
 	
 	use super::*;
 	use util::core::*;
@@ -402,8 +400,7 @@ mod _tests {
 	
 	use service_util::*;
 	use jsonrpc_objects::*;
-
-
+	
 	pub fn sample_fn(params: Point) -> Result<String, ServiceError<()>> {
 		let x_str : String = params.x.to_string();
 		let y_str : String = params.y.to_string();

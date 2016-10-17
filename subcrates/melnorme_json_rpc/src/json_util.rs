@@ -32,7 +32,7 @@ pub fn unwrap_object(value: Value) -> JsonObject {
 
 pub trait JsonDeserializerHelper<ERR> {
 	
-	fn new_request_deserialization_error(&self) -> ERR;
+	fn new_error(&self, error_message: &str) -> ERR;
 	
 	fn obtain_Value(&mut self, mut json_map : &mut JsonObject, key: & str) 
 		-> Result<Value, ERR> 
@@ -40,7 +40,7 @@ pub trait JsonDeserializerHelper<ERR> {
 		let value = json_map.remove(key);
 		match value {
 			Some(value) => { Ok(value) }, 
-			None => { return Err(self.new_request_deserialization_error()) }
+			None => { return Err(self.new_error(&format!("Property `{}` is missing.", key))) }
 		}
 	}
 	
@@ -48,7 +48,11 @@ pub trait JsonDeserializerHelper<ERR> {
 		-> Value 
 	{
 		if let Some(value) = json_map.remove(key) {
-			value
+			if let Value::Null = value {
+				default()
+			} else {
+				value
+			}
 		} else {
 			default()
 		}
@@ -57,14 +61,14 @@ pub trait JsonDeserializerHelper<ERR> {
 	fn as_String(&mut self, value: Value) -> Result<String, ERR> {
 		match value {
 			Value::String(string) => Ok(string),
-			_ => Err(self.new_request_deserialization_error()),
+			_ => Err(self.new_error(&format!("Value `{}` is not a String.", value))),
 		}
 	}
 	
-	fn as_Map(&mut self, value: Value) -> Result<JsonObject, ERR> {
+	fn as_Object(&mut self, value: Value) -> Result<JsonObject, ERR> {
 		match value {
 			Value::Object(map) => Ok(map),
-			_ => Err(self.new_request_deserialization_error()),
+			_ => Err(self.new_error(&format!("Value `{}` is not an Object.", value))),
 		}
 	}
 	
@@ -72,7 +76,7 @@ pub trait JsonDeserializerHelper<ERR> {
 		match value {
 			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
 			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
-			_ => Err(self.new_request_deserialization_error()) ,
+			_ => Err(self.new_error(&format!("Value `{}` is not an Integer.", value))),
 		}
 	}
 	
@@ -84,18 +88,18 @@ pub trait JsonDeserializerHelper<ERR> {
 		self.as_String(value)
 	}
 	
-	fn obtain_Map(&mut self, json_map : &mut JsonObject, key: &str) 
+	fn obtain_Object(&mut self, json_map : &mut JsonObject, key: &str) 
 		-> Result<JsonObject, ERR> 
 	{
 		let value = try!(self.obtain_Value(json_map, key));
-		self.as_Map(value)
+		self.as_Object(value)
 	}
 	
-	fn obtain_Map_or(&mut self, json_map : &mut JsonObject, key: &str, default: & Fn() -> JsonObject) 
+	fn obtain_Object_or(&mut self, json_map : &mut JsonObject, key: &str, default: & Fn() -> JsonObject) 
 		-> Result<JsonObject, ERR> 
 	{
 		let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
-		self.as_Map(value)
+		self.as_Object(value)
 	}
 	
 	fn obtain_u32(&mut self, json_map: &mut JsonObject, key: &str) 
