@@ -85,38 +85,38 @@ impl LSPServer {
 
 pub fn initialize_methods(ls: Rc<LanguageServer>, handler: &mut MapRpcRequestHandler) {
 	
-	handler.add_handler(lsp::request__Initialize(ls.clone()));
-	handler.add_handler(lsp::request__Shutdown(ls.clone()));
+	let (name, mh) = lsp::request__Initialize(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__Shutdown(ls.clone()); handler.add_request(name, mh);
 	
-	handler.add_handler(lsp::notification__Exit(ls.clone()));
+	let (name, mh) = lsp::notification__Exit(ls.clone()); handler.add_notification(name, mh);
 	
-	handler.add_handler(lsp::notification__ShowMessage(ls.clone()));
-	handler.add_handler(lsp::request__ShowMessageRequest(ls.clone()));
-	handler.add_handler(lsp::notification__LogMessage(ls.clone()));
-	handler.add_handler(lsp::notification__TelemetryEvent(ls.clone()));
-	handler.add_handler(lsp::notification__WorkspaceChangeConfiguration(ls.clone()));
-	handler.add_handler(lsp::notification__DidOpenTextDocument(ls.clone()));
-	handler.add_handler(lsp::notification__DidChangeTextDocument(ls.clone()));
-	handler.add_handler(lsp::notification__DidCloseTextDocument(ls.clone()));
-	handler.add_handler(lsp::notification__DidSaveTextDocument(ls.clone()));
-	handler.add_handler(lsp::notification__DidChangeWatchedFiles(ls.clone()));
-	handler.add_handler(lsp::notification__PublishDiagnostics(ls.clone()));
+	let (name, mh) = lsp::notification__ShowMessage(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::request__ShowMessageRequest(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::notification__LogMessage(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__TelemetryEvent(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__WorkspaceChangeConfiguration(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__DidOpenTextDocument(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__DidChangeTextDocument(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__DidCloseTextDocument(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__DidSaveTextDocument(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__DidChangeWatchedFiles(ls.clone()); handler.add_notification(name, mh);
+	let (name, mh) = lsp::notification__PublishDiagnostics(ls.clone()); handler.add_notification(name, mh);
 	
-	handler.add_handler(lsp::request__Completion(ls.clone()));
-	handler.add_handler(lsp::request__ResolveCompletionItem(ls.clone()));
-	handler.add_handler(lsp::request__Hover(ls.clone()));
-	handler.add_handler(lsp::request__SignatureHelp(ls.clone()));
-	handler.add_handler(lsp::request__GotoDefinition(ls.clone()));
-	handler.add_handler(lsp::request__References(ls.clone()));
-	handler.add_handler(lsp::request__DocumentHighlight(ls.clone()));
-	handler.add_handler(lsp::request__DocumentSymbols(ls.clone()));
-	handler.add_handler(lsp::request__WorkspaceSymbols(ls.clone()));
-	handler.add_handler(lsp::request__CodeAction(ls.clone()));
-	handler.add_handler(lsp::request__CodeLens(ls.clone()));
-	handler.add_handler(lsp::request__CodeLensResolve(ls.clone()));
-	handler.add_handler(lsp::request__Formatting(ls.clone()));
-	handler.add_handler(lsp::request__RangeFormatting(ls.clone()));
-	handler.add_handler(lsp::request__OnTypeFormatting(ls.clone()));
-	handler.add_handler(lsp::request__Rename(ls.clone()));
+	let (name, mh) = lsp::request__Completion(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__ResolveCompletionItem(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__Hover(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__SignatureHelp(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__GotoDefinition(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__References(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__DocumentHighlight(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__DocumentSymbols(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__WorkspaceSymbols(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__CodeAction(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__CodeLens(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__CodeLensResolve(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__Formatting(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__RangeFormatting(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__OnTypeFormatting(ls.clone()); handler.add_request(name, mh);
+	let (name, mh) = lsp::request__Rename(ls.clone()); handler.add_request(name, mh);
 	
 }

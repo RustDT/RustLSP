@@ -22,5 +22,6 @@ pub struct ServiceError<DATA> {
 	pub data : DATA
 }
 
-pub type ServiceHandler<PARAMS, RETURN_VALUE, ERROR_DATA> = 
-	Fn(PARAMS) -> Result<RETURN_VALUE, ServiceError<ERROR_DATA>>;
+pub type ServiceResult<RETURN_VALUE, ERROR_DATA> = Result<RETURN_VALUE, ServiceError<ERROR_DATA>>;
+
+pub type ServiceHandler<PARAMS, RETURN_VALUE, ERROR_DATA> = Fn(PARAMS) -> ServiceResult<RETURN_VALUE, ERROR_DATA>;

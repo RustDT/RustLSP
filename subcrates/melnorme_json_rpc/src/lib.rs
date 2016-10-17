@@ -34,7 +34,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 
 use service_util::ServiceError;
-use service_util::ServiceHandler;
+use service_util::ServiceResult;
 use service_util::Provider;
 use service_util::Handler;
 
@@ -247,7 +247,7 @@ pub fn post_response(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcRe
 /* -----------------  ----------------- */
 
 pub struct MapRpcRequestHandler {
-	pub method_handlers : HashMap<String, Box<MethodHandler>>,
+	pub method_handlers : HashMap<String, Box<RpcMethodHandler>>,
 }
 
 impl MapRpcRequestHandler {
@@ -263,7 +263,9 @@ impl MapRpcRequestHandler {
 		method_name: &'static str, 
 		method_fn: Box<Fn(PARAMS)>
 	) {
-		self.add_rpc_handler(method_name, RpcNotification { method_fn : method_fn });
+		let handler = new(move |p| { method_fn(p); None });
+		let request : FnRpcMethodHandler<PARAMS, (), ()> = FnRpcMethodHandler { method_fn : handler };
+		self.add_rpc_handler(method_name, request);
 	}
 	
 	pub fn add_request<
@@ -273,19 +275,13 @@ impl MapRpcRequestHandler {
 	>(
 		&mut self,
 		method_name: &'static str, 
-		method_fn: Box<ServiceHandler<PARAMS, RET, RET_ERROR>>
+		method_fn: Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>
 	) {
-		self.add_rpc_handler(method_name, RpcRequest { method_fn : method_fn });
+		let handler = new(move |p| { Some(method_fn(p)) });
+		self.add_rpc_handler(method_name, FnRpcMethodHandler { method_fn : handler });
 	}
 	
-	pub fn add_handler<METHOD_HANDLER : MethodHandler + 'static>(
-		&mut self,
-		method: (&'static str, METHOD_HANDLER)
-	) {
-		self.add_rpc_handler(method.0, method.1);
-	}
-	
-	pub fn add_rpc_handler<METHOD_HANDLER: MethodHandler + 'static>(
+	pub fn add_rpc_handler<METHOD_HANDLER: RpcMethodHandler + 'static>(
 		&mut self,
 		method_name: &'static str,
 		method_handler: METHOD_HANDLER
@@ -318,25 +314,25 @@ impl RpcRequestHandler for MapRpcRequestHandler {
 	
 }
 
-pub trait MethodHandler {
+pub trait RpcMethodHandler {
 	
 	fn handle_invocation(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error>;
 	
 }
 
-pub struct RpcRequest<
+pub struct FnRpcMethodHandler<
 	PARAMS : serde::Deserialize, 
 	RET: serde::Serialize,
 	RET_ERROR : serde::Serialize,
 > {
-	pub method_fn: Box<ServiceHandler<PARAMS, RET, RET_ERROR>>
+	pub method_fn: Box<Fn(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>>
 }
 
 impl<
 	PARAMS : serde::Deserialize, 
 	RET : serde::Serialize,
 	RET_ERROR : serde::Serialize,
-> MethodHandler for RpcRequest<PARAMS, RET, RET_ERROR> {
+> RpcMethodHandler for FnRpcMethodHandler<PARAMS, RET, RET_ERROR> {
 	
 	fn handle_invocation(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
 		handle_request(params_map, self.method_fn.as_ref())
@@ -344,35 +340,9 @@ impl<
 	
 }
 
-
-pub struct RpcNotification<
-	PARAMS : serde::Deserialize, 
-> {
-	pub method_fn: Box<Fn(PARAMS)>
-}
-
-impl<
-	PARAMS : serde::Deserialize, 
-> MethodHandler for RpcNotification<PARAMS> {
-	
-	fn handle_invocation(&self, params_map: JsonObject) -> Option<JsonRpcResult_Or_Error> {
-		let params_res : Result<PARAMS, _> = serde_json::from_value(Value::Object(params_map));
-		match params_res {
-			Ok(params) => { 
-				(self.method_fn)(params);
-				None
-			} 
-			Err(error) => {
-				return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams(error)));
-			}
-		}
-	}
-	
-}
-
 	pub fn handle_request<PARAMS, RET, RET_ERROR>(
 		params_map: JsonObject,
-		method_fn: &ServiceHandler<PARAMS, RET, RET_ERROR>
+		method_fn: &Fn(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>
 	) -> Option<JsonRpcResult_Or_Error>
 		where 
 		PARAMS : serde::Deserialize, 
@@ -381,17 +351,22 @@ impl<
 	{
 		let params_result : Result<PARAMS, _> = serde_json::from_value(Value::Object(params_map));
 		
-		let params = 
+		let result = 
 		match params_result {
 			Ok(params) => { 
-				params 
+				method_fn(params) 
 			} 
 			Err(error) => { 
 				return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams(error)));
 			}
 		};
 		
-		let result = method_fn(params);
+		let result = 
+		if let Some(result) = result {
+			result
+		} else {
+			return None;
+		};
 		
 		match result {
 			Ok(ret) => {

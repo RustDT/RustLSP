@@ -9,8 +9,6 @@
 #![allow(non_camel_case_types)]
 
 use json_rpc::service_util::*;
-use json_rpc::RpcRequest;
-use json_rpc::RpcNotification;
 
 use serde_json::Value;
 use serde;
@@ -24,17 +22,18 @@ use std::collections::HashMap;
 
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
 
-pub type FnLanguageServerNotification<PARAMS> = 
-	(&'static str, RpcNotification<PARAMS>);
-pub type FnLanguageServerRequest<PARAMS, RET, ERR> = 
-	(&'static str, RpcRequest<PARAMS, RET, ERR>);
+pub type FnLanguageServerNotification<PARAMS> =
+    (&'static str, Box<Fn(PARAMS)>);
+pub type FnLanguageServerRequest<PARAMS, RET, RET_ERROR> =
+    (&'static str, Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>);
 
 
 fn notification<
-	PARAMS : serde::Deserialize + 'static, 
+	PARAMS: serde::Deserialize + 'static, 
 >(name: &'static str, method_fn: Box<Fn(PARAMS)>) 
--> (&'static str, RpcNotification<PARAMS>) {
-	(name, RpcNotification { method_fn : method_fn } )
+	-> (&'static str, Box<Fn(PARAMS)>) 
+{
+	(name, method_fn)
 }
 
 fn request<
@@ -42,8 +41,9 @@ fn request<
 	RET: serde::Serialize + 'static, 
 	ERR : serde::Serialize + 'static
 >(name: &'static str, method_fn: Box<Fn(PARAMS) -> LSResult<RET, ERR>>) 
--> (&'static str, RpcRequest<PARAMS, RET, ERR>) {
-	(name, RpcRequest { method_fn : method_fn } )
+	-> (&'static str, Box<Fn(PARAMS) -> LSResult<RET, ERR>>) 
+{
+	(name, method_fn)
 }
 
 use std::rc::Rc;

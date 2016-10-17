@@ -9,8 +9,6 @@
 #![allow(non_camel_case_types)]
 
 use json_rpc::service_util::*;
-use json_rpc::RpcRequest;
-use json_rpc::RpcNotification;
 
 use serde_json::Value;
 use serde;
@@ -25,24 +23,25 @@ use std::collections::HashMap;
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
 
 pub type FnLanguageServerNotification<PARAMS> =
-    (&'static str, RpcNotification<PARAMS>);
-pub type FnLanguageServerRequest<PARAMS, RET, ERR> =
-    (&'static str, RpcRequest<PARAMS, RET, ERR>);
+    (&'static str, Box<Fn(PARAMS)>);
+pub type FnLanguageServerRequest<PARAMS, RET, RET_ERROR> =
+    (&'static str, Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>);
 
 
 fn notification<PARAMS: serde::Deserialize +
                 'static>(name: &'static str, method_fn: Box<Fn(PARAMS)>)
- -> (&'static str, RpcNotification<PARAMS>) {
-    (name, RpcNotification{method_fn: method_fn,})
+ -> (&'static str, Box<Fn(PARAMS)>) {
+    (name, method_fn)
 }
 
 fn request<PARAMS: serde::Deserialize + 'static, RET: serde::Serialize +
            'static, ERR: serde::Serialize +
            'static>(name: &'static str,
                     method_fn: Box<Fn(PARAMS) -> LSResult<RET, ERR>>)
- -> (&'static str, RpcRequest<PARAMS, RET, ERR>) {
-    (name, RpcRequest{method_fn: method_fn,})
+ -> (&'static str, Box<Fn(PARAMS) -> LSResult<RET, ERR>>) {
+    (name, method_fn)
 }
+
 
 use std::rc::Rc;
 
@@ -807,9 +806,9 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                         Some(try!(visitor . visit_value :: <
                                                   Option < string > > (  )));
                                 }
-                                __Field::__field4 => {
-                                    if __field4.is_some()
-                                       {
+                                __Field::__field4 =>
+                                {
+                                    if __field4.is_some() {
                                         return Err(<__V::Error as
                                                        _serde::de::Error>::duplicate_field("message"));
                                     }
@@ -820,11 +819,11 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                 _ => {
                                     try!(visitor . visit_value :: < _serde ::
                                          de :: impls :: IgnoredAny > (  ));
+
                                 }
                             }
                         }
                         try!(visitor . end (  ));
-
                         let __field0 =
                             match __field0 {
                                 Some(__field0) => __field0,
@@ -833,32 +832,36 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                             };
                         let __field1 =
                             match __field1 {
-                                Some(__field1) => __field1,
+                                Some(__field1) =>
+
+                                    __field1,
                                 None =>
                                 try!(visitor . missing_field ( "severity" )),
                             };
+                        //    code?: number | string;
                         let __field2 =
                             match __field2 {
+                                Some(__field2) =>
 
-                                //    code?: number | string;
-                                Some(__field2) => __field2,
+                                    __field2,
                                 None =>
                                 try!(visitor . missing_field ( "code" )),
                             };
-
                         let __field3 =
                             match __field3 {
                                 Some(__field3) => __field3,
                                 None =>
                                 try!(visitor . missing_field ( "source" )),
                             };
+
                         let __field4 =
                             match __field4 {
-                                Some(__field4) => __field4,
+                                Some(__field4) =>
+
+                                    __field4,
                                 None =>
                                 try!(visitor . missing_field ( "message" )),
                             };
-
                         Ok(Diagnostic{range: __field0,
                                       severity: __field1,
                                       code: __field2,
@@ -4385,8 +4388,8 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "completionProvider" )),
                             };
+                        //textDocumentSync?: number;
                         let __field3 =
-                            //textDocumentSync?: number;
                             match __field3 {
                                 Some(__field3) => __field3,
                                 None =>
@@ -4499,15 +4502,17 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                 }
                 const FIELDS: &'static [&'static str] =
                     &["textDocumentSync", "hoverProvider",
-                      "completionProvider", "signatureHelpProvider",
-                      "definitionProvider",
+                      "completionProvider",
+                      "signatureHelpProvider", "definitionProvider",
                       "referencesProvider", "documentHighlightProvider",
                       "documentSymbolProvider", "workspaceSymbolProvider",
                       "codeActionProvider", "codeLensProvider",
                       "documentFormattingProvider",
                       "documentRangeFormattingProvider",
                       "documentOnTypeFormattingProvider", "renameProvider"];
-                deserializer.deserialize_struct("ServerCapabilities", FIELDS,
+                deserializer.deserialize_struct(
+
+                                                "ServerCapabilities", FIELDS,
                                                 __Visitor)
             }
         }
@@ -4822,7 +4827,6 @@ const _IMPL_SERIALIZE_FOR_ShowMessageParams: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct ShowMessageParams {
     /**
