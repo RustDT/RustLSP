@@ -197,9 +197,9 @@ impl JsonRpcRequestCompletable {
 		
 		// From the spec: `A Notification is a Request object without an "id" member.`
 		
-		let completable = id.is_some(); 
+		let finished = !id.is_some(); 
 		
-		JsonRpcRequestCompletable{ completion_flag : FinishedFlag(completable), id : id, output_agent: output_agent } 
+		JsonRpcRequestCompletable{ completion_flag : FinishedFlag(finished), id : id, output_agent: output_agent } 
 	}
 	
 	pub fn provide_result(mut self, rpc_result: Option<JsonRpcResult_Or_Error>) {
