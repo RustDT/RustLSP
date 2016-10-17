@@ -177,13 +177,77 @@ impl JsonRpcEndpoint {
 	
 }
 
-/* -----------------  ----------------- */
+/* ----------------- Response handling ----------------- */
 
 pub trait RpcRequestHandler {
 	
 	fn handle_request(&mut self, request_method: &String, request_params: JsonObject, 
 		completable: JsonRpcRequestCompletable); 
 }
+
+pub struct JsonRpcRequestCompletable {
+	completion_flag: FinishedFlag,
+	id: Option<RpcId>,
+	output_agent: Arc<Mutex<OutputAgent>>,
+}
+
+impl JsonRpcRequestCompletable {
+	
+	pub fn new(id: Option<RpcId>, output_agent: Arc<Mutex<OutputAgent>>) -> JsonRpcRequestCompletable {
+		
+		// From the spec: `A Notification is a Request object without an "id" member.`
+		
+		let completable = id.is_some(); 
+		
+		JsonRpcRequestCompletable{ completion_flag : FinishedFlag(completable), id : id, output_agent: output_agent } 
+	}
+	
+	pub fn provide_result(mut self, rpc_result: Option<JsonRpcResult_Or_Error>) {
+		if let Some(rpc_result) = rpc_result {
+			self.completion_flag.finish();
+			
+			let response =
+			if let Some(id) = self.id {
+				JsonRpcResponse{ id : id, result_or_error : rpc_result }
+			} else {
+				JsonRpcResponse::new_error(RpcId::Null, error_JSON_RPC_InvalidRequest())
+			};
+			
+			post_response(&self.output_agent, response);
+		} else {
+			self.completion_flag.set_finished();
+		}
+	}
+	
+}
+
+pub fn post_response(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcResponse) {
+	
+	let task : OutputAgentTask = Box::new(move |mut response_handler| {
+		/* FIXME: log , review expect */ 
+		writeln!(&mut io::stderr(), "Response: {:?}", response).expect("Failed writing to stderr");
+		
+		let response_str = serde_json::to_string(&response).unwrap_or_else(|error| -> String { 
+			panic!("Failed to serialize to JSON, should be impossible: {}", error);
+		});
+		
+		let write_res = response_handler.supply(&response_str);
+		if let Err(error) = write_res {
+			// TODO log
+			// FIXME handle output stream write error by shutting down
+			writeln!(&mut io::stderr(), "Error writing RPC response: {}", error)
+				.expect("Failed writing to stderr");
+		};
+	});
+	
+	let res = {
+		output_agent.lock().unwrap().try_submit_task(task)
+	}; 
+	// If res is error, panic here, outside of thread lock
+	res.expect("Output agent is shutdown or thread panicked!");
+}
+
+/* -----------------  ----------------- */
 
 pub struct MapRpcRequestHandler {
 	pub method_handlers : HashMap<String, Box<MethodHandler>>,
@@ -256,8 +320,6 @@ impl RpcRequestHandler for MapRpcRequestHandler {
 	}
 	
 }
-
-/* -----------------  ----------------- */
 
 pub trait MethodHandler {
 	
@@ -353,69 +415,6 @@ impl<
 		}
 	}
 
-/* ----------------- Response ----------------- */
-
-pub struct JsonRpcRequestCompletable {
-	completion_flag: FinishedFlag,
-	id: Option<RpcId>,
-	output_agent: Arc<Mutex<OutputAgent>>,
-}
-
-impl JsonRpcRequestCompletable {
-	
-	pub fn new(id: Option<RpcId>, output_agent: Arc<Mutex<OutputAgent>>) -> JsonRpcRequestCompletable {
-		
-		// From the spec: `A Notification is a Request object without an "id" member.`
-		
-		let completable = id.is_some(); 
-		
-		JsonRpcRequestCompletable{ completion_flag : FinishedFlag(completable), id : id, output_agent: output_agent } 
-	}
-	
-	pub fn provide_result(mut self, rpc_result: Option<JsonRpcResult_Or_Error>) {
-		if let Some(rpc_result) = rpc_result {
-			self.completion_flag.finish();
-			
-			let response =
-			if let Some(id) = self.id {
-				JsonRpcResponse{ id : id, result_or_error : rpc_result }
-			} else {
-				JsonRpcResponse::new_error(RpcId::Null, error_JSON_RPC_InvalidRequest())
-			};
-			
-			post_response(&self.output_agent, response);
-		} else {
-			self.completion_flag.set_finished();
-		}
-	}
-	
-}
-
-pub fn post_response(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcResponse) {
-	
-	let task : OutputAgentTask = Box::new(move |mut response_handler| {
-		/* FIXME: log , review expect */ 
-		writeln!(&mut io::stderr(), "Response: {:?}", response).expect("Failed writing to stderr");
-		
-		let response_str = serde_json::to_string(&response).unwrap_or_else(|error| -> String { 
-			panic!("Failed to serialize to JSON, should be impossible: {}", error);
-		});
-		
-		let write_res = response_handler.supply(&response_str);
-		if let Err(error) = write_res {
-			// TODO log
-			// FIXME handle output stream write error by shutting down
-			writeln!(&mut io::stderr(), "Error writing RPC response: {}", error)
-				.expect("Failed writing to stderr");
-		};
-	});
-	
-	let res = {
-		output_agent.lock().unwrap().try_submit_task(task)
-	}; 
-	// If res is error, panic here, outside of thread lock
-	res.expect("Output agent is shutdown or thread panicked!");
-}
 
 /* ----------------- Tests ----------------- */
 
