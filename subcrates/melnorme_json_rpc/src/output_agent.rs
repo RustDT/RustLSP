@@ -16,11 +16,28 @@ use std::io;
 #[allow(unused_imports)]
 use util::core::*;
 
-use service_util::Handler;
+use service_util::MessageWriter;
+
+
+/* -----------------  ----------------- */
+
+/// Functional interface representing the execution of the Agent
+pub trait AgentRunnable {
+	
+	/// Run the Agent. Must end with a call to `agent_inner.enter_agent_loop()`
+	fn run_agent(self, agent_inner: AgentInnerRunner);
+	
+}
+
+impl<FN : FnOnce(AgentInnerRunner)> AgentRunnable for FN {
+	fn run_agent(self, agent_lr: AgentInnerRunner) {
+		self(agent_lr)
+	}
+}
 
 /* ----------------- Output_Agent ----------------- */
 
-pub type OutputAgentTask = Box<Fn(&mut Handler<String, GError>) + Send>;
+pub type OutputAgentTask = Box<Fn(&mut MessageWriter) + Send>;
 
 pub enum OutputAgentMessage {
 	Shutdown,
@@ -50,41 +67,29 @@ impl OutputAgent {
 	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P) 
 		-> OutputAgent
 	where 
-		OUT: Handler<String, GError> + 'static, 
+		OUT: MessageWriter + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
-		Self::start(move |loop_runner: AgentLoopRunner| {
+		Self::start(move |inner_runner: AgentInnerRunner| {
 			let mut out_stream : OUT = out_stream_provider();
 			
-			loop_runner.enter_agent_loop(&mut move |task| {
+			inner_runner.enter_agent_loop(&mut move |task| {
 				task(&mut out_stream); 
 			});
 		})
 	}
 	
-	pub fn start_with_task_runner<TASK_RUNNER, TASK_RUNNER_P>(task_runner_provider: TASK_RUNNER_P) 
-		-> OutputAgent
-	where 
-		TASK_RUNNER_P : FnOnce() -> TASK_RUNNER, 
-		TASK_RUNNER_P : Send + 'static,
-		TASK_RUNNER : FnMut(OutputAgentTask),
-	{
-		Self::start(move |loop_runner: AgentLoopRunner| {
-			let mut task_runner = task_runner_provider();
-			loop_runner.enter_agent_loop(&mut task_runner);
-		})
-	}
 	
-	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER) 
+	pub fn start<AGENT_RUNNER : Sized>(agent_runner: AGENT_RUNNER) 
 		-> OutputAgent
 	where 
-		AGENT_RUNNER : FnOnce(AgentLoopRunner),
+		AGENT_RUNNER : AgentRunnable,
 		AGENT_RUNNER : Send + 'static,
 	{
 		let (tx, rx) = mpsc::channel::<OutputAgentMessage>();
 		
 		let output_thread = thread::spawn(move || {
-			agent_runner(AgentLoopRunner{ rx : rx });
+			agent_runner.run_agent(AgentInnerRunner{ rx : rx });
         });
 		
 		OutputAgent { is_shutdown : false, task_queue : tx,  output_thread : Some(output_thread) } 	
@@ -143,10 +148,10 @@ impl Drop for OutputAgent {
 	
 }
 
-pub struct AgentLoopRunner {
+pub struct AgentInnerRunner {
 	rx: Receiver<OutputAgentMessage>,
 }
-impl AgentLoopRunner {
+impl AgentInnerRunner {
 	
 	/// Enter agent loop, with given task runner
 	pub fn enter_agent_loop<TASK_RUNNER>(self, mut task_runner: &mut TASK_RUNNER,)
@@ -187,8 +192,8 @@ impl AgentLoopRunner {
 /// Handle a message simply by writing to a io::Write
 pub struct IoWriteHandler<T: io::Write>(pub T);
 
-impl<T : io::Write> Handler<String, GError> for IoWriteHandler<T> {
-	fn supply(&mut self, msg: &str) -> Result<(), GError> {
+impl<T : io::Write> MessageWriter for IoWriteHandler<T> {
+	fn write_message(&mut self, msg: &str) -> Result<(), GError> {
 		try!(self.0.write_all(msg.as_bytes()));
 		Ok(())
 	}
@@ -203,7 +208,7 @@ fn test_OutputAgent() {
 	let mut agent = OutputAgent::start_with_provider(move || IoWriteHandler(output));
 	
 	agent.submit_task(new(|msg_writer| {
-		msg_writer.supply("First responde.").unwrap();
+		msg_writer.write_message("First responde.").unwrap();
 	}));
 	
 	agent.shutdown_and_join();
@@ -213,14 +218,16 @@ fn test_OutputAgent() {
 	
 	let output = newArcMutex(vec![] as Vec<u8>);
 	let output2 = output.clone();
-	let mut agent = OutputAgent::start_with_task_runner(|| {
-		move |task: OutputAgentTask| {
+	
+	let mut agent = OutputAgent::start(move |inner_runner: AgentInnerRunner| {
+		inner_runner.enter_agent_loop(&mut move |task: OutputAgentTask| {
 			let mut lock : std::sync::MutexGuard<Vec<u8>> = output2.lock().unwrap();
 			task(&mut IoWriteHandler(&mut *lock));
-		}
+		});
 	});
+	
 	agent.submit_task(new(|msg_writer| {
-		msg_writer.supply("First response.").unwrap();
+		msg_writer.write_message("First response.").unwrap();
 	}));
 	
 	agent.shutdown_and_join();
@@ -237,27 +244,17 @@ pub fn test_OutputAgent_API() {
 	use std::io::Read;
 	
 	
-	// Test with Stdout
+	// Test with StdOut
 	let mut agent = OutputAgent::start_with_provider(|| IoWriteHandler(std::io::stdout()));
 	agent.shutdown_and_join();
 	
 	
-	// Test with StdoutLock
-	let mut agent = OutputAgent::start_with_task_runner(|| {
-		let stdout = io::stdout();
-		move |task: OutputAgentTask| {
-			task(&mut IoWriteHandler(stdout.lock()));
-		}
-	});
-	agent.shutdown_and_join();
-	
-
-	// Test with StdoutLock - lock entire loop
-	let mut agent = OutputAgent::start(|loop_runner| {
+	// Test with StdoutLock - lock entire agent loop
+	let mut agent = OutputAgent::start(|inner_runner: AgentInnerRunner| {
 		let stdout = io::stdout();
 		let mut stdoutlock = stdout.lock();
 		
-		loop_runner.enter_agent_loop(&mut |task: OutputAgentTask| {
+		inner_runner.enter_agent_loop(&mut |task: OutputAgentTask| {
 			task(&mut IoWriteHandler(&mut stdoutlock));
 		});
 	});
@@ -267,12 +264,12 @@ pub fn test_OutputAgent_API() {
 	// Test with tcp stream
 	let stream = Arc::new(Mutex::new(TcpStream::connect("127.0.0.1:34254").unwrap()));
 	let stream2 = stream.clone();
-	let task_runner = move |task : OutputAgentTask| {
-		let mut stream = stream2.lock().expect("Re-entered mutex lock");
-		task(&mut IoWriteHandler(&mut *stream));
-	};
-	
-	let mut agent = OutputAgent::start_with_task_runner(|| task_runner );
+	let mut agent = OutputAgent::start(move |inner_runner: AgentInnerRunner| {
+		inner_runner.enter_agent_loop(&mut |task: OutputAgentTask| {
+			let mut stream = stream2.lock().expect("Re-entered mutex lock");
+			task(&mut IoWriteHandler(&mut *stream));
+		});
+	});
 	agent.shutdown_and_join();
 	
 	{

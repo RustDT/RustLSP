@@ -19,27 +19,30 @@ fn main() {
 	} else {
 		let mut args = env::args();
 		args.next();
-		let port = args.next().unwrap();
-		tcp_server(port);
+		let mut port_str = args.next().unwrap();
+		
+		println!("starting server on port: {}", port_str);
+	
+		// Workaround for a CDT-GDB bug on Windows that adds single quotes to params
+		if port_str.starts_with("'") && port_str.ends_with("'"){
+			port_str = port_str[1..port_str.len()-1].to_string();
+		}
+		
+		let port : u16 = port_str.parse::<u16>().expect(&format!("Invalid port number: {}", port_str));
+		tcp_server(("127.0.0.1", port));
 	}
 	
 }
 
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::net::ToSocketAddrs;
 use std::thread;
 
 
-fn tcp_server(mut port_str: String) {
-	println!("starting server on port: {}", port_str);
+fn tcp_server<A: ToSocketAddrs>(addr: A) {
 	
-	// Workaround for a CDT-GDB bug on Windows that adds single quotes to params
-	if port_str.starts_with("'") && port_str.ends_with("'"){
-		port_str = port_str[1..port_str.len()-1].to_string();
-	}
-	
-	let port : u16 = port_str.parse::<u16>().expect(&format!("Invalid port number: {}", port_str));
-	let listener = TcpListener::bind(("127.0.0.1", port)).unwrap();
+	let listener = TcpListener::bind(addr).unwrap(); //FIXME - unwrap
 	
 	for stream in listener.incoming() {
 		match stream {

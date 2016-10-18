@@ -11,22 +11,26 @@
 use std::io::{self, Write};
 
 use util::core::*;
-use json_rpc::service_util::Provider;
-use json_rpc::service_util::Handler;
 
+use json_rpc;
 use json_rpc::*;
+use json_rpc::service_util::Provider;
+use json_rpc::service_util::MessageWriter;
+use json_rpc::output_agent::OutputAgent;
 
 use lsp;
 use lsp_transport;
 use lsp::*;
 
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 /* -----------------  ----------------- */
 
-struct LSPMessageProvider<'a>(&'a mut io::BufRead);
+struct LSPMessageReader<'a>(&'a mut io::BufRead);
 
-impl<'a> Provider<String, GError> for LSPMessageProvider<'a> {
+impl<'a> Provider<String, GError> for LSPMessageReader<'a> {
 	fn obtain_next(&mut self) -> GResult<String> {
 		lsp_transport::parse_transport_message(&mut self.0)
 	}
@@ -34,17 +38,16 @@ impl<'a> Provider<String, GError> for LSPMessageProvider<'a> {
 
 struct LSPMessageWriter<T: io::Write>(pub T);
 
-impl<T: io::Write> Handler<String, GError> for LSPMessageWriter<T> {
-	fn supply(&mut self, msg: &str) -> Result<(), GError> {
+impl<T: io::Write> MessageWriter for LSPMessageWriter<T> {
+	fn write_message(&mut self, msg: &str) -> Result<(), GError> {
 		lsp_transport::write_transport_message(msg, &mut self.0)
 	}
 }
 
+/* -----------------  ----------------- */
+
 
 pub struct LSPServer {
-	
-	pub ls: Rc<LanguageServer>,
-	pub json_rpc : JsonRpcEndpoint,
 	
 }
 
@@ -57,21 +60,21 @@ impl LSPServer {
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
-		let mut handler = new(MapRpcRequestHandler::new());
-		initialize_methods(ls.clone(), &mut handler);
+		let mut request_handler = new(MapRpcRequestHandler::new());
+		initialize_methods(ls.clone(), &mut request_handler);
 		
-		let jsonrpc_endpoint = JsonRpcEndpoint::start_with_provider(|| {
+		let output_agent = OutputAgent::start_with_provider(|| {
 			LSPMessageWriter(out_stream_provider())
-		}, handler);
-		Self::start_with_endpoint(ls, input, jsonrpc_endpoint)
-	}
-	
-	pub fn start_with_endpoint(
-		ls: Rc<LanguageServer>, input: &mut io::BufRead, jsonrpc_endpoint: JsonRpcEndpoint
-	) {
-		let mut server = LSPServer { ls : ls, json_rpc : jsonrpc_endpoint };
+		});
+		let jsonrpc_endpoint = JsonRpcEndpoint::start_with_output_agent(output_agent, request_handler);
 		
-		let result = server.json_rpc.run_message_read_loop(LSPMessageProvider(input));
+		let jsonrpc_endpoint = newArcMutex(jsonrpc_endpoint);
+		
+		let ls_client = EndpointLSClient { jsonrpc_endpoint : jsonrpc_endpoint.clone() };
+		// FIXME: todo LanguageServerEndpoint + LS
+		ls.connect(ls_client);
+		
+		let result = json_rpc::run_message_read_loop(jsonrpc_endpoint, LSPMessageReader(input));
 		match result {
 			Err(error) => { 
 				writeln!(&mut io::stderr(), "Error handling incoming the connection streams: {}", error)
@@ -113,5 +116,41 @@ pub fn initialize_methods(ls: Rc<LanguageServer>, handler: &mut MapRpcRequestHan
 	let (name, mh) = lsp::request__RangeFormatting(ls.clone()); handler.add_request(name, mh);
 	let (name, mh) = lsp::request__OnTypeFormatting(ls.clone()); handler.add_request(name, mh);
 	let (name, mh) = lsp::request__Rename(ls.clone()); handler.add_request(name, mh);
+	
+}
+
+
+pub trait LanguageServerEndpoint {
+	fn connect(&self, client_endpoint: EndpointLSClient);	
+}
+
+impl LanguageServerEndpoint for LanguageServer {
+	fn connect(&self, client_endpoint: EndpointLSClient) {
+		// FIXME: todo
+	}
+}
+
+pub struct EndpointLSClient {
+	jsonrpc_endpoint: Arc<Mutex<JsonRpcEndpoint>>,
+}
+
+impl LanguageClient for EndpointLSClient {
+	
+    fn showMessage(&self, _params: ShowMessageParams) {
+//    	let (name, mh) = lsp::notification__ShowMessage(ls);
+    	panic!("not implemented")
+    }
+    fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()> {
+    	panic!("not implemented")
+    }
+    fn logMessage(&self, _params: LogMessageParams) {
+    	panic!("not implemented")
+    }
+    fn telemetryEvent(&self, _params: any) {
+    	panic!("not implemented")
+    }
+    fn publishDiagnostics(&self, _params: PublishDiagnosticsParams) {
+    	panic!("not implemented")
+    }
 	
 }

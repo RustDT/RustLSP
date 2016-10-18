@@ -5,15 +5,18 @@
 // This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use std::result;
+use std::result::Result;
 
+use util::core::*;
 
 pub trait Provider<VALUE, ERR> {
-	fn obtain_next(&mut self) -> result::Result<VALUE, ERR>;
+	fn obtain_next(&mut self) -> Result<VALUE, ERR>;
 }
 
-pub trait Handler<VALUE, ERR> {
-	fn supply(&mut self, msg: &str) -> Result<(), ERR>;
+pub trait MessageWriter {
+	
+	fn write_message(&mut self, msg: &str) -> Result<(), GError>;
+	
 }
 
 pub struct ServiceError<DATA> {

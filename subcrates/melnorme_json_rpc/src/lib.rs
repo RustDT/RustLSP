@@ -36,7 +36,6 @@ use std::sync::Mutex;
 use service_util::ServiceError;
 use service_util::ServiceResult;
 use service_util::Provider;
-use service_util::Handler;
 
 use json_util::*;
 use jsonrpc_objects::*;
@@ -46,11 +45,14 @@ use jsonrpc_objects::*;
 
 use output_agent::OutputAgent;
 use output_agent::OutputAgentTask;
-use output_agent::AgentLoopRunner;
+use output_agent::AgentRunnable;
 
+
+/// A JSON-RPC Server-role than can receive requests.
+/// TODO: Client role (send requests)
 pub struct JsonRpcEndpoint {
-	pub request_handler : Box<RpcRequestHandler>,
-	pub output_agent : Arc<Mutex<OutputAgent>>,
+	request_handler : Box<RpcRequestHandler>,
+	output_agent : Arc<Mutex<OutputAgent>>,
 }
 
 impl JsonRpcEndpoint {
@@ -58,20 +60,16 @@ impl JsonRpcEndpoint {
 	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER, request_handler: Box<RpcRequestHandler>) 
 		-> JsonRpcEndpoint
 	where 
-		AGENT_RUNNER : FnOnce(AgentLoopRunner),
+		AGENT_RUNNER : AgentRunnable,
 		AGENT_RUNNER : Send + 'static,
 	{
 		let output_agent = OutputAgent::start(agent_runner);
-		JsonRpcEndpoint { request_handler: request_handler, output_agent : newArcMutex(output_agent) }
+		Self::start_with_output_agent(output_agent, request_handler)
 	}
 	
-	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P, request_handler: Box<RpcRequestHandler>) 
+	pub fn start_with_output_agent(output_agent: OutputAgent, request_handler: Box<RpcRequestHandler>) 
 		-> JsonRpcEndpoint
-	where 
-		OUT: Handler<String, GError> + 'static, 
-		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
-		let output_agent = OutputAgent::start_with_provider(out_stream_provider);
 		JsonRpcEndpoint { request_handler: request_handler, output_agent : newArcMutex(output_agent) }
 	}
 	
@@ -81,15 +79,6 @@ impl JsonRpcEndpoint {
 	
 	pub fn shutdown(&mut self) {
 		self.output_agent.lock().unwrap().shutdown_and_join();
-	}
-	
-	pub fn run_message_read_loop<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER) 
-		-> GResult<()> 
-	{
-		loop {
-			let message = try!(input.obtain_next());
-			self.handle_message(&message);
-		}
 	}
 	
 	pub fn handle_message(&mut self, message: &str) {
@@ -112,12 +101,26 @@ impl JsonRpcEndpoint {
 	
 }
 
+pub fn run_message_read_loop<PROVIDER>(jsonrpc: Arc<Mutex<JsonRpcEndpoint>>, mut input: PROVIDER) 
+	-> GResult<()>
+where
+	PROVIDER : Provider<String, GError>
+{
+	loop {
+		let message = try!(input.obtain_next());
+		
+		let mut jsonrpc_lock = jsonrpc.lock().unwrap();
+		jsonrpc_lock.handle_message(&message);
+	}
+}
+
 /* ----------------- Response handling ----------------- */
 
 pub trait RpcRequestHandler {
 	
-	fn handle_request(&mut self, request_method: &String, request_params: JsonObject, 
-		completable: JsonRpcResponseCompletable); 
+	fn handle_request(
+		&mut self, request_method: &String, request_params: JsonObject, completable: JsonRpcResponseCompletable
+	);
 }
 
 pub struct JsonRpcResponseCompletable {
@@ -169,7 +172,7 @@ pub fn post_response(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcRe
 			panic!("Failed to serialize to JSON, should be impossible: {}", error);
 		});
 		
-		let write_res = response_handler.supply(&response_str);
+		let write_res = response_handler.write_message(&response_str);
 		if let Err(error) = write_res {
 			// TODO log
 			// FIXME handle output stream write error by shutting down
@@ -352,6 +355,7 @@ mod tests_ {
 	
 	use json_util::JsonObject;
 	use output_agent::IoWriteHandler;
+	use output_agent::OutputAgent;
 	use serde_json::Value;
 	use serde_json;
 	
@@ -386,21 +390,21 @@ mod tests_ {
 		
 		{
 			// Test handle unknown method
-			let mut method_handler = new(MapRpcRequestHandler::new());
+			let mut request_handler = new(MapRpcRequestHandler::new());
 			
 			let request = JsonRpcRequest::new(1, "my_method".to_string(), JsonObject::new());
-			let result = method_handler.invoke_method(&request.method, request.params).unwrap();
+			let result = request_handler.invoke_method(&request.method, request.params).unwrap();
 			
 			check_request(result, JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()));
 		}
 		
 		let output = vec![];
-		let mut method_handler = new(MapRpcRequestHandler::new());
-		method_handler.add_request("my_method", Box::new(sample_fn));
+		let mut request_handler = new(MapRpcRequestHandler::new());
+		request_handler.add_request("my_method", Box::new(sample_fn));
 		
 		// test with invalid params = "{}" 
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), JsonObject::new());
-		let result = method_handler.invoke_method(&request.method, request.params).unwrap();
+		let result = request_handler.invoke_method(&request.method, request.params).unwrap();
 		check_request(result, JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams("invalid type: unit")));
 		
 		// test with valid params
@@ -409,17 +413,17 @@ mod tests_ {
 			_ => panic!("Not serialized into Object") 
 		};
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), params_value);
-		let result = method_handler.invoke_method(&request.method, request.params.clone()).unwrap();
+		let result = request_handler.invoke_method(&request.method, request.params.clone()).unwrap();
 		assert_equal(result, JsonRpcResult_Or_Error::Result(
 			Value::String("1020".to_string())
 		));
 		
 		
 		// Test valid request with params = "{}"
-		method_handler.add_request("no_params_method", Box::new(no_params_method));
+		request_handler.add_request("no_params_method", Box::new(no_params_method));
 		
 		let request = JsonRpcRequest::new(1, "no_params_method".to_string(), JsonObject::new());
-		let result = method_handler.invoke_method(&request.method, request.params.clone()).unwrap();
+		let result = request_handler.invoke_method(&request.method, request.params.clone()).unwrap();
 		assert_equal(result, JsonRpcResult_Or_Error::Result(
 			Value::String("okay".to_string())
 		));
@@ -427,7 +431,8 @@ mod tests_ {
 		
 		// --- JsonRpcEndpoint:
 		
-		let mut rpc = JsonRpcEndpoint::start_with_provider(move || IoWriteHandler(output), method_handler);
+		let output_agent = OutputAgent::start_with_provider(move || IoWriteHandler(output));
+		let mut rpc = JsonRpcEndpoint::start_with_output_agent(output_agent, request_handler);
 		
 		// Test JsonRpcResponseCompletable - missing id for notification method
 		let completable = JsonRpcResponseCompletable::new(None, rpc.output_agent.clone());
