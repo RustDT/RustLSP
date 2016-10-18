@@ -41,12 +41,6 @@ impl LanguageServer for DummyLanguageServer {
 	fn exit(&self, _: ()) {
 	}
 	
-	fn showMessage(&self, _: ShowMessageParams) {}
-	fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()> { 
-		Err(DummyLanguageServer::error_not_available(()))
-	}
-	fn logMessage(&self, _: LogMessageParams) {}
-	fn telemetryEvent(&self, _: any) {}
 	fn workspaceChangeConfiguration(&self, _: DidChangeConfigurationParams) {}
 	fn didOpenTextDocument(&self, _: DidOpenTextDocumentParams) {}
 	fn didChangeTextDocument(&self, _: DidChangeTextDocumentParams) {}
@@ -54,8 +48,6 @@ impl LanguageServer for DummyLanguageServer {
 	fn didSaveTextDocument(&self, _: DidSaveTextDocumentParams) {}
 	fn didChangeWatchedFiles(&self, _: DidChangeWatchedFilesParams) {}
 	
-	fn publishDiagnostics(&self, _: PublishDiagnosticsParams) {}
-
 	fn completion(&self, _: TextDocumentPositionParams) -> LSResult<CompletionList, ()> {
 		Err(DummyLanguageServer::error_not_available(()))
 	}

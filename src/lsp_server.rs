@@ -90,17 +90,12 @@ pub fn initialize_methods(ls: Rc<LanguageServer>, handler: &mut MapRpcRequestHan
 	
 	let (name, mh) = lsp::notification__Exit(ls.clone()); handler.add_notification(name, mh);
 	
-	let (name, mh) = lsp::notification__ShowMessage(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::request__ShowMessageRequest(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::notification__LogMessage(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::notification__TelemetryEvent(ls.clone()); handler.add_notification(name, mh);
 	let (name, mh) = lsp::notification__WorkspaceChangeConfiguration(ls.clone()); handler.add_notification(name, mh);
 	let (name, mh) = lsp::notification__DidOpenTextDocument(ls.clone()); handler.add_notification(name, mh);
 	let (name, mh) = lsp::notification__DidChangeTextDocument(ls.clone()); handler.add_notification(name, mh);
 	let (name, mh) = lsp::notification__DidCloseTextDocument(ls.clone()); handler.add_notification(name, mh);
 	let (name, mh) = lsp::notification__DidSaveTextDocument(ls.clone()); handler.add_notification(name, mh);
 	let (name, mh) = lsp::notification__DidChangeWatchedFiles(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::notification__PublishDiagnostics(ls.clone()); handler.add_notification(name, mh);
 	
 	let (name, mh) = lsp::request__Completion(ls.clone()); handler.add_request(name, mh);
 	let (name, mh) = lsp::request__ResolveCompletionItem(ls.clone()); handler.add_request(name, mh);

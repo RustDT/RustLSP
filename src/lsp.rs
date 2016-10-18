@@ -51,11 +51,6 @@ pub trait LanguageServer {
     fn shutdown(&self, params: ())
     -> LSResult<(), ()>;
     fn exit(&self, params: ());
-    fn showMessage(&self, params: ShowMessageParams);
-    fn showMessageRequest(&self, params: ShowMessageRequestParams)
-    -> LSResult<MessageActionItem, ()>;
-    fn logMessage(&self, params: LogMessageParams);
-    fn telemetryEvent(&self, params: any);
     fn workspaceChangeConfiguration(&self,
                                     params: DidChangeConfigurationParams);
     fn didOpenTextDocument(&self, params: DidOpenTextDocumentParams);
@@ -63,8 +58,6 @@ pub trait LanguageServer {
     fn didCloseTextDocument(&self, params: DidCloseTextDocumentParams);
     fn didSaveTextDocument(&self, params: DidSaveTextDocumentParams);
     fn didChangeWatchedFiles(&self, params: DidChangeWatchedFilesParams);
-    fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
-
     fn completion(&self, params: TextDocumentPositionParams)
     -> LSResult<CompletionList, ()>;
     fn resolveCompletionItem(&self, params: CompletionItem)
@@ -101,7 +94,13 @@ pub trait LanguageServer {
 
 
 pub trait LanguageClient {
-    // FIXME move methods here
+    fn showMessage(&self, params: ShowMessageParams);
+    fn showMessageRequest(&self, params: ShowMessageRequestParams)
+    -> LSResult<MessageActionItem, ()>;
+    fn logMessage(&self, params: LogMessageParams);
+    fn telemetryEvent(&self, params: any);
+    fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
+
 }
 
 
@@ -816,10 +815,10 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                         Some(try!(visitor . visit_value :: <
                                                   string > (  )));
                                 }
-                                _ => {
+                                _ =>
+                                {
                                     try!(visitor . visit_value :: < _serde ::
                                          de :: impls :: IgnoredAny > (  ));
-
                                 }
                             }
                         }
@@ -833,25 +832,22 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
 
                         let __field1 =
                             match __field1 {
-                                Some(__field1) => __field1,
-
-                                //    code?: number | string;
+                                Some(
+                                     //    code?: number | string;
+                                     __field1) => __field1,
                                 None =>
                                 try!(visitor . missing_field ( "severity" )),
                             };
-                        let 
-
-                                __field2 =
+                        let __field2 =
                             match __field2 {
                                 Some(__field2) => __field2,
                                 None =>
                                 try!(visitor . missing_field ( "code" )),
                             };
                         let __field3 =
-                            match __field3 {
-                                Some(__field3) =>
-
-                                    __field3,
+                            match 
+                                __field3 {
+                                Some(__field3) => __field3,
                                 None =>
                                 try!(visitor . missing_field ( "source" )),
                             };
@@ -4505,9 +4501,8 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                       "completionProvider", "signatureHelpProvider",
                       "definitionProvider", "referencesProvider",
                       "documentHighlightProvider", "documentSymbolProvider",
-                      "workspaceSymbolProvider",
-                      "codeActionProvider", "codeLensProvider",
-                      "documentFormattingProvider",
+                      "workspaceSymbolProvider", "codeActionProvider",
+                      "codeLensProvider", "documentFormattingProvider",
                       "documentRangeFormattingProvider",
                       "documentOnTypeFormattingProvider", "renameProvider"];
                 deserializer.deserialize_struct("ServerCapabilities", FIELDS,
@@ -4662,7 +4657,7 @@ pub fn notification__Exit(ls: Rc<LanguageServer>)
  * The show message notification is sent from a server to a client to ask the client to display a particular message
  * in the user interface.
  */
-pub fn notification__ShowMessage(ls: Rc<LanguageServer>)
+pub fn notification__ShowMessage(ls: Rc<LanguageClient>)
  -> FnLanguageServerNotification<ShowMessageParams> {
     notification("window/showMessage",
                  Box::new(move |params| { ls.showMessage(params) }))
@@ -5014,7 +5009,7 @@ pub enum MessageType {
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
-pub fn request__ShowMessageRequest(ls: Rc<LanguageServer>)
+pub fn request__ShowMessageRequest(ls: Rc<LanguageClient>)
  -> FnLanguageServerRequest<ShowMessageRequestParams, MessageActionItem, ()> {
     request("window/showMessageRequest",
             Box::new(move |params| { ls.showMessageRequest(params) }))
@@ -5378,7 +5373,7 @@ pub struct MessageActionItem {
 /**
  * The log message notification is sent from the server to the client to ask the client to log a particular message.
  */
-pub fn notification__LogMessage(ls: Rc<LanguageServer>)
+pub fn notification__LogMessage(ls: Rc<LanguageClient>)
  -> FnLanguageServerNotification<LogMessageParams> {
     notification("window/logMessage",
                  Box::new(move |params| { ls.logMessage(params) }))
@@ -5560,7 +5555,7 @@ pub struct LogMessageParams {
 /**
  * The telemetry notification is sent from the server to the client to ask the client to log a telemetry event.
  */
-pub fn notification__TelemetryEvent(ls: Rc<LanguageServer>)
+pub fn notification__TelemetryEvent(ls: Rc<LanguageClient>)
  -> FnLanguageServerNotification<any> {
     notification("telemetry/event",
                  Box::new(move |params| { ls.telemetryEvent(params) }))
@@ -7123,7 +7118,7 @@ pub struct FileEvent {
 /**
  * Diagnostics notification are sent from the server to the client to signal results of validation runs.
  */
-pub fn notification__PublishDiagnostics(ls: Rc<LanguageServer>)
+pub fn notification__PublishDiagnostics(ls: Rc<LanguageClient>)
  -> FnLanguageServerNotification<PublishDiagnosticsParams> {
     notification("textDocument/publishDiagnostics",
                  Box::new(move |params| { ls.publishDiagnostics(params) }))

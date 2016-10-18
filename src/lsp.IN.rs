@@ -54,10 +54,6 @@ pub trait LanguageServer {
 	fn initialize(&self, params: InitializeParams) -> LSResult<InitializeResult, InitializeError>;
 	fn shutdown(&self, params: ()) -> LSResult<(), ()>;
 	fn exit(&self, params: ());
-	fn showMessage(&self, params: ShowMessageParams);
-	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()>;
-	fn logMessage(&self, params: LogMessageParams);
-	fn telemetryEvent(&self, params: any);
 	fn workspaceChangeConfiguration(&self, params: DidChangeConfigurationParams);
 	fn didOpenTextDocument(&self, params: DidOpenTextDocumentParams);
 	fn didChangeTextDocument(&self, params: DidChangeTextDocumentParams);
@@ -65,8 +61,6 @@ pub trait LanguageServer {
 	fn didSaveTextDocument(&self, params: DidSaveTextDocumentParams);
 	fn didChangeWatchedFiles(&self, params: DidChangeWatchedFilesParams);
 	
-	fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
-
 	fn completion(&self, params: TextDocumentPositionParams) -> LSResult<CompletionList, ()>;
 	fn resolveCompletionItem(&self, params: CompletionItem) -> LSResult<CompletionItem, ()>;
 	fn hover(&self, params: TextDocumentPositionParams) -> LSResult<Hover, ()>;
@@ -88,7 +82,14 @@ pub trait LanguageServer {
 
 
 pub trait LanguageClient {
-	// FIXME move methods here
+	
+	fn showMessage(&self, params: ShowMessageParams);
+	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()>;
+	fn logMessage(&self, params: LogMessageParams);
+	fn telemetryEvent(&self, params: any);
+	
+	fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
+
 }
 
 
@@ -568,7 +569,7 @@ pub fn notification__Exit(ls : Rc<LanguageServer>)
  * The show message notification is sent from a server to a client to ask the client to display a particular message
  * in the user interface.
  */
-pub fn notification__ShowMessage(ls : Rc<LanguageServer>) 
+pub fn notification__ShowMessage(ls : Rc<LanguageClient>) 
 	-> FnLanguageServerNotification<ShowMessageParams> 
 {
 	notification("window/showMessage", Box::new(move |params| {
@@ -615,7 +616,7 @@ pub enum MessageType {
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
-pub fn request__ShowMessageRequest(ls : Rc<LanguageServer>) 
+pub fn request__ShowMessageRequest(ls : Rc<LanguageClient>) 
 	-> FnLanguageServerRequest<ShowMessageRequestParams, MessageActionItem, ()> 
 {
 	request("window/showMessageRequest", Box::new(move |params| {
@@ -653,7 +654,7 @@ pub struct MessageActionItem {
 /**
  * The log message notification is sent from the server to the client to ask the client to log a particular message.
  */
-pub fn notification__LogMessage(ls : Rc<LanguageServer>) 
+pub fn notification__LogMessage(ls : Rc<LanguageClient>) 
 	-> FnLanguageServerNotification<LogMessageParams> 
 {
 	notification("window/logMessage", Box::new(move |params| {
@@ -678,7 +679,7 @@ pub struct LogMessageParams {
 /**
  * The telemetry notification is sent from the server to the client to ask the client to log a telemetry event.
  */
-pub fn notification__TelemetryEvent(ls : Rc<LanguageServer>) 
+pub fn notification__TelemetryEvent(ls : Rc<LanguageClient>) 
 	-> FnLanguageServerNotification<any> 
 {
 	notification("telemetry/event", Box::new(move |params| {
@@ -876,7 +877,7 @@ pub struct FileEvent {
 /**
  * Diagnostics notification are sent from the server to the client to signal results of validation runs.
  */
-pub fn notification__PublishDiagnostics(ls : Rc<LanguageServer>) 
+pub fn notification__PublishDiagnostics(ls : Rc<LanguageClient>) 
 	-> FnLanguageServerNotification<PublishDiagnosticsParams> 
 {
 	notification("textDocument/publishDiagnostics", Box::new(move |params| {
