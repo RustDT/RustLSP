@@ -41,66 +41,6 @@ use service_util::Handler;
 use json_util::*;
 use jsonrpc_objects::*;
 
-/* -----------------  JSON-RPC custom deserialization  ----------------- */
-
-struct JsonRequestDeserializerHelper;
-
-impl JsonDeserializerHelper<JsonRpcError> for JsonRequestDeserializerHelper {
-	
-	fn new_error(&self, error_message: &str) -> JsonRpcError {
-		return error_JSON_RPC_InvalidRequest(error_message.to_string());
-	}
-	
-}
-
-pub type JsonRpcParseResult<T> = Result<T, JsonRpcError>;
-
-
-pub fn parse_jsonrpc_request(message: &str) -> JsonRpcParseResult<JsonRpcRequest> {
-	let json_value : Value = 
-	match serde_json::from_str(message) 
-	{
-		Ok(ok) => { ok } 
-		Err(error) => { 
-			return Err(error_JSON_RPC_ParseError(error));
-		}
-	};
-	
-	let mut helper = JsonRequestDeserializerHelper { };
-	let mut json_request_obj : JsonObject = try!(helper.as_Object(json_value));
-		
-	parse_jsonrpc_request_jsonObject(&mut json_request_obj)
-}
-
-pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> JsonRpcParseResult<JsonRpcRequest> {
-	let mut helper = JsonRequestDeserializerHelper { };
-	
-	let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
-	if jsonrpc != "2.0" {
-		return Err(error_JSON_RPC_InvalidRequest(r#"Property `jsonrpc` is not "2.0". "#))
-	}
-	let id = try!(parse_jsonrpc_request_id(request_map.remove("id")));
-	let method = try!(helper.obtain_String(&mut request_map, "method"));
-	let params = try!(helper.obtain_Object_or(&mut request_map, "params", &|| new_object()));
-	
-	let jsonrpc_request = JsonRpcRequest { id : id, method : method, params : params}; 
-	
-	Ok(jsonrpc_request)
-}
-
-pub fn parse_jsonrpc_request_id(id: Option<Value>) -> JsonRpcParseResult<Option<RpcId>> {
-	let id : Value = match id {
-		None => return Ok(None),
-		Some(id) => id,
-	};
-	match id {
-		Value::I64(number) => Ok(Some(RpcId::Number(number as u64))), // FIXME truncation
-		Value::U64(number) => Ok(Some(RpcId::Number(number))),
-		Value::String(string) => Ok(Some(RpcId::String(string))),
-		Value::Null => Ok(None),
-		_ => Err(error_JSON_RPC_InvalidRequest("Property `id` not a String or integer.")),
-	}
-}
 
 /* -----------------  JsonRpcEndpoint  ----------------- */
 
@@ -112,8 +52,6 @@ pub struct JsonRpcEndpoint {
 	pub request_handler : Box<RpcRequestHandler>,
 	pub output_agent : Arc<Mutex<OutputAgent>>,
 }
-
-
 
 impl JsonRpcEndpoint {
 	
@@ -145,7 +83,7 @@ impl JsonRpcEndpoint {
 		self.output_agent.lock().unwrap().shutdown_and_join();
 	}
 	
-	pub fn read_incoming_messages<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER) 
+	pub fn run_message_read_loop<PROVIDER : Provider<String, GError>>(&mut self, mut input: PROVIDER) 
 		-> GResult<()> 
 	{
 		loop {

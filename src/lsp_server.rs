@@ -71,7 +71,7 @@ impl LSPServer {
 	) {
 		let mut server = LSPServer { ls : ls, json_rpc : jsonrpc_endpoint };
 		
-		let result = server.json_rpc.read_incoming_messages(LSPMessageProvider(input));
+		let result = server.json_rpc.run_message_read_loop(LSPMessageProvider(input));
 		match result {
 			Err(error) => { 
 				writeln!(&mut io::stderr(), "Error handling incoming the connection streams: {}", error)
