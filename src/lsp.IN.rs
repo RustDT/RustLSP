@@ -16,8 +16,8 @@ use std::collections::HashMap;
 
 
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
-// Last update 07/10/2016 at commit: 
-// https://github.com/Microsoft/language-server-protocol/commit/8fd7e96205a7750eb8440040c247f4a6533b238f
+// Last update 14/Oct/2016 at commit: 
+// https://github.com/Microsoft/language-server-protocol/commit/63f5d02d39d0135c234162a28d0523c9323ab3f7
 
 
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
@@ -348,15 +348,16 @@ pub fn request__Initialize(ls : Rc<LanguageServer>)
 pub struct InitializeParams {
     /**
      * The process Id of the parent process that started
-     * the server.
+     * the server. Is null if the process has not been started by another process.
+     * If the parent process is not alive then the server should exit (see exit notification) its process.
      */
-    pub processId: Option<number>, // XXX: LSP protocol is ambiguous if it can be null
+    pub processId: Option<number>,
 
     /**
      * The rootPath of the workspace. Is null
      * if no folder is open.
      */
-    pub rootPath: Option<string>, // XXX: LSP protocol is ambiguous if it can be null
+    pub rootPath: Option<string>,
     
     /**
      * User provided initialization options.
@@ -551,7 +552,9 @@ pub fn request__Shutdown(ls : Rc<LanguageServer>)
 }
 
 /**
- * A notification to ask the server to exit its process.
+ * A notification to ask the server to exit its process. 
+ * The server should exit with success code 0 if the shutdown request has been received before; 
+ * otherwise with error code 1.
  */
 pub fn notification__Exit(ls : Rc<LanguageServer>) 
 	-> FnLanguageServerNotification<()> 
@@ -975,6 +978,18 @@ pub struct CompletionItem {
      */
     pub textEdit: Option<TextEdit>,
     /**
+     * An optional array of additional text edits that are applied when
+     * selecting this completion. Edits must not overlap with the main edit
+     * nor with themselves.
+     */
+    pub additionalTextEdits: Option<Vec<TextEdit>>,
+    /**
+     * An optional command that is executed *after* inserting this completion. *Note* that
+     * additional modifications to the current document should be described with the
+     * additionalTextEdits-property.
+     */
+    pub command: Option<Command>,
+    /**
      * An data entry field that is preserved on a completion item between
      * a completion and a completion resolve request.
      */
@@ -1043,11 +1058,22 @@ pub struct Hover {
     pub contents: Vec<MarkedString>, /* FIXME: */
 
     /**
-     * An optional range
+     * An optional range is a range inside a text document 
+	 * that is used to visualize a hover, e.g. by changing the background color.
      */
     pub range: Option<Range>,
 }
 
+/**
+ * The marked string is rendered:
+ * - as markdown if it is represented as a string
+ * - as code block of the given langauge if it is represented as a pair of a language and a value
+ *
+ * The pair of a language and a value is an equivalent to markdown:
+ * ```${language}
+ * ${value}
+ * ```
+ */
 //type MarkedString = string | { language: string; value: string };
 pub type MarkedString = string; /* FIXME: todo*/
 

@@ -350,6 +350,11 @@ mod tests_ {
 	use service_util::*;
 	use jsonrpc_objects::*;
 	
+	use json_util::JsonObject;
+	use output_agent::IoWriteHandler;
+	use serde_json::Value;
+	use serde_json;
+	
 	pub fn sample_fn(params: Point) -> Result<String, ServiceError<()>> {
 		let x_str : String = params.x.to_string();
 		let y_str : String = params.y.to_string();
@@ -378,11 +383,6 @@ mod tests_ {
 	
 	#[test]
 	fn test_JsonRpcEndpoint() {
-		
-		use json_util::JsonObject;
-		use output_agent::IoWriteHandler;
-		use serde_json::Value;
-		use serde_json;
 		
 		{
 			// Test handle unknown method

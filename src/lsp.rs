@@ -16,8 +16,8 @@ use std::collections::HashMap;
 
 
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
-// Last update 07/10/2016 at commit: 
-// https://github.com/Microsoft/language-server-protocol/commit/8fd7e96205a7750eb8440040c247f4a6533b238f
+// Last update 14/Oct/2016 at commit: 
+// https://github.com/Microsoft/language-server-protocol/commit/63f5d02d39d0135c234162a28d0523c9323ab3f7
 
 
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
@@ -41,7 +41,6 @@ fn request<PARAMS: serde::Deserialize + 'static, RET: serde::Serialize +
  -> (&'static str, Box<Fn(PARAMS) -> LSResult<RET, ERR>>) {
     (name, method_fn)
 }
-
 
 use std::rc::Rc;
 
@@ -803,11 +802,12 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                                        _serde::de::Error>::duplicate_field("source"));
                                     }
                                     __field3 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+
+                                             try!(visitor . visit_value :: <
                                                   Option < string > > (  )));
                                 }
-                                __Field::__field4 =>
-                                {
+                                __Field::__field4 => {
                                     if __field4.is_some() {
                                         return Err(<__V::Error as
                                                        _serde::de::Error>::duplicate_field("message"));
@@ -830,35 +830,35 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                 None =>
                                 try!(visitor . missing_field ( "range" )),
                             };
+
                         let __field1 =
                             match __field1 {
-                                Some(__field1) =>
+                                Some(__field1) => __field1,
 
-                                    __field1,
+                                //    code?: number | string;
                                 None =>
                                 try!(visitor . missing_field ( "severity" )),
                             };
-                        //    code?: number | string;
-                        let __field2 =
-                            match __field2 {
-                                Some(__field2) =>
+                        let 
 
-                                    __field2,
+                                __field2 =
+                            match __field2 {
+                                Some(__field2) => __field2,
                                 None =>
                                 try!(visitor . missing_field ( "code" )),
                             };
                         let __field3 =
                             match __field3 {
-                                Some(__field3) => __field3,
+                                Some(__field3) =>
+
+                                    __field3,
                                 None =>
                                 try!(visitor . missing_field ( "source" )),
                             };
 
                         let __field4 =
                             match __field4 {
-                                Some(__field4) =>
-
-                                    __field4,
+                                Some(__field4) => __field4,
                                 None =>
                                 try!(visitor . missing_field ( "message" )),
                             };
@@ -871,7 +871,9 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                 }
                 const FIELDS: &'static [&'static str] =
                     &["range", "severity", "code", "source", "message"];
-                deserializer.deserialize_struct("Diagnostic", FIELDS,
+                deserializer.deserialize_struct(
+
+                                                "Diagnostic", FIELDS,
                                                 __Visitor)
             }
         }
@@ -1293,7 +1295,6 @@ const _IMPL_SERIALIZE_FOR_Command: () =
             }
         }
     };
-
 /**
  Represents a reference to a command. Provides a title which will be used to represent a command in the UI. 
  Commands are identitifed using a string identifier and the protocol currently doesn't specify a set of 
@@ -2689,17 +2690,16 @@ const _IMPL_SERIALIZE_FOR_InitializeParams: () =
 pub struct InitializeParams {
     /**
      * The process Id of the parent process that started
-     * the server.
+     * the server. Is null if the process has not been started by another process.
+     * If the parent process is not alive then the server should exit (see exit notification) its process.
      */
     pub processId: Option<number>,
-     // XXX: LSP protocol is ambiguous if it can be null
 
     /**
      * The rootPath of the workspace. Is null
      * if no folder is open.
      */
     pub rootPath: Option<string>,
-     // XXX: LSP protocol is ambiguous if it can be null
     /**
      * User provided initialization options.
      */
@@ -4502,17 +4502,15 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                 }
                 const FIELDS: &'static [&'static str] =
                     &["textDocumentSync", "hoverProvider",
-                      "completionProvider",
-                      "signatureHelpProvider", "definitionProvider",
-                      "referencesProvider", "documentHighlightProvider",
-                      "documentSymbolProvider", "workspaceSymbolProvider",
+                      "completionProvider", "signatureHelpProvider",
+                      "definitionProvider", "referencesProvider",
+                      "documentHighlightProvider", "documentSymbolProvider",
+                      "workspaceSymbolProvider",
                       "codeActionProvider", "codeLensProvider",
                       "documentFormattingProvider",
                       "documentRangeFormattingProvider",
                       "documentOnTypeFormattingProvider", "renameProvider"];
-                deserializer.deserialize_struct(
-
-                                                "ServerCapabilities", FIELDS,
+                deserializer.deserialize_struct("ServerCapabilities", FIELDS,
                                                 __Visitor)
             }
         }
@@ -4652,7 +4650,9 @@ pub fn request__Shutdown(ls: Rc<LanguageServer>)
     request("shutdown", Box::new(move |params| { ls.shutdown(params) }))
 }
 /**
- * A notification to ask the server to exit its process.
+ * A notification to ask the server to exit its process. 
+ * The server should exit with success code 0 if the shutdown request has been received before; 
+ * otherwise with error code 1.
  */
 pub fn notification__Exit(ls: Rc<LanguageServer>)
  -> FnLanguageServerNotification<()> {
@@ -4827,6 +4827,7 @@ const _IMPL_SERIALIZE_FOR_ShowMessageParams: () =
             }
         }
     };
+
 #[derive(Debug, Clone)]
 pub struct ShowMessageParams {
     /**
@@ -7535,6 +7536,8 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                     __field6,
                     __field7,
                     __field8,
+                    __field9,
+                    __field10,
                     __ignore,
                 }
                 impl _serde::de::Deserialize for __Field {
@@ -7561,6 +7564,8 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                                     6usize => { Ok(__Field::__field6) }
                                     7usize => { Ok(__Field::__field7) }
                                     8usize => { Ok(__Field::__field8) }
+                                    9usize => { Ok(__Field::__field9) }
+                                    10usize => { Ok(__Field::__field10) }
                                     _ => Ok(__Field::__ignore),
                                 }
                             }
@@ -7578,7 +7583,11 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                                     "filterText" => { Ok(__Field::__field5) }
                                     "insertText" => { Ok(__Field::__field6) }
                                     "textEdit" => { Ok(__Field::__field7) }
-                                    "data" => { Ok(__Field::__field8) }
+                                    "additionalTextEdits" => {
+                                        Ok(__Field::__field8)
+                                    }
+                                    "command" => { Ok(__Field::__field9) }
+                                    "data" => { Ok(__Field::__field10) }
                                     _ => Ok(__Field::__ignore),
                                 }
                             }
@@ -7596,7 +7605,11 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                                     b"filterText" => { Ok(__Field::__field5) }
                                     b"insertText" => { Ok(__Field::__field6) }
                                     b"textEdit" => { Ok(__Field::__field7) }
-                                    b"data" => { Ok(__Field::__field8) }
+                                    b"additionalTextEdits" => {
+                                        Ok(__Field::__field8)
+                                    }
+                                    b"command" => { Ok(__Field::__field9) }
+                                    b"data" => { Ok(__Field::__field10) }
                                     _ => Ok(__Field::__ignore),
                                 }
                             }
@@ -7686,12 +7699,30 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                                 }
                             };
                         let __field8 =
+                            match try!(visitor . visit :: < Option < Vec <
+                                       TextEdit > > > (  )) {
+                                Some(value) => { value }
+                                None => {
+                                    try!(visitor . end (  ));
+                                    return Err(_serde::de::Error::invalid_length(8usize));
+                                }
+                            };
+                        let __field9 =
+                            match try!(visitor . visit :: < Option < Command >
+                                       > (  )) {
+                                Some(value) => { value }
+                                None => {
+                                    try!(visitor . end (  ));
+                                    return Err(_serde::de::Error::invalid_length(9usize));
+                                }
+                            };
+                        let __field10 =
                             match try!(visitor . visit :: < Option < any > > (
                                         )) {
                                 Some(value) => { value }
                                 None => {
                                     try!(visitor . end (  ));
-                                    return Err(_serde::de::Error::invalid_length(8usize));
+                                    return Err(_serde::de::Error::invalid_length(10usize));
                                 }
                             };
                         try!(visitor . end (  ));
@@ -7703,7 +7734,9 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                                           filterText: __field5,
                                           insertText: __field6,
                                           textEdit: __field7,
-                                          data: __field8,})
+                                          additionalTextEdits: __field8,
+                                          command: __field9,
+                                          data: __field10,})
                     }
                     #[inline]
                     fn visit_map<__V>(&mut self, mut visitor: __V)
@@ -7718,7 +7751,10 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                         let mut __field5: Option<Option<string>> = None;
                         let mut __field6: Option<Option<string>> = None;
                         let mut __field7: Option<Option<TextEdit>> = None;
-                        let mut __field8: Option<Option<any>> = None;
+                        let mut __field8: Option<Option<Vec<TextEdit>>> =
+                            None;
+                        let mut __field9: Option<Option<Command>> = None;
+                        let mut __field10: Option<Option<any>> = None;
                         while let Some(key) =
                                   try!(visitor . visit_key :: < __Field > (
                                        )) {
@@ -7800,9 +7836,28 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                                 __Field::__field8 => {
                                     if __field8.is_some() {
                                         return Err(<__V::Error as
-                                                       _serde::de::Error>::duplicate_field("data"));
+                                                       _serde::de::Error>::duplicate_field("additionalTextEdits"));
                                     }
                                     __field8 =
+                                        Some(try!(visitor . visit_value :: <
+                                                  Option < Vec < TextEdit > >
+                                                  > (  )));
+                                }
+                                __Field::__field9 => {
+                                    if __field9.is_some() {
+                                        return Err(<__V::Error as
+                                                       _serde::de::Error>::duplicate_field("command"));
+                                    }
+                                    __field9 =
+                                        Some(try!(visitor . visit_value :: <
+                                                  Option < Command > > (  )));
+                                }
+                                __Field::__field10 => {
+                                    if __field10.is_some() {
+                                        return Err(<__V::Error as
+                                                       _serde::de::Error>::duplicate_field("data"));
+                                    }
+                                    __field10 =
                                         Some(try!(visitor . visit_value :: <
                                                   Option < any > > (  )));
                                 }
@@ -7868,6 +7923,19 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                             match __field8 {
                                 Some(__field8) => __field8,
                                 None =>
+                                try!(visitor . missing_field (
+                                     "additionalTextEdits" )),
+                            };
+                        let __field9 =
+                            match __field9 {
+                                Some(__field9) => __field9,
+                                None =>
+                                try!(visitor . missing_field ( "command" )),
+                            };
+                        let __field10 =
+                            match __field10 {
+                                Some(__field10) => __field10,
+                                None =>
                                 try!(visitor . missing_field ( "data" )),
                             };
                         Ok(CompletionItem{label: __field0,
@@ -7878,12 +7946,15 @@ const _IMPL_DESERIALIZE_FOR_CompletionItem: () =
                                           filterText: __field5,
                                           insertText: __field6,
                                           textEdit: __field7,
-                                          data: __field8,})
+                                          additionalTextEdits: __field8,
+                                          command: __field9,
+                                          data: __field10,})
                     }
                 }
                 const FIELDS: &'static [&'static str] =
                     &["label", "kind", "detail", "documentation", "sortText",
-                      "filterText", "insertText", "textEdit", "data"];
+                      "filterText", "insertText", "textEdit",
+                      "additionalTextEdits", "command", "data"];
                 deserializer.deserialize_struct("CompletionItem", FIELDS,
                                                 __Visitor)
             }
@@ -7901,7 +7972,7 @@ const _IMPL_SERIALIZE_FOR_CompletionItem: () =
                 let mut __serde_state =
                     try!(_serializer . serialize_struct (
                          "CompletionItem" , 0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1
-                         + 1 ));
+                         + 1 + 1 + 1 ));
                 try!(_serializer . serialize_struct_elt (
                      & mut __serde_state , "label" , & self . label ));
                 try!(_serializer . serialize_struct_elt (
@@ -7921,6 +7992,11 @@ const _IMPL_SERIALIZE_FOR_CompletionItem: () =
                      ));
                 try!(_serializer . serialize_struct_elt (
                      & mut __serde_state , "textEdit" , & self . textEdit ));
+                try!(_serializer . serialize_struct_elt (
+                     & mut __serde_state , "additionalTextEdits" , & self .
+                     additionalTextEdits ));
+                try!(_serializer . serialize_struct_elt (
+                     & mut __serde_state , "command" , & self . command ));
                 try!(_serializer . serialize_struct_elt (
                      & mut __serde_state , "data" , & self . data ));
                 _serializer.serialize_struct_end(__serde_state)
@@ -7971,6 +8047,18 @@ pub struct CompletionItem {
      * insertText is ignored.
      */
     pub textEdit: Option<TextEdit>,
+    /**
+     * An optional array of additional text edits that are applied when
+     * selecting this completion. Edits must not overlap with the main edit
+     * nor with themselves.
+     */
+    pub additionalTextEdits: Option<Vec<TextEdit>>,
+    /**
+     * An optional command that is executed *after* inserting this completion. *Note* that
+     * additional modifications to the current document should be described with the
+     * additionalTextEdits-property.
+     */
+    pub command: Option<Command>,
     /**
      * An data entry field that is preserved on a completion item between
      * a completion and a completion resolve request.
@@ -8529,12 +8617,23 @@ pub struct Hover {
      /* FIXME: */
 
     /**
-     * An optional range
+     * An optional range is a range inside a text document 
+	 * that is used to visualize a hover, e.g. by changing the background color.
      */
     pub range: Option<Range>,
 }
 
 //type MarkedString = string | { language: string; value: string };
+/**
+ * The marked string is rendered:
+ * - as markdown if it is represented as a string
+ * - as code block of the given langauge if it is represented as a pair of a language and a value
+ *
+ * The pair of a language and a value is an equivalent to markdown:
+ * ```${language}
+ * ${value}
+ * ```
+ */
 pub type MarkedString = string;
  /* FIXME: todo*/
 
