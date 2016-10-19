@@ -23,13 +23,10 @@ pub mod output_agent;
 
 use util::core::*;
 
-use serde_json::Value;
-
 use std::io;
 use std::io::Write;
 use std::collections::HashMap;
 use std::result::Result;
-use std::fmt::Debug;
 
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -38,7 +35,6 @@ use service_util::ServiceError;
 use service_util::ServiceResult;
 use service_util::Provider;
 
-use json_util::*;
 use jsonrpc_objects::*;
 
 
@@ -90,7 +86,7 @@ impl JsonRpcEndpoint {
 			Err(error) => {
 				// If we can't parse JsonRpcRequest, send an error response with null id
 				let id = RpcId::Null;
-				submit_write_task(&mut self.output_agent, JsonRpcResponse::new_error(id, error)); 
+				submit_write_task(&mut self.output_agent, JsonRpcResponse::new_error(id, error).to_message()); 
 			}
 		}
 	}
@@ -135,7 +131,7 @@ impl JsonRpcResponseCompletable {
 	pub fn new(id: Option<RpcId>, output_agent: Arc<Mutex<OutputAgent>>) -> JsonRpcResponseCompletable {
 		
 		let on_response : Box<FnMut(JsonRpcResponse)> = new(move |response| { 
-			submit_write_task(&output_agent, response); 
+			submit_write_task(&output_agent, response.to_message()); 
 		});
 		
 		JsonRpcResponseCompletable { 
@@ -163,13 +159,69 @@ impl JsonRpcResponseCompletable {
 	
 }
 
-pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, response: JsonRpcResponse) {
+/* -----------------  ----------------- */
+
+impl JsonRpcEndpoint {
+	
+	// TODO
+//	pub fn send_request<
+//		PARAMS : serde::Serialize, 
+//		RET: serde::Deserialize,
+//		RET_ERROR : serde::Deserialize,
+//	>(&mut self, method_name: &str, params: PARAMS) -> GResult<Future<ServiceResult<RET, RET_ERROR>>> {
+//		let id = None; // FIXME
+//			
+//		self.do_send_request(id, method_name, params)
+//	}
+	
+	pub fn do_send_request<
+		PARAMS : serde::Serialize, 
+		RET: serde::Deserialize,
+		RET_ERROR : serde::Deserialize,
+	>(&mut self, id: Option<RpcId>, method_name: &str, params: PARAMS) -> GResult<Future<ServiceResult<RET, RET_ERROR>>> {
+		let params_value = serde_json::to_value(&params);
+		let params = try!(jsonrpc_objects::parse_jsonrpc_params(params_value));
+		
+		let rpc_request = JsonRpcRequest { id: id, method : method_name.into(), params : params };
+		
+		let future = Future(None);
+		submit_write_task(&self.output_agent, JsonRpcMessage::Request(rpc_request));
+		
+		Ok(future)
+	}
+	
+	pub fn send_notification<
+		PARAMS : serde::Serialize, 
+	>(&mut self, method_name: &str, params: PARAMS) -> GResult<()> {
+		let id = None;
+		
+		let future: Future<ServiceResult<(), ()>> = try!(self.do_send_request(id, method_name, params));
+		future.complete(Ok(()));
+		Ok(())
+	}
+	
+}
+
+// FIXME: use upcoming futures API, this is just a mock ATM
+pub struct Future<T>(Option<T>); 
+
+impl<T> Future<T> {
+	pub fn is_completed(&self) -> bool {
+		// TODO
+		true
+	}
+	
+	pub fn complete(&self, _result: T) {
+	}
+}
+
+pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: JsonRpcMessage) {
 	
 	let write_task : OutputAgentTask = Box::new(move |mut response_handler| {
 		/* FIXME: log , review expect */ 
-		writeln!(&mut io::stderr(), "JSON-RPC message: {:?}", response).expect("Failed writing to stderr");
+		writeln!(&mut io::stderr(), "JSON-RPC message: {:?}", rpc_message).expect("Failed writing to stderr");
 		
-		let response_str = serde_json::to_string(&response).unwrap_or_else(|error| -> String { 
+		let response_str = serde_json::to_string(&rpc_message).unwrap_or_else(|error| -> String { 
 			panic!("Failed to serialize to JSON object: {}", error);
 		});
 		
@@ -448,8 +500,8 @@ mod tests_ {
 		rpc.handle_request(request);
 		
 		
-//		let params = new_sample_params(123, 66);
-//		let future : Option<ServiceResult<(),()>> = rpc.send_request("my_method", params);
+		let params = new_sample_params(123, 66);
+		rpc.send_notification("my_method", params).unwrap();
 		
 		rpc.shutdown();
 	}

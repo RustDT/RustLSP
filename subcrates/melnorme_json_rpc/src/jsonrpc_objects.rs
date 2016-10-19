@@ -13,7 +13,8 @@ extern crate serde;
 use json_util::*;
 
 use std::fmt;
-//use util::core::*;
+use util::core::GResult;
+use util::core::ErrorMessage;
 use serde_json::Value;
 
 
@@ -75,6 +76,10 @@ impl JsonRpcRequest {
 		} 
 	}
 	
+	pub fn to_message(self) -> JsonRpcMessage {
+		JsonRpcMessage::Request(self)
+	}
+	
 }
 
 
@@ -86,6 +91,10 @@ impl JsonRpcResponse {
 	
 	pub fn new_error(id: RpcId, error: JsonRpcError) -> JsonRpcResponse {
 		JsonRpcResponse { id : id, result_or_error : JsonRpcResult_Or_Error::Error(error) }
+	}
+	
+	pub fn to_message(self) -> JsonRpcMessage {
+		JsonRpcMessage::Response(self)
 	}
 	
 }
@@ -260,19 +269,22 @@ pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> Jso
 	let method = try!(helper.obtain_String(&mut request_map, "method"));
 	let params = try!(helper.obtain_Value(&mut request_map, "params"));
 	
-	let params : JsonRpcParams = try!(parse_jsonrpc_params(params));
+	let params : JsonRpcParams = match parse_jsonrpc_params(params) {
+		Ok(ok) => ok,
+		Err(error) => return Err(error_JSON_RPC_InvalidRequest(error)),
+	};
 	
 	let jsonrpc_request = JsonRpcRequest { id : id, method : method, params : params }; 
 	
 	Ok(jsonrpc_request)
 }
 
-pub fn parse_jsonrpc_params(params: Value) -> JsonRpcParseResult<JsonRpcParams> {
+pub fn parse_jsonrpc_params(params: Value) -> GResult<JsonRpcParams> {
 	match params {
 		Value::Object(object) => Ok(JsonRpcParams::Object(object)),
 		Value::Array(array) => Ok(JsonRpcParams::Array(array)),
 		Value::Null => Ok(JsonRpcParams::None),
-		_ => Err(error_JSON_RPC_InvalidRequest("Property `params` not an Object, Array, or null.")),
+		_ => Err(ErrorMessage::create("Property `params` not an Object, Array, or null.".into())),
 	}
 }
 
@@ -289,6 +301,26 @@ pub fn parse_jsonrpc_id(id: Option<Value>) -> JsonRpcParseResult<Option<RpcId>> 
 		_ => Err(error_JSON_RPC_InvalidRequest("Property `id` not a String or integer.")),
 	}
 }
+
+/* -----------------  ----------------- */
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum JsonRpcMessage {
+	Request(JsonRpcRequest),
+	Response(JsonRpcResponse),
+}
+
+impl serde::Serialize for JsonRpcMessage {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		match *self {
+			JsonRpcMessage::Request(ref request) => request.serialize(serializer),
+			JsonRpcMessage::Response(ref response) => response.serialize(serializer),
+		}
+	}
+}
+
 
 /* ----------------- Tests ----------------- */
 

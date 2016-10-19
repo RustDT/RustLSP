@@ -22,82 +22,6 @@ pub type GResult<T> = result::Result<T, GError>;
 pub type Void = GResult<()>;
 
 
-pub trait CharOutput<ERR> {
-	
-	fn write_str(&mut self, s: &str) -> result::Result<(), ERR>;
-	
-	fn write_char(&mut self, c: char) -> result::Result<(), ERR>;
-	
-}
-
-
-pub trait BasicCharOutput {
-	
-	fn put_str(&mut self, s: &str) ;
-	
-	fn put_char(&mut self, c: char) ;
-	
-}
-
-//impl fmt::Write for BasicCharOutput {
-//	fn write_str(&mut self, str: &str) -> fmt::Result {
-//    	self.put_str(str);
-//    	Ok(())
-//    }
-//	
-//    fn write_char(&mut self, ch: char) -> fmt::Result {
-//    	self.put_char(ch);
-//    	Ok(())
-//    }
-//}
-
-
-impl<ERR> CharOutput<ERR> for BasicCharOutput {
-	
-	fn write_str(&mut self, s: &str) -> result::Result<(), ERR> {
-		BasicCharOutput::put_str(self, s);
-		Ok(())
-	}
-	
-	fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
-		BasicCharOutput::put_char(self, c);
-		Ok(())
-	}
-	
-}
-
-//// TODO: might have to remove this, if it's polluting namespace?
-impl BasicCharOutput for String {
-	
-	fn put_str(&mut self, str: &str) {
-		self.push_str(str);
-	}
-	
-	fn put_char(&mut self, ch: char) {
-		self.push(ch);
-	}
-	
-}
-
-impl<ERR> CharOutput<ERR> for String {
-	
-	fn write_str(&mut self, s: &str) -> result::Result<(), ERR> {
-		self.put_str(s);
-		Ok(())
-	}
-	
-	fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
-		self.put_char(c);
-		Ok(())
-	}
-}
-
-/* ----------------- CommonCharOutput ----------------- */
-
-pub type CommonCharOutput = CharOutput<GError>;
-
-/* -----------------  ----------------- */
-
 pub trait GErrorT {
 	
 	fn write_message(&self, writer: &mut CommonCharOutput) -> Void;
@@ -157,45 +81,6 @@ fn write_display_to_char_out(display: & fmt::Display, out: &mut CommonCharOutput
 	out.write_str(&string)
 }
 
-/*
-fn write_display_to_BasicCharOut(display : &fmt::Display, out: &mut BasicCharOutput) {
-	
-	struct _BasicWrite<'a>(&'a mut BasicCharOutput);
-	
-	impl<'a> fmt::Write for _BasicWrite<'a> {
-		fn write_str(&mut self, str: &str) -> fmt::Result {
-			self.0.put_str(str);
-			Ok(())
-		}
-		
-		fn write_char(&mut self, ch: char) -> fmt::Result {
-			self.0.put_char(ch);
-			Ok(())
-		}
-		
-	}
-	
-	fmt::write(&mut _BasicWrite(out), format_args!("{}", display))
-		.expect("displayObj object should not result an error.");
-	
-}
-
-#[test]
-fn test_write_display_to_BasicCharOut() {
-	
-	struct _Display(());
-	impl fmt::Display for _Display {
-		fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-			write!(formatter, "Blah {}", "XXX")
-		}
-	}
-	
-	let mut result = String::new();
-	write_display_to_BasicCharOut(&_Display(()), &mut result);
-	assert_eq!(result, "Blah XXX");
-}
-*/
-
 /* ----------------- convert to GError ----------------- */
 
 
@@ -236,6 +121,123 @@ fn test_convert() {
 	
 	test().unwrap_err();
 }
+
+/* ----------------- CommonCharOutput ----------------- */
+
+pub type CommonCharOutput = CharOutput<GError>;
+
+pub trait CharOutput<ERR> {
+	
+	fn write_str(&mut self, s: &str) -> result::Result<(), ERR>;
+	
+	fn write_char(&mut self, c: char) -> result::Result<(), ERR>;
+	
+}
+
+
+
+
+impl<ERR> CharOutput<ERR> for String {
+	
+	fn write_str(&mut self, s: &str) -> result::Result<(), ERR> {
+		self.put_str(s);
+		Ok(())
+	}
+	
+	fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
+		self.put_char(c);
+		Ok(())
+	}
+}
+
+pub trait BasicCharOutput {
+	
+	fn put_str(&mut self, s: &str) ;
+	
+	fn put_char(&mut self, c: char) ;
+	
+}
+
+//impl fmt::Write for BasicCharOutput {
+//	fn write_str(&mut self, str: &str) -> fmt::Result {
+//    	self.put_str(str);
+//    	Ok(())
+//    }
+//	
+//    fn write_char(&mut self, ch: char) -> fmt::Result {
+//    	self.put_char(ch);
+//    	Ok(())
+//    }
+//}
+
+
+impl<ERR> CharOutput<ERR> for BasicCharOutput {
+	
+	fn write_str(&mut self, s: &str) -> result::Result<(), ERR> {
+		BasicCharOutput::put_str(self, s);
+		Ok(())
+	}
+	
+	fn write_char(&mut self, c: char) -> result::Result<(), ERR> {
+		BasicCharOutput::put_char(self, c);
+		Ok(())
+	}
+	
+}
+
+//// TODO: might have to remove this, if it's polluting namespace?
+impl BasicCharOutput for String {
+	
+	fn put_str(&mut self, str: &str) {
+		self.push_str(str);
+	}
+	
+	fn put_char(&mut self, ch: char) {
+		self.push(ch);
+	}
+	
+}
+
+/*
+fn write_display_to_BasicCharOut(display : &fmt::Display, out: &mut BasicCharOutput) {
+	
+	struct _BasicWrite<'a>(&'a mut BasicCharOutput);
+	
+	impl<'a> fmt::Write for _BasicWrite<'a> {
+		fn write_str(&mut self, str: &str) -> fmt::Result {
+			self.0.put_str(str);
+			Ok(())
+		}
+		
+		fn write_char(&mut self, ch: char) -> fmt::Result {
+			self.0.put_char(ch);
+			Ok(())
+		}
+		
+	}
+	
+	fmt::write(&mut _BasicWrite(out), format_args!("{}", display))
+		.expect("displayObj object should not result an error.");
+	
+}
+
+#[test]
+fn test_write_display_to_BasicCharOut() {
+	
+	struct _Display(());
+	impl fmt::Display for _Display {
+		fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+			write!(formatter, "Blah {}", "XXX")
+		}
+	}
+	
+	let mut result = String::new();
+	write_display_to_BasicCharOut(&_Display(()), &mut result);
+	assert_eq!(result, "Blah XXX");
+}
+*/
+
+
 
 
 /* -----------------  lifecycle / dispose  ----------------- */
