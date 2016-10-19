@@ -22,26 +22,10 @@ pub type GResult<T> = result::Result<T, GError>;
 pub type Void = GResult<()>;
 
 
-pub trait GErrorT {
-	
-	fn write_message(&self, writer: &mut CommonCharOutput) -> Void;
-	
-	fn write_message_to_string(&self) -> String {
-		let mut str = String::new();
-		self.write_message(&mut str).ok(); // Should not error because it's writting to a string
-		str
-	}
+pub trait GErrorT : fmt::Display {
 	
 }
 
-impl fmt::Display for GErrorT {
-	
-	fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result {
-		let to_string = self.write_message_to_string();
-		fmt.write_str(&to_string)
-	}
-	
-}
 
 impl fmt::Debug for GErrorT {
 	
@@ -62,23 +46,23 @@ impl ErrorMessage {
 	
 }
 
-impl GErrorT for ErrorMessage {
-	fn write_message(&self, out: &mut CommonCharOutput) -> Void {
-		out.write_str(&self.0)
+impl fmt::Display for ErrorMessage {
+	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+		self.0.fmt(fmt)
 	}
 }
+impl GErrorT for ErrorMessage {
+}
+
 
 struct FmtDisplayError<T : fmt::Display>(T);
 
-impl<T : fmt::Display> GErrorT for FmtDisplayError<T> {
-	fn write_message(& self, out: &mut CommonCharOutput) -> Void {
-		write_display_to_char_out(& self.0, out)
+impl<T : fmt::Display> fmt::Display for FmtDisplayError<T> {
+	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+		self.0.fmt(fmt)
 	}
 }
-
-fn write_display_to_char_out(display: & fmt::Display, out: &mut CommonCharOutput) -> Void {
-	let string = format!("{}", display);
-	out.write_str(&string)
+impl<T : fmt::Display> GErrorT for FmtDisplayError<T> {
 }
 
 /* ----------------- convert to GError ----------------- */
@@ -120,32 +104,6 @@ fn test_convert() {
 	}
 	
 	test().unwrap_err();
-}
-
-/* ----------------- CommonCharOutput ----------------- */
-
-pub type CommonCharOutput = CharOutput<GError>;
-
-pub trait CharOutput<ERR> {
-	
-	fn write_str(&mut self, st: &str) -> result::Result<(), ERR>;
-	
-	fn write_char(&mut self, ch: char) -> result::Result<(), ERR>;
-	
-}
-
-
-impl<ERR> CharOutput<ERR> for String {
-	
-	fn write_str(&mut self, st: &str) -> result::Result<(), ERR> {
-		self.push_str(st);
-		Ok(())
-	}
-	
-	fn write_char(&mut self, ch: char) -> result::Result<(), ERR> {
-		self.push(ch);
-		Ok(())
-	}
 }
 
 /* -----------------  lifecycle / dispose  ----------------- */
