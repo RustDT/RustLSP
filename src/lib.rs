@@ -5,6 +5,7 @@ extern crate melnorme_util as util;
 pub extern crate melnorme_json_rpc as json_rpc;
 extern crate serde_json;
 extern crate serde;
+#[macro_use] extern crate log;
 
 pub mod lsp;
 pub mod lsp_transport;

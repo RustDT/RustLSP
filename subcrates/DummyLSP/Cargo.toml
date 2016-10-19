@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 
 [dependencies]
+log = "0.3"
+env_logger = "0.3"
 rust_lsp = { path = "../.." }
 melnorme_util = { path = "../../subcrates/melnorme_util" }
 melnorme_json_rpc = { path = "../../subcrates/melnorme_json_rpc" }

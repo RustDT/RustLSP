@@ -10,6 +10,7 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
+#[macro_use] extern crate log;
 extern crate serde_json;
 extern crate serde;
 extern crate melnorme_util as util;
@@ -23,8 +24,6 @@ pub mod output_agent;
 
 use util::core::*;
 
-use std::io;
-use std::io::Write;
 use std::collections::HashMap;
 use std::result::Result;
 
@@ -218,8 +217,7 @@ impl<T> Future<T> {
 pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: JsonRpcMessage) {
 	
 	let write_task : OutputAgentTask = Box::new(move |mut response_handler| {
-		/* FIXME: log , review expect */ 
-		writeln!(&mut io::stderr(), "JSON-RPC message: {:?}", rpc_message).expect("Failed writing to stderr");
+		info!("JSON-RPC message: {:?}", rpc_message);
 		
 		let response_str = serde_json::to_string(&rpc_message).unwrap_or_else(|error| -> String { 
 			panic!("Failed to serialize to JSON object: {}", error);
@@ -227,10 +225,8 @@ pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: Js
 		
 		let write_res = response_handler.write_message(&response_str);
 		if let Err(error) = write_res {
-			// TODO log
 			// FIXME handle output stream write error by shutting down
-			writeln!(&mut io::stderr(), "Error writing RPC response: {}", error)
-				.expect("Failed writing to stderr");
+			error!("Error writing JSON-RPC message: {}", error);
 		};
 	});
 	

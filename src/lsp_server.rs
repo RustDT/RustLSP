@@ -77,12 +77,9 @@ impl LSPServer {
 		ls.connect(ls_client);
 		
 		let result = json_rpc::run_message_read_loop(jsonrpc_endpoint, LSPMessageReader(input));
-		match result {
-			Err(error) => {
-				writeln!(&mut io::stderr(), "Error handling the incoming connection stream: {}", error)
-					.expect("Failed writing to stderr");
-			}
-			Ok(_) => { } 
+		
+		if let Err(error) = result {
+			error!("Error handling the incoming stream: {}", error);
 		}
 	}
 	

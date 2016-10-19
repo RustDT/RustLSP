@@ -1,3 +1,6 @@
+
+#[macro_use] extern crate log;
+extern crate env_logger;
 extern crate dummy_lsp;
 
 
@@ -7,7 +10,25 @@ use std::io;
 use std::io::Write;
 use std::rc::Rc;
 
+use log::{LogRecord, LogLevelFilter};
+use env_logger::LogBuilder;
+
+
 fn main() {
+	
+	// Prepare log 
+    let mut builder = LogBuilder::new();
+    // Set info as default log level
+    builder.filter(None, LogLevelFilter::Info);
+	
+	if let Ok(rustlog_env_var) = env::var("RUST_LOG") {
+		builder.parse(&rustlog_env_var);
+	}
+    builder.init().unwrap();
+	
+	
+    info!("Starting example server.");
+    
 	let ls = Rc::new(DummyLanguageServer{ });
 
 	if env::args().len() == 1  {
@@ -21,7 +42,7 @@ fn main() {
 		args.next();
 		let mut port_str = args.next().unwrap();
 		
-		println!("starting server on port: {}", port_str);
+		info!("starting server on port: {}", port_str);
 	
 		// Workaround for a CDT-GDB bug on Windows that adds single quotes to params
 		if port_str.starts_with("'") && port_str.ends_with("'"){
