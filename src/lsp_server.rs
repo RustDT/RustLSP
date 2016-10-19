@@ -60,13 +60,15 @@ impl LSPServer {
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
-		let mut request_handler = new(MapRpcRequestHandler::new());
-		initialize_methods(ls.clone(), &mut request_handler);
 		
 		let output_agent = OutputAgent::start_with_provider(|| {
 			LSPMessageWriter(out_stream_provider())
 		});
-		let jsonrpc_endpoint = JsonRpcEndpoint::start_with_output_agent(output_agent, request_handler);
+		let mut jsonrpc_endpoint = JsonRpcEndpoint::start_with_output_agent(output_agent, new(MapRpcRequestHandler::new()));
+		
+		let mut request_handler = new(MapRpcRequestHandler::new());
+		initialize_methods(ls.clone(), &mut request_handler);
+		jsonrpc_endpoint.request_handler = request_handler;
 		
 		let jsonrpc_endpoint = newArcMutex(jsonrpc_endpoint);
 		
@@ -76,8 +78,8 @@ impl LSPServer {
 		
 		let result = json_rpc::run_message_read_loop(jsonrpc_endpoint, LSPMessageReader(input));
 		match result {
-			Err(error) => { 
-				writeln!(&mut io::stderr(), "Error handling incoming the connection streams: {}", error)
+			Err(error) => {
+				writeln!(&mut io::stderr(), "Error handling the incoming connection stream: {}", error)
 					.expect("Failed writing to stderr");
 			}
 			Ok(_) => { } 
