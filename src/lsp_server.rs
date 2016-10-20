@@ -142,10 +142,10 @@ pub trait LanguageClient {
 
 impl RpcRequestHandler for LanguageServer {
 	
-	fn handle_request(&mut self, request_method: &str, params: JsonRpcParams, 
+	fn handle_request(&mut self, method_name: &str, params: JsonRpcParams, 
 		completable: JsonRpcResponseCompletable) 
 	{
-		match request_method {
+		match method_name {
 			lsp::Request__Initialize => { completable.sync_handle_request(params, 
 				|params| self.initialize(params)) 
 			}
