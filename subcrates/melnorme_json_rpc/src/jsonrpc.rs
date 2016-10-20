@@ -256,9 +256,8 @@ impl MapRpcRequestHandler {
 		method_name: &'static str, 
 		method_fn: Box<Fn(PARAMS)>
 	) {
-		let handler = new(move |p| { method_fn(p); None });
-		let request : FnRpcMethodHandler<PARAMS, (), ()> = FnRpcMethodHandler { method_fn : handler };
-		self.add_rpc_handler(method_name, request);
+		let handler : Box<Fn(_) -> Option<ServiceResult<(), ()>>> = new(move |p| { method_fn(p); None });
+		self.add_rpc_handler(method_name, handler);
 	}
 	
 	pub fn add_request<
@@ -270,8 +269,8 @@ impl MapRpcRequestHandler {
 		method_name: &'static str, 
 		method_fn: Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>
 	) {
-		let handler = new(move |p| { Some(method_fn(p)) });
-		self.add_rpc_handler(method_name, FnRpcMethodHandler { method_fn : handler });
+		let handler : Box<Fn(_) -> Option<_>> = new(move |p| { Some(method_fn(p)) });
+		self.add_rpc_handler(method_name, handler);
 	}
 	
 	pub fn add_rpc_handler<METHOD_HANDLER: RpcMethodHandler + 'static>(
@@ -313,33 +312,23 @@ pub trait RpcMethodHandler {
 	
 }
 
-pub struct FnRpcMethodHandler<
-	PARAMS : serde::Deserialize, 
-	RET: serde::Serialize,
-	RET_ERROR : serde::Serialize,
-> {
-	pub method_fn: Box<Fn(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>>
-}
-
 impl<
 	PARAMS : serde::Deserialize, 
 	RET : serde::Serialize,
 	RET_ERROR : serde::Serialize,
-> RpcMethodHandler for FnRpcMethodHandler<PARAMS, RET, RET_ERROR> {
+> RpcMethodHandler for Box<Fn(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>> {
 	
 	fn handle_invocation(&self, params: JsonRpcParams) -> Option<JsonRpcResult_Or_Error> {
-		RequestHandling::handle_request(params, self.method_fn.as_ref())
+		handle_request(params, self.as_ref())
 	}
 	
 }
 
-pub struct RequestHandling;
-
-impl RequestHandling {
+impl JsonRpcResponseCompletable {
 	
 	pub fn sync_handle_request<PARAMS, RET, RET_ERROR, METHOD>(
+		self,
 		params: JsonRpcParams,
-		completable: JsonRpcResponseCompletable, 
 		method_fn: METHOD
 	) 
 	where 
@@ -349,17 +338,13 @@ impl RequestHandling {
 		METHOD : FnOnce(PARAMS) -> ServiceResult<RET, RET_ERROR>,
 	{
 		let method_fn = move |params| Some(method_fn(params));
-		let result = Self::handle_request(params, method_fn);
-		if let Some(result) = result {
-			completable.complete(Some(result));
-		} else {
-			completable.complete(None);
-		}
+		let result = handle_request(params, method_fn);
+		self.complete(result);
 	}
 	
 	pub fn sync_handle_notification<PARAMS, METHOD>(
+		self,
 		params: JsonRpcParams,
-		completable: JsonRpcResponseCompletable, 
 		method_fn: METHOD
 	) 
 	where 
@@ -367,14 +352,16 @@ impl RequestHandling {
 		METHOD : FnOnce(PARAMS),
 	{
 		let method_fn = move |params| { method_fn(params); None };
-		let result = Self::handle_request::<_, (), (), _>(params, method_fn);
-		if let Some(result) = result {
-			completable.complete(Some(result));
-		} else {
-			completable.complete(None);
-		}
+		let result = handle_request::<_, (), (), _>(params, method_fn);
+		self.complete(result);
 	}
 	
+	pub fn complete_with_error(self, error: JsonRpcError) {
+		self.complete(Some(JsonRpcResult_Or_Error::Error(error)));
+	}
+	
+}
+
 	pub fn handle_request<PARAMS, RET, RET_ERROR, METHOD>(
 		params: JsonRpcParams,
 		method_fn: METHOD
@@ -423,7 +410,6 @@ impl RequestHandling {
 			}
 		}
 	}
-}
 
 /* ----------------- Tests ----------------- */
 

@@ -10,7 +10,7 @@
 
 extern crate serde;
 
-use std::io::{self, Write};
+use std::io;
 
 use util::core::*;
 
@@ -19,7 +19,6 @@ use jsonrpc::*;
 use jsonrpc::service_util::Provider;
 use jsonrpc::service_util::MessageWriter;
 use jsonrpc::service_util::ServiceError;
-use jsonrpc::service_util::ServiceResult;
 
 use jsonrpc::output_agent::OutputAgent;
 
@@ -147,84 +146,83 @@ impl RpcRequestHandler for LanguageServer {
 		completable: JsonRpcResponseCompletable) 
 	{
 		match request_method {
-			lsp::Request__Initialize => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__Initialize => { completable.sync_handle_request(params, 
 				|params| self.initialize(params)) 
 			}
-			lsp::Request__Shutdown => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__Shutdown => { completable.sync_handle_request(params, 
 				|params| self.shutdown(params)) 
 			}
-			lsp::Notification__Exit => { RequestHandling::sync_handle_notification(params, completable, 
+			lsp::Notification__Exit => { completable.sync_handle_notification(params, 
 				|params| self.exit(params)) 
 			}
-			lsp::Notification__WorkspaceChangeConfiguration => { RequestHandling::sync_handle_notification(params, completable, 
+			lsp::Notification__WorkspaceChangeConfiguration => { completable.sync_handle_notification(params, 
 				|params| self.workspaceChangeConfiguration(params)) 
 			}
-			lsp::Notification__DidOpenTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+			lsp::Notification__DidOpenTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.didOpenTextDocument(params)) 
 			}
-			lsp::Notification__DidChangeTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+			lsp::Notification__DidChangeTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.didChangeTextDocument(params)) 
 			}
-			lsp::Notification__DidCloseTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+			lsp::Notification__DidCloseTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.didCloseTextDocument(params)) 
 			}
-			lsp::Notification__DidSaveTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+			lsp::Notification__DidSaveTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.didSaveTextDocument(params)) 
 			}
-			lsp::Notification__DidChangeWatchedFiles => { RequestHandling::sync_handle_notification(params, completable, 
+			lsp::Notification__DidChangeWatchedFiles => { completable.sync_handle_notification(params, 
 				|params| self.didChangeWatchedFiles(params)) 
 			}
-			lsp::Request__Completion => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__Completion => { completable.sync_handle_request(params, 
 				|params| self.completion(params)) 
 			}
-			lsp::Request__ResolveCompletionItem => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__ResolveCompletionItem => { completable.sync_handle_request(params, 
 				|params| self.resolveCompletionItem(params)) 
 			}
-			lsp::Request__Hover => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__Hover => { completable.sync_handle_request(params, 
 				|params| self.hover(params)) 
 			}
-			lsp::Request__SignatureHelp => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__SignatureHelp => { completable.sync_handle_request(params, 
 				|params| self.signatureHelp(params)) 
 			}
-			lsp::Request__GotoDefinition => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__GotoDefinition => { completable.sync_handle_request(params, 
 				|params| self.gotoDefinition(params)) 
 			}
-			lsp::Request__References => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__References => { completable.sync_handle_request(params, 
 				|params| self.references(params)) 
 			}
-			lsp::Request__DocumentHighlight => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__DocumentHighlight => { completable.sync_handle_request(params, 
 				|params| self.documentHighlight(params)) 
 			}
-			lsp::Request__DocumentSymbols => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__DocumentSymbols => { completable.sync_handle_request(params, 
 				|params| self.documentSymbols(params)) 
 			}
-			lsp::Request__WorkspaceSymbols => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__WorkspaceSymbols => { completable.sync_handle_request(params, 
 				|params| self.workspaceSymbols(params)) 
 			}
-			lsp::Request__CodeAction => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__CodeAction => { completable.sync_handle_request(params, 
 				|params| self.codeAction(params)) 
 			}
-			lsp::Request__CodeLens => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__CodeLens => { completable.sync_handle_request(params, 
 				|params| self.codeLens(params)) 
 			}
-			lsp::Request__CodeLensResolve => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__CodeLensResolve => { completable.sync_handle_request(params, 
 				|params| self.codeLensResolve(params)) 
 			}
-			lsp::Request__Formatting => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__Formatting => { completable.sync_handle_request(params, 
 				|params| self.formatting(params)) 
 			}
-			lsp::Request__RangeFormatting => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__RangeFormatting => { completable.sync_handle_request(params, 
 				|params| self.rangeFormatting(params)) 
 			}
-			lsp::Request__OnTypeFormatting => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__OnTypeFormatting => { completable.sync_handle_request(params, 
 				|params| self.onTypeFormatting(params)) 
 			}
-			lsp::Request__Rename => { RequestHandling::sync_handle_request(params, completable, 
+			lsp::Request__Rename => { completable.sync_handle_request(params, 
 				|params| self.rename(params)) 
 			}
 			_ => {
-				let method_result = JsonRpcResult_Or_Error::Error(jsonrpc_objects::error_JSON_RPC_MethodNotFound());
-				completable.complete(Some(method_result));
+				completable.complete_with_error(jsonrpc_objects::error_JSON_RPC_MethodNotFound());
 			}
 		};
 		
