@@ -8,89 +8,13 @@
 
 #![allow(non_camel_case_types)]
 
-use json_rpc::service_util::*;
-
 use serde_json::Value;
-use serde;
 use std::collections::HashMap;
 
 
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
 // Last update 14/Oct/2016 at commit: 
 // https://github.com/Microsoft/language-server-protocol/commit/63f5d02d39d0135c234162a28d0523c9323ab3f7
-
-
-pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
-
-pub type FnLanguageServerNotification<PARAMS> =
-    (&'static str, Box<Fn(PARAMS)>);
-pub type FnLanguageServerRequest<PARAMS, RET, RET_ERROR> =
-    (&'static str, Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>);
-
-
-fn notification<
-	PARAMS: serde::Deserialize + 'static, 
->(name: &'static str, method_fn: Box<Fn(PARAMS)>) 
-	-> (&'static str, Box<Fn(PARAMS)>) 
-{
-	(name, method_fn)
-}
-
-fn request<
-	PARAMS : serde::Deserialize + 'static, 
-	RET: serde::Serialize + 'static, 
-	ERR : serde::Serialize + 'static
->(name: &'static str, method_fn: Box<Fn(PARAMS) -> LSResult<RET, ERR>>) 
-	-> (&'static str, Box<Fn(PARAMS) -> LSResult<RET, ERR>>) 
-{
-	(name, method_fn)
-}
-
-use std::rc::Rc;
-
-
-pub trait LanguageServer {
-	
-	fn initialize(&self, params: InitializeParams) -> LSResult<InitializeResult, InitializeError>;
-	fn shutdown(&self, params: ()) -> LSResult<(), ()>;
-	fn exit(&self, params: ());
-	fn workspaceChangeConfiguration(&self, params: DidChangeConfigurationParams);
-	fn didOpenTextDocument(&self, params: DidOpenTextDocumentParams);
-	fn didChangeTextDocument(&self, params: DidChangeTextDocumentParams);
-	fn didCloseTextDocument(&self, params: DidCloseTextDocumentParams);
-	fn didSaveTextDocument(&self, params: DidSaveTextDocumentParams);
-	fn didChangeWatchedFiles(&self, params: DidChangeWatchedFilesParams);
-	
-	fn completion(&self, params: TextDocumentPositionParams) -> LSResult<CompletionList, ()>;
-	fn resolveCompletionItem(&self, params: CompletionItem) -> LSResult<CompletionItem, ()>;
-	fn hover(&self, params: TextDocumentPositionParams) -> LSResult<Hover, ()>;
-	fn signatureHelp(&self, params: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()>;
-	fn gotoDefinition(&self, params: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()>;
-	fn references(&self, params: ReferenceParams) -> LSResult<Vec<Location>, ()>;
-	fn documentHighlight(&self, params: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()>;
-	fn documentSymbols(&self, params: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
-	fn workspaceSymbols(&self, params: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
-	fn codeAction(&self, params: CodeActionParams) -> LSResult<Vec<Command>, ()>;
-	fn codeLens(&self, params: CodeLensParams) -> LSResult<Vec<CodeLens>, ()>;
-	fn codeLensResolve(&self, params: CodeLens) -> LSResult<CodeLens, ()>;
-	fn formatting(&self, params: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn rangeFormatting(&self, params: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn onTypeFormatting(&self, params: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn rename(&self, params: RenameParams) -> LSResult<WorkspaceEdit, ()>;
-	
-}
-
-
-pub trait LanguageClient {
-	
-	fn showMessage(&self, params: ShowMessageParams);
-	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()>;
-	fn logMessage(&self, params: LogMessageParams);
-	fn telemetryEvent(&self, params: any);
-	
-	fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
-
-}
 
 
 /* ----------------- Basic JSON Structures ----------------- */
@@ -337,13 +261,7 @@ pub struct TextDocumentPositionParams {
 /**
  * The initialize request is sent as the first request from the client to the server.
  */
-pub fn request__Initialize(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<InitializeParams, InitializeResult, InitializeError> 
-{
-	request("initialize", Box::new(move |params| {
-		ls.initialize(params) 
-	}))
-}
+pub const Request__Initialize: &'static str = "initialize";
 
 #[derive(Clone, Serialize, Deserialize, Debug)] 
 pub struct InitializeParams {
@@ -544,38 +462,20 @@ pub struct ServerCapabilities {
  * but to not exit (otherwise the response might not be delivered correctly to the client).
  * There is a separate exit notification that asks the server to exit.
  */
-pub fn request__Shutdown(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<(), (), ()> 
-{
-	request("shutdown", Box::new(move |params| {
-		ls.shutdown(params) 
-	}))
-}
+pub const Request__Shutdown: &'static str = "shutdown";
 
 /**
  * A notification to ask the server to exit its process. 
  * The server should exit with success code 0 if the shutdown request has been received before; 
  * otherwise with error code 1.
  */
-pub fn notification__Exit(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<()> 
-{
-	notification("exit", Box::new(move |params| {
-		ls.exit(params) 
-	}))
-}
+pub const Notification__Exit: &'static str = "exit";
 
 /**
  * The show message notification is sent from a server to a client to ask the client to display a particular message
  * in the user interface.
  */
-pub fn notification__ShowMessage(ls : Rc<LanguageClient>) 
-	-> FnLanguageServerNotification<ShowMessageParams> 
-{
-	notification("window/showMessage", Box::new(move |params| {
-		ls.showMessage(params) 
-	}))
-}
+pub const Notification__ShowMessage: &'static str = "window/showMessage";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ShowMessageParams {
@@ -616,13 +516,7 @@ pub enum MessageType {
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
-pub fn request__ShowMessageRequest(ls : Rc<LanguageClient>) 
-	-> FnLanguageServerRequest<ShowMessageRequestParams, MessageActionItem, ()> 
-{
-	request("window/showMessageRequest", Box::new(move |params| {
-		ls.showMessageRequest(params) 
-	}))
-}
+pub const Request__ShowMessageRequest: &'static str = "window/showMessageRequest";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ShowMessageRequestParams {
@@ -654,13 +548,7 @@ pub struct MessageActionItem {
 /**
  * The log message notification is sent from the server to the client to ask the client to log a particular message.
  */
-pub fn notification__LogMessage(ls : Rc<LanguageClient>) 
-	-> FnLanguageServerNotification<LogMessageParams> 
-{
-	notification("window/logMessage", Box::new(move |params| {
-		ls.logMessage(params) 
-	}))
-}
+pub const Notification__LogMessage: &'static str = "window/logMessage";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct LogMessageParams {
@@ -679,24 +567,12 @@ pub struct LogMessageParams {
 /**
  * The telemetry notification is sent from the server to the client to ask the client to log a telemetry event.
  */
-pub fn notification__TelemetryEvent(ls : Rc<LanguageClient>) 
-	-> FnLanguageServerNotification<any> 
-{
-	notification("telemetry/event", Box::new(move |params| {
-		ls.telemetryEvent(params) 
-	}))
-}
+pub const Notification__TelemetryEvent: &'static str = "telemetry/event";
 
 /**
  * A notification sent from the client to the server to signal the change of configuration settings.
  */
-pub fn notification__WorkspaceChangeConfiguration(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<DidChangeConfigurationParams> 
-{
-	notification("workspace/didChangeConfiguration", Box::new(move |params| {
-		ls.workspaceChangeConfiguration(params) 
-	}))
-}
+pub const Notification__WorkspaceChangeConfiguration: &'static str = "workspace/didChangeConfiguration";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidChangeConfigurationParams {
@@ -713,13 +589,7 @@ pub struct DidChangeConfigurationParams {
  * The document's truth is now managed by the client and the server must not try to read the document's truth
  * using the document's uri.
  */
-pub fn notification__DidOpenTextDocument(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<DidOpenTextDocumentParams> 
-{
-	notification("textDocument/didOpen", Box::new(move |params| {
-		ls.didOpenTextDocument(params) 
-	}))
-}
+pub const Notification__DidOpenTextDocument: &'static str = "textDocument/didOpen";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidOpenTextDocumentParams {
@@ -733,13 +603,7 @@ pub struct DidOpenTextDocumentParams {
  * The document change notification is sent from the client to the server to signal changes to a text document.
  * In 2.0 the shape of the params has changed to include proper version numbers and language ids.
  */
-pub fn notification__DidChangeTextDocument(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<DidChangeTextDocumentParams> 
-{
-	notification("textDocument/didChange", Box::new(move |params| {
-		ls.didChangeTextDocument(params) 
-	}))
-}
+pub const Notification__DidChangeTextDocument: &'static str = "textDocument/didChange";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidChangeTextDocumentParams {
@@ -784,13 +648,7 @@ pub struct TextDocumentContentChangeEvent {
  * The document's truth now exists where the document's uri points to (e.g. if the document's uri is a file uri
  * the truth now exists on disk).
  */
-pub fn notification__DidCloseTextDocument(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<DidCloseTextDocumentParams> 
-{
-	notification("textDocument/didClose", Box::new(move |params| {
-		ls.didCloseTextDocument(params) 
-	}))
-}
+pub const Notification__DidCloseTextDocument: &'static str = "textDocument/didClose";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidCloseTextDocumentParams {
@@ -803,13 +661,7 @@ pub struct DidCloseTextDocumentParams {
 /**
  * The document save notification is sent from the client to the server when the document was saved in the client.
  */
-pub fn notification__DidSaveTextDocument(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<DidSaveTextDocumentParams> 
-{
-	notification("textDocument/didSave", Box::new(move |params| {
-		ls.didSaveTextDocument(params) 
-	}))
-}
+pub const Notification__DidSaveTextDocument: &'static str = "textDocument/didSave";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidSaveTextDocumentParams {
@@ -823,13 +675,7 @@ pub struct DidSaveTextDocumentParams {
  * The watched files notification is sent from the client to the server when the client detects changes to files
  * watched by the language client.
  */
-pub fn notification__DidChangeWatchedFiles(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerNotification<DidChangeWatchedFilesParams> 
-{
-	notification("workspace/didChangeWatchedFiles", Box::new(move |params| {
-		ls.didChangeWatchedFiles(params) 
-	}))
-}
+pub const Notification__DidChangeWatchedFiles: &'static str = "workspace/didChangeWatchedFiles";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DidChangeWatchedFilesParams {
@@ -877,13 +723,7 @@ pub struct FileEvent {
 /**
  * Diagnostics notification are sent from the server to the client to signal results of validation runs.
  */
-pub fn notification__PublishDiagnostics(ls : Rc<LanguageClient>) 
-	-> FnLanguageServerNotification<PublishDiagnosticsParams> 
-{
-	notification("textDocument/publishDiagnostics", Box::new(move |params| {
-		ls.publishDiagnostics(params) 
-	}))
-}
+pub const Notification__PublishDiagnostics: &'static str = "textDocument/publishDiagnostics";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct PublishDiagnosticsParams {
@@ -908,14 +748,8 @@ pub struct PublishDiagnosticsParams {
  request is sent with the selected completion item as a param. The returned completion item should have the 
  documentation property filled in.
 */
-pub fn request__Completion(ls : Rc<LanguageServer>) 
 // result: CompletionItem[] | CompletionList FIXME
-	-> FnLanguageServerRequest<TextDocumentPositionParams, CompletionList, ()> 
-{
-	request("textDocument/completion", Box::new(move |params| {
-		ls.completion(params) 
-	}))
-}
+pub const Request__Completion: &'static str = "textDocument/completion";
 
 
 /**
@@ -1026,26 +860,14 @@ pub enum CompletionItemKind {
 /**
  * The request is sent from the client to the server to resolve additional information for a given completion item. 
  */
-pub fn request__ResolveCompletionItem(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<CompletionItem, CompletionItem, ()>
-{
-	request("completionItem/resolve", Box::new(move |params| {
-		ls.resolveCompletionItem(params) 
-	}))
-}
+pub const Request__ResolveCompletionItem: &'static str = "completionItem/resolve";
 
 
 /**
  * The hover request is sent from the client to the server to request hover information at a given text 
  * document position.
  */
-pub fn request__Hover(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<TextDocumentPositionParams, Hover, ()>
-{
-	request("textDocument/hover", Box::new(move |params| {
-		ls.hover(params) 
-	}))
-}
+pub const Request__Hover: &'static str = "textDocument/hover";
 
 /**
  * The result of a hover request.
@@ -1082,13 +904,7 @@ pub type MarkedString = string; /* FIXME: todo*/
  * The signature help request is sent from the client to the server to request signature information at 
  * a given cursor position.
  */
-pub fn request__SignatureHelp(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<TextDocumentPositionParams, SignatureHelp, ()>
-{
-	request("textDocument/signatureHelp", Box::new(move |params| {
-		ls.signatureHelp(params) 
-	}))
-}
+pub const Request__SignatureHelp: &'static str = "textDocument/signatureHelp";
 
 
 /**
@@ -1163,25 +979,13 @@ pub struct ParameterInformation {
  * The goto definition request is sent from the client to the server to resolve the definition location of 
  * a symbol at a given text document position.
  */
-pub fn request__GotoDefinition(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<TextDocumentPositionParams, Vec<Location>, ()>
-{
-	request("textDocument/definition", Box::new(move |params| {
-		ls.gotoDefinition(params) 
-	}))
-}
+pub const Request__GotoDefinition: &'static str = "textDocument/definition";
 
 /**
  * The references request is sent from the client to the server to resolve project-wide references for the 
  * symbol denoted by the given text document position.
  */
-pub fn request__References(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<ReferenceParams, Vec<Location>, ()> 
-{
-	request("textDocument/references", Box::new(move |params| {
-		ls.references(params) 
-	}))
-}
+pub const Request__References: &'static str = "textDocument/references";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ReferenceParams 
@@ -1222,13 +1026,7 @@ pub struct ReferenceContext {
  Symbol matches usually have a DocumentHighlightKind of Read or Write whereas fuzzy or textual matches 
  use Textas the kind.
 */
-pub fn request__DocumentHighlight(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<TextDocumentPositionParams, DocumentHighlight, ()>
-{
-	request("textDocument/documentHighlight", Box::new(move |params| {
-		ls.documentHighlight(params) 
-	}))
-}
+pub const Request__DocumentHighlight: &'static str = "textDocument/documentHighlight";
 
 /**
  * A document highlight is a range inside a text document which deserves
@@ -1273,13 +1071,7 @@ pub enum DocumentHighlightKind {
  * The document symbol request is sent from the client to the server to list all symbols found in a given 
  * text document.
  */
-pub fn request__DocumentSymbols(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<DocumentSymbolParams, Vec<SymbolInformation>, ()>
-{
-	request("textDocument/documentSymbol", Box::new(move |params| {
-		ls.documentSymbols(params) 
-	}))
-}
+pub const Request__DocumentSymbols: &'static str = "textDocument/documentSymbol";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentSymbolParams {
@@ -1345,13 +1137,7 @@ pub enum SymbolKind {
  * The workspace symbol request is sent from the client to the server to list project-wide symbols 
  * matching the query string.
  */
-pub fn request__WorkspaceSymbols(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<WorkspaceSymbolParams, Vec<SymbolInformation>, ()>
-{
-	request("workspace/symbol", Box::new(move |params| {
-		ls.workspaceSymbols(params) 
-	}))
-}
+pub const Request__WorkspaceSymbols: &'static str = "workspace/symbol";
 
 /**
  * The parameters of a Workspace Symbol Request.
@@ -1369,13 +1155,7 @@ pub struct WorkspaceSymbolParams {
  * and range. The request is triggered when the user moves the cursor into a problem marker in the editor or 
  * presses the lightbulb associated with a marker.
  */
-pub fn request__CodeAction(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<CodeActionParams, Vec<Command>, ()>
-{
-	request("textDocument/codeAction", Box::new(move |params| {
-		ls.codeAction(params) 
-	}))
-}
+pub const Request__CodeAction: &'static str = "textDocument/codeAction";
 
 /**
  * Params for the CodeActionRequest
@@ -1413,13 +1193,7 @@ pub struct CodeActionContext {
 /**
  * The code lens request is sent from the client to the server to compute code lenses for a given text document.
  */
-pub fn request__CodeLens(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<CodeLensParams, Vec<CodeLens>, ()>
-{
-	request("textDocument/codeLens", Box::new(move |params| {
-		ls.codeLens(params) 
-	}))
-}
+pub const Request__CodeLens: &'static str = "textDocument/codeLens";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct CodeLensParams {
@@ -1461,24 +1235,12 @@ pub struct CodeLens {
  * The code lens resolve request is sent from the client to the server to resolve the command for a 
  * given code lens item.
  */
-pub fn request__CodeLensResolve(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<CodeLens, CodeLens, ()> 
-{
-	request("codeLens/resolve", Box::new(move |params| {
-		ls.codeLensResolve(params) 
-	}))
-}
+pub const Request__CodeLensResolve: &'static str = "codeLens/resolve";
 
 /**
  * The document formatting request is sent from the server to the client to format a whole document.
  */
-pub fn request__Formatting(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<DocumentFormattingParams, Vec<TextEdit>, ()>
-{
-	request("textDocument/formatting", Box::new(move |params| {
-		ls.formatting(params) 
-	}))
-}
+pub const Request__Formatting: &'static str = "textDocument/formatting";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentFormattingParams {
@@ -1519,13 +1281,7 @@ pub struct FormattingOptions {
 /**
  * The document range formatting request is sent from the client to the server to format a given range in a document.
  */
-pub fn request__RangeFormatting(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<DocumentRangeFormattingParams, Vec<TextEdit>, ()> 
-{
-	request("textDocument/rangeFormatting", Box::new(move |params| {
-		ls.rangeFormatting(params) 
-	}))
-}
+pub const Request__RangeFormatting: &'static str = "textDocument/rangeFormatting";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentRangeFormattingParams {
@@ -1549,13 +1305,7 @@ pub struct DocumentRangeFormattingParams {
  * The document on type formatting request is sent from the client to the server to format parts of 
  * the document during typing.
  */
-pub fn request__OnTypeFormatting(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<DocumentOnTypeFormattingParams, Vec<TextEdit>, ()> 
-{
-	request("textDocument/onTypeFormatting", Box::new(move |params| {
-		ls.onTypeFormatting(params) 
-	}))
-}
+pub const Request__OnTypeFormatting: &'static str = "textDocument/onTypeFormatting";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct DocumentOnTypeFormattingParams {
@@ -1583,13 +1333,7 @@ pub struct DocumentOnTypeFormattingParams {
 /**
  * The rename request is sent from the client to the server to perform a workspace-wide rename of a symbol.
  */
-pub fn request__Rename(ls : Rc<LanguageServer>) 
-	-> FnLanguageServerRequest<RenameParams, WorkspaceEdit, ()> 
-{
-	request("textDocument/rename", Box::new(move |params| {
-		ls.rename(params) 
-	}))
-}
+pub const Request__Rename: &'static str = "textDocument/rename";
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RenameParams {

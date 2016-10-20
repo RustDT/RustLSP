@@ -8,6 +8,8 @@
 
 #![allow(non_camel_case_types)]
 
+extern crate serde;
+
 use std::io::{self, Write};
 
 use util::core::*;
@@ -16,7 +18,13 @@ use json_rpc;
 use json_rpc::*;
 use json_rpc::service_util::Provider;
 use json_rpc::service_util::MessageWriter;
+use json_rpc::service_util::ServiceError;
+use json_rpc::service_util::ServiceResult;
+
 use json_rpc::output_agent::OutputAgent;
+
+use json_rpc::jsonrpc_objects::JsonRpcParams;
+use json_rpc::jsonrpc_objects::JsonRpcResult_Or_Error;
 
 use lsp;
 use lsp_transport;
@@ -67,7 +75,8 @@ impl LSPServer {
 		let mut jsonrpc_endpoint = JsonRpcEndpoint::start_with_output_agent(output_agent, new(MapRpcRequestHandler::new()));
 		
 		let mut request_handler = new(MapRpcRequestHandler::new());
-		initialize_methods(ls.clone(), &mut request_handler);
+		//FIXME
+		//initialize_methods(ls.clone(), &mut request_handler);
 		jsonrpc_endpoint.request_handler = request_handler;
 		
 		let jsonrpc_endpoint = newArcMutex(jsonrpc_endpoint);
@@ -85,36 +94,141 @@ impl LSPServer {
 	
 }
 
-pub fn initialize_methods(ls: Rc<LanguageServer>, handler: &mut MapRpcRequestHandler) {
+pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
+
+pub trait LanguageServer {
 	
-	let (name, mh) = lsp::request__Initialize(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__Shutdown(ls.clone()); handler.add_request(name, mh);
+	fn initialize(&self, params: InitializeParams) -> LSResult<InitializeResult, InitializeError>;
+	fn shutdown(&self, params: ()) -> LSResult<(), ()>;
+	fn exit(&self, params: ());
+	fn workspaceChangeConfiguration(&self, params: DidChangeConfigurationParams);
+	fn didOpenTextDocument(&self, params: DidOpenTextDocumentParams);
+	fn didChangeTextDocument(&self, params: DidChangeTextDocumentParams);
+	fn didCloseTextDocument(&self, params: DidCloseTextDocumentParams);
+	fn didSaveTextDocument(&self, params: DidSaveTextDocumentParams);
+	fn didChangeWatchedFiles(&self, params: DidChangeWatchedFilesParams);
 	
-	let (name, mh) = lsp::notification__Exit(ls.clone()); handler.add_notification(name, mh);
+	fn completion(&self, params: TextDocumentPositionParams) -> LSResult<CompletionList, ()>;
+	fn resolveCompletionItem(&self, params: CompletionItem) -> LSResult<CompletionItem, ()>;
+	fn hover(&self, params: TextDocumentPositionParams) -> LSResult<Hover, ()>;
+	fn signatureHelp(&self, params: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()>;
+	fn gotoDefinition(&self, params: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()>;
+	fn references(&self, params: ReferenceParams) -> LSResult<Vec<Location>, ()>;
+	fn documentHighlight(&self, params: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()>;
+	fn documentSymbols(&self, params: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
+	fn workspaceSymbols(&self, params: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
+	fn codeAction(&self, params: CodeActionParams) -> LSResult<Vec<Command>, ()>;
+	fn codeLens(&self, params: CodeLensParams) -> LSResult<Vec<CodeLens>, ()>;
+	fn codeLensResolve(&self, params: CodeLens) -> LSResult<CodeLens, ()>;
+	fn formatting(&self, params: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
+	fn rangeFormatting(&self, params: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
+	fn onTypeFormatting(&self, params: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
+	fn rename(&self, params: RenameParams) -> LSResult<WorkspaceEdit, ()>;
 	
-	let (name, mh) = lsp::notification__WorkspaceChangeConfiguration(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::notification__DidOpenTextDocument(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::notification__DidChangeTextDocument(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::notification__DidCloseTextDocument(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::notification__DidSaveTextDocument(ls.clone()); handler.add_notification(name, mh);
-	let (name, mh) = lsp::notification__DidChangeWatchedFiles(ls.clone()); handler.add_notification(name, mh);
+}
+
+
+pub trait LanguageClient {
 	
-	let (name, mh) = lsp::request__Completion(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__ResolveCompletionItem(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__Hover(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__SignatureHelp(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__GotoDefinition(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__References(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__DocumentHighlight(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__DocumentSymbols(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__WorkspaceSymbols(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__CodeAction(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__CodeLens(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__CodeLensResolve(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__Formatting(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__RangeFormatting(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__OnTypeFormatting(ls.clone()); handler.add_request(name, mh);
-	let (name, mh) = lsp::request__Rename(ls.clone()); handler.add_request(name, mh);
+	fn showMessage(&self, params: ShowMessageParams);
+	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()>;
+	fn logMessage(&self, params: LogMessageParams);
+	fn telemetryEvent(&self, params: any);
+	
+	fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
+
+}
+
+
+
+impl RpcRequestHandler for LanguageServer {
+	
+	fn handle_request(&mut self, request_method: &str, params: JsonRpcParams, 
+		completable: JsonRpcResponseCompletable) 
+	{
+		match request_method {
+			lsp::Request__Initialize => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.initialize(params)) 
+			}
+			lsp::Request__Shutdown => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.shutdown(params)) 
+			}
+			lsp::Notification__Exit => { RequestHandling::sync_handle_notification(params, completable, 
+				|params| self.exit(params)) 
+			}
+			lsp::Notification__WorkspaceChangeConfiguration => { RequestHandling::sync_handle_notification(params, completable, 
+				|params| self.workspaceChangeConfiguration(params)) 
+			}
+			lsp::Notification__DidOpenTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+				|params| self.didOpenTextDocument(params)) 
+			}
+			lsp::Notification__DidChangeTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+				|params| self.didChangeTextDocument(params)) 
+			}
+			lsp::Notification__DidCloseTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+				|params| self.didCloseTextDocument(params)) 
+			}
+			lsp::Notification__DidSaveTextDocument => { RequestHandling::sync_handle_notification(params, completable, 
+				|params| self.didSaveTextDocument(params)) 
+			}
+			lsp::Notification__DidChangeWatchedFiles => { RequestHandling::sync_handle_notification(params, completable, 
+				|params| self.didChangeWatchedFiles(params)) 
+			}
+			lsp::Request__Completion => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.completion(params)) 
+			}
+			lsp::Request__ResolveCompletionItem => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.resolveCompletionItem(params)) 
+			}
+			lsp::Request__Hover => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.hover(params)) 
+			}
+			lsp::Request__SignatureHelp => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.signatureHelp(params)) 
+			}
+			lsp::Request__GotoDefinition => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.gotoDefinition(params)) 
+			}
+			lsp::Request__References => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.references(params)) 
+			}
+			lsp::Request__DocumentHighlight => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.documentHighlight(params)) 
+			}
+			lsp::Request__DocumentSymbols => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.documentSymbols(params)) 
+			}
+			lsp::Request__WorkspaceSymbols => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.workspaceSymbols(params)) 
+			}
+			lsp::Request__CodeAction => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.codeAction(params)) 
+			}
+			lsp::Request__CodeLens => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.codeLens(params)) 
+			}
+			lsp::Request__CodeLensResolve => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.codeLensResolve(params)) 
+			}
+			lsp::Request__Formatting => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.formatting(params)) 
+			}
+			lsp::Request__RangeFormatting => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.rangeFormatting(params)) 
+			}
+			lsp::Request__OnTypeFormatting => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.onTypeFormatting(params)) 
+			}
+			lsp::Request__Rename => { RequestHandling::sync_handle_request(params, completable, 
+				|params| self.rename(params)) 
+			}
+			_ => {
+				let method_result = JsonRpcResult_Or_Error::Error(jsonrpc_objects::error_JSON_RPC_MethodNotFound());
+				completable.complete(Some(method_result));
+			}
+		};
+		
+	}
 	
 }
 
@@ -135,21 +249,30 @@ pub struct EndpointLSClient {
 
 impl LanguageClient for EndpointLSClient {
 	
-    fn showMessage(&self, _params: ShowMessageParams) {
-//    	let (name, mh) = lsp::notification__ShowMessage(ls);
-    	panic!("not implemented")
+    fn showMessage(&self, params: ShowMessageParams) {
+    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
+    	jsonrpc_endpoint.send_notification(lsp::Notification__ShowMessage, params);
     }
+    
     fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()> {
+    	let jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
+//    	jsonrpc_endpoint.send_request(lsp::Notification__ShowMessageRequest, params);
     	panic!("not implemented")
     }
-    fn logMessage(&self, _params: LogMessageParams) {
-    	panic!("not implemented")
+    
+    fn logMessage(&self, params: LogMessageParams) {
+    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
+    	jsonrpc_endpoint.send_notification(lsp::Notification__LogMessage, params);
     }
-    fn telemetryEvent(&self, _params: any) {
-    	panic!("not implemented")
+    
+    fn telemetryEvent(&self, params: any) {
+    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
+    	jsonrpc_endpoint.send_notification(lsp::Notification__TelemetryEvent, params);
     }
-    fn publishDiagnostics(&self, _params: PublishDiagnosticsParams) {
-    	panic!("not implemented")
+    
+    fn publishDiagnostics(&self, params: PublishDiagnosticsParams) {
+    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
+    	jsonrpc_endpoint.send_notification(lsp::Notification__PublishDiagnostics, params);
     }
 	
 }

@@ -8,100 +8,13 @@
 
 #![allow(non_camel_case_types)]
 
-use json_rpc::service_util::*;
-
 use serde_json::Value;
-use serde;
 use std::collections::HashMap;
 
 
 // Based on protocol: https://github.com/Microsoft/language-server-protocol/blob/master/protocol.md
 // Last update 14/Oct/2016 at commit: 
 // https://github.com/Microsoft/language-server-protocol/commit/63f5d02d39d0135c234162a28d0523c9323ab3f7
-
-
-pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
-
-pub type FnLanguageServerNotification<PARAMS> =
-    (&'static str, Box<Fn(PARAMS)>);
-pub type FnLanguageServerRequest<PARAMS, RET, RET_ERROR> =
-    (&'static str, Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>);
-
-
-fn notification<PARAMS: serde::Deserialize +
-                'static>(name: &'static str, method_fn: Box<Fn(PARAMS)>)
- -> (&'static str, Box<Fn(PARAMS)>) {
-    (name, method_fn)
-}
-
-fn request<PARAMS: serde::Deserialize + 'static, RET: serde::Serialize +
-           'static, ERR: serde::Serialize +
-           'static>(name: &'static str,
-                    method_fn: Box<Fn(PARAMS) -> LSResult<RET, ERR>>)
- -> (&'static str, Box<Fn(PARAMS) -> LSResult<RET, ERR>>) {
-    (name, method_fn)
-}
-
-use std::rc::Rc;
-
-
-pub trait LanguageServer {
-    fn initialize(&self, params: InitializeParams)
-    -> LSResult<InitializeResult, InitializeError>;
-    fn shutdown(&self, params: ())
-    -> LSResult<(), ()>;
-    fn exit(&self, params: ());
-    fn workspaceChangeConfiguration(&self,
-                                    params: DidChangeConfigurationParams);
-    fn didOpenTextDocument(&self, params: DidOpenTextDocumentParams);
-    fn didChangeTextDocument(&self, params: DidChangeTextDocumentParams);
-    fn didCloseTextDocument(&self, params: DidCloseTextDocumentParams);
-    fn didSaveTextDocument(&self, params: DidSaveTextDocumentParams);
-    fn didChangeWatchedFiles(&self, params: DidChangeWatchedFilesParams);
-    fn completion(&self, params: TextDocumentPositionParams)
-    -> LSResult<CompletionList, ()>;
-    fn resolveCompletionItem(&self, params: CompletionItem)
-    -> LSResult<CompletionItem, ()>;
-    fn hover(&self, params: TextDocumentPositionParams)
-    -> LSResult<Hover, ()>;
-    fn signatureHelp(&self, params: TextDocumentPositionParams)
-    -> LSResult<SignatureHelp, ()>;
-    fn gotoDefinition(&self, params: TextDocumentPositionParams)
-    -> LSResult<Vec<Location>, ()>;
-    fn references(&self, params: ReferenceParams)
-    -> LSResult<Vec<Location>, ()>;
-    fn documentHighlight(&self, params: TextDocumentPositionParams)
-    -> LSResult<DocumentHighlight, ()>;
-    fn documentSymbols(&self, params: DocumentSymbolParams)
-    -> LSResult<Vec<SymbolInformation>, ()>;
-    fn workspaceSymbols(&self, params: WorkspaceSymbolParams)
-    -> LSResult<Vec<SymbolInformation>, ()>;
-    fn codeAction(&self, params: CodeActionParams)
-    -> LSResult<Vec<Command>, ()>;
-    fn codeLens(&self, params: CodeLensParams)
-    -> LSResult<Vec<CodeLens>, ()>;
-    fn codeLensResolve(&self, params: CodeLens)
-    -> LSResult<CodeLens, ()>;
-    fn formatting(&self, params: DocumentFormattingParams)
-    -> LSResult<Vec<TextEdit>, ()>;
-    fn rangeFormatting(&self, params: DocumentRangeFormattingParams)
-    -> LSResult<Vec<TextEdit>, ()>;
-    fn onTypeFormatting(&self, params: DocumentOnTypeFormattingParams)
-    -> LSResult<Vec<TextEdit>, ()>;
-    fn rename(&self, params: RenameParams)
-    -> LSResult<WorkspaceEdit, ()>;
-}
-
-
-pub trait LanguageClient {
-    fn showMessage(&self, params: ShowMessageParams);
-    fn showMessageRequest(&self, params: ShowMessageRequestParams)
-    -> LSResult<MessageActionItem, ()>;
-    fn logMessage(&self, params: LogMessageParams);
-    fn telemetryEvent(&self, params: any);
-    fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
-
-}
 
 
 /* ----------------- Basic JSON Structures ----------------- */
@@ -134,7 +47,10 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                             Value
                             =
                             __Field;
-                            fn visit_usize<__E>(&mut self, value: usize)
+                            fn visit_usize<__E>(&mut self,
+
+
+                                                    value: usize)
                              -> ::std::result::Result<__Field, __E> where
                              __E: _serde::de::Error {
                                 match value {
@@ -144,10 +60,17 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                                 }
                             }
                             fn visit_str<__E>(&mut self, value: &str)
-                             -> ::std::result::Result<__Field, __E> where
+                             ->
+                                 ::std::result::Result<
+
+                                                       __Field, __E> where
                              __E: _serde::de::Error {
                                 match value {
-                                    "line" => { Ok(__Field::__field0) }
+                                    "line" => {
+                                        Ok(
+
+                                           __Field::__field0)
+                                    }
                                     "character" => { Ok(__Field::__field1) }
                                     _ => Ok(__Field::__ignore),
                                 }
@@ -157,12 +80,18 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                              __E: _serde::de::Error {
                                 match value {
                                     b"line" => { Ok(__Field::__field0) }
-                                    b"character" => { Ok(__Field::__field1) }
+                                    b"character" => {
+                                        Ok(
+
+                                           __Field::__field1)
+                                    }
                                     _ => Ok(__Field::__ignore),
                                 }
                             }
                         }
-                        deserializer.deserialize_struct_field(__FieldVisitor)
+                        deserializer.deserialize_struct_field(
+
+                                                              __FieldVisitor)
                     }
                 }
                 struct __Visitor;
@@ -173,14 +102,19 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                     Position;
                     #[inline]
                     fn visit_seq<__V>(&mut self, mut visitor: __V)
-                     -> ::std::result::Result<Position, __V::Error> where
+                     ->
+                         ::std::result::Result<
+
+                                               Position, __V::Error> where
                      __V: _serde::de::SeqVisitor {
                         let __field0 =
                             match try!(visitor . visit :: < number > (  )) {
                                 Some(value) => { value }
                                 None => {
                                     try!(visitor . end (  ));
-                                    return Err(_serde::de::Error::invalid_length(0usize));
+                                    return Err(
+
+                                               _serde::de::Error::invalid_length(0usize));
                                 }
                             };
                         let __field1 =
@@ -192,15 +126,25 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                                 }
                             };
                         try!(visitor . end (  ));
-                        Ok(Position{line: __field0, character: __field1,})
+                        Ok(
+                           //    code?: number | string;
+                           Position{line: __field0, character: __field1,})
                     }
                     #[inline]
-                    fn visit_map<__V>(&mut self, mut visitor: __V)
+                    fn visit_map<__V>(&mut self,
+
+
+                                          mut visitor: __V)
                      -> ::std::result::Result<Position, __V::Error> where
                      __V: _serde::de::MapVisitor {
-                        let mut __field0: Option<number> = None;
+                        let mut __field0:
+                                Option<
+
+                                       number> = None;
                         let mut __field1: Option<number> = None;
-                        while let Some(key) =
+                        while let Some(
+
+                                       key) =
                                   try!(visitor . visit_key :: < __Field > (
                                        )) {
                             match key {
@@ -215,7 +159,9 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                                 }
                                 __Field::__field1 => {
                                     if __field1.is_some() {
-                                        return Err(<__V::Error as
+                                        return Err(
+
+                                                   <__V::Error as
                                                        _serde::de::Error>::duplicate_field("character"));
                                     }
                                     __field1 =
@@ -246,7 +192,10 @@ const _IMPL_DESERIALIZE_FOR_Position: () =
                 }
                 const FIELDS: &'static [&'static str] =
                     &["line", "character"];
-                deserializer.deserialize_struct("Position", FIELDS, __Visitor)
+                deserializer.deserialize_struct(
+                                                //    arguments?: any[];
+                                                "Position", FIELDS, __Visitor)
+
             }
         }
     };
@@ -271,7 +220,6 @@ const _IMPL_SERIALIZE_FOR_Position: () =
             }
         }
     };
-
 /// Position in a text document expressed as zero-based line and character offset. 
 /// A position is between two characters like an 'insert' cursor in a editor.
 #[derive(Debug, Copy, Clone)]
@@ -280,7 +228,6 @@ pub struct Position {
      * Line position in a document (zero-based).
      */
     pub line: number,
-
     /**
      * Character offset on a line in a document (zero-based).
      */
@@ -443,7 +390,6 @@ const _IMPL_SERIALIZE_FOR_Range: () =
             }
         }
     };
-
 /// A range in a text document expressed as (zero-based) start and end positions. 
 /// A range is comparable to a selection in an editor. Therefore the end position is exclusive.
 #[derive(Debug, Copy, Clone)]
@@ -452,7 +398,6 @@ pub struct Range {
      * The range's start position.
      */
     pub start: Position,
-
     /**
      * The range's end position.
      */
@@ -615,7 +560,6 @@ const _IMPL_SERIALIZE_FOR_Location: () =
             }
         }
     };
-
 ///Represents a location inside a resource, such as a line inside a text file.
 #[derive(Debug, Clone)]
 pub struct Location {
@@ -764,11 +708,14 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                         let mut __field4: Option<string> = None;
                         while let Some(key) =
                                   try!(visitor . visit_key :: < __Field > (
-                                       )) {
+                                       ))
+                                  {
                             match key {
                                 __Field::__field0 => {
                                     if __field0.is_some() {
-                                        return Err(<__V::Error as
+                                        return Err(
+
+                                                   <__V::Error as
                                                        _serde::de::Error>::duplicate_field("range"));
                                     }
                                     __field0 =
@@ -777,11 +724,15 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                 }
                                 __Field::__field1 => {
                                     if __field1.is_some() {
-                                        return Err(<__V::Error as
-                                                       _serde::de::Error>::duplicate_field("severity"));
+                                        return Err(
+                                                   //changes: { [uri: string]: TextEdit[]; };
+                                                   <__V::Error as
+                                                       _serde::de::Error>::duplicate_field("severity")); // FIXME review if this is correct
                                     }
                                     __field1 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+
+                                             try!(visitor . visit_value :: <
                                                   Option < DiagnosticSeverity
                                                   > > (  )));
                                 }
@@ -791,7 +742,12 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                                        _serde::de::Error>::duplicate_field("code"));
                                     }
                                     __field2 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+                                             // !!!!!! Note: 
+                                             // In the spec VersionedTextDocumentIdentifier extends TextDocumentIdentifier
+                                             // This modelled by "mixing-in" TextDocumentIdentifier in VersionedTextDocumentIdentifier,
+                                             // so any changes to this type must be effected in subt-type as well.
+                                             try!(visitor . visit_value :: <
                                                   Option < number_or_string >
                                                   > (  )));
                                 }
@@ -801,24 +757,25 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                                        _serde::de::Error>::duplicate_field("source"));
                                     }
                                     __field3 =
-                                        Some(
-
-                                             try!(visitor . visit_value :: <
+                                        Some(try!(visitor . visit_value :: <
                                                   Option < string > > (  )));
                                 }
-                                __Field::__field4 => {
+                                __Field::__field4 =>
+                                {
                                     if __field4.is_some() {
-                                        return Err(<__V::Error as
+                                        return Err(
+
+                                                   <__V::Error as
                                                        _serde::de::Error>::duplicate_field("message"));
                                     }
                                     __field4 =
                                         Some(try!(visitor . visit_value :: <
                                                   string > (  )));
                                 }
-                                _ =>
-                                {
+                                _ => {
                                     try!(visitor . visit_value :: < _serde ::
                                          de :: impls :: IgnoredAny > (  ));
+
                                 }
                             }
                         }
@@ -826,15 +783,14 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                         let __field0 =
                             match __field0 {
                                 Some(__field0) => __field0,
+
+
                                 None =>
                                 try!(visitor . missing_field ( "range" )),
                             };
-
                         let __field1 =
                             match __field1 {
-                                Some(
-                                     //    code?: number | string;
-                                     __field1) => __field1,
+                                Some(__field1) => __field1,
                                 None =>
                                 try!(visitor . missing_field ( "severity" )),
                             };
@@ -842,18 +798,20 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                             match __field2 {
                                 Some(__field2) => __field2,
                                 None =>
-                                try!(visitor . missing_field ( "code" )),
+
+                                    try!(visitor . missing_field ( "code" )),
                             };
                         let __field3 =
-                            match 
-                                __field3 {
+                            match __field3 {
                                 Some(__field3) => __field3,
                                 None =>
                                 try!(visitor . missing_field ( "source" )),
                             };
-
+                        //extends TextDocumentIdentifier 
                         let __field4 =
                             match __field4 {
+
+                                // This field was "mixed-in" from TextDocumentIdentifier
                                 Some(__field4) => __field4,
                                 None =>
                                 try!(visitor . missing_field ( "message" )),
@@ -863,13 +821,12 @@ const _IMPL_DESERIALIZE_FOR_Diagnostic: () =
                                       code: __field2,
                                       source: __field3,
                                       message: __field4,})
+
                     }
                 }
                 const FIELDS: &'static [&'static str] =
                     &["range", "severity", "code", "source", "message"];
-                deserializer.deserialize_struct(
-
-                                                "Diagnostic", FIELDS,
+                deserializer.deserialize_struct("Diagnostic", FIELDS,
                                                 __Visitor)
             }
         }
@@ -1306,7 +1263,6 @@ pub struct Command {
      * The identifier of the actual command handler.
      */
     pub command: string,
-    //    arguments?: any[];
     /**
      * Arguments that the command handler should be
      * invoked with.
@@ -1470,7 +1426,6 @@ const _IMPL_SERIALIZE_FOR_TextEdit: () =
             }
         }
     };
-
 /**
  * A textual edit applicable to a text document.
  */
@@ -1481,7 +1436,6 @@ pub struct TextEdit {
      * text into a document create a range where start === end.
      */
     pub range: Range,
-
     /**
      * The string to be inserted. For delete operations use an
      * empty string.
@@ -1620,18 +1574,15 @@ const _IMPL_SERIALIZE_FOR_WorkspaceEdit: () =
             }
         }
     };
-
 /**
  * A workspace edit represents changes to many resources managed in the workspace.
  */
 #[derive(Debug, Clone)]
 pub struct WorkspaceEdit {
-    //changes: { [uri: string]: TextEdit[]; };
     /**
      * Holds changes to existing resources.
      */
-    pub changes: HashMap<String,
-                         Vec<TextEdit>>, // FIXME review if this is correct
+    pub changes: HashMap<String, Vec<TextEdit>>,
 }
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_TextDocumentIdentifier: () =
@@ -1766,18 +1717,12 @@ const _IMPL_SERIALIZE_FOR_TextDocumentIdentifier: () =
             }
         }
     };
-
 /**
  * Text documents are identified using a URI. On the protocol level, URIs are passed as strings. 
  * The corresponding JSON structure looks like this:
  */
 #[derive(Debug, Clone)]
 pub struct TextDocumentIdentifier {
-    // !!!!!! Note: 
-    // In the spec VersionedTextDocumentIdentifier extends TextDocumentIdentifier
-    // This modelled by "mixing-in" TextDocumentIdentifier in VersionedTextDocumentIdentifier,
-    // so any changes to this type must be effected in subt-type as well.
-
     /**
      * The text document's URI.
      */
@@ -2016,7 +1961,6 @@ const _IMPL_SERIALIZE_FOR_TextDocumentItem: () =
             }
         }
     };
-
 /**
  * An item to transfer a text document from the client to the server. 
  */
@@ -2026,18 +1970,15 @@ pub struct TextDocumentItem {
      * The text document's URI.
      */
     pub uri: string,
-
     /**
      * The text document's language identifier.
      */
     pub languageId: Option<string>,
-
     /**
      * The version number of this document (it will strictly increase after each
      * change, including undo/redo).
      */
     pub version: Option<number>,
-
     /**
      * The content of the opened text document.
      */
@@ -2211,14 +2152,11 @@ const _IMPL_SERIALIZE_FOR_VersionedTextDocumentIdentifier: () =
             }
         }
     };
-
 /**
  * An identifier to denote a specific version of a text document.
  */
 #[derive(Debug, Clone)]
 pub struct VersionedTextDocumentIdentifier {
-    //extends TextDocumentIdentifier 
-    // This field was "mixed-in" from TextDocumentIdentifier
     /**
      * The text document's URI.
      */
@@ -2402,7 +2340,6 @@ const _IMPL_SERIALIZE_FOR_TextDocumentPositionParams: () =
             }
         }
     };
-
 /**
  * A parameter literal used in requests to pass a text document and a position inside that document.
  */
@@ -2428,12 +2365,7 @@ pub struct TextDocumentPositionParams {
 /**
  * The initialize request is sent as the first request from the client to the server.
  */
-pub fn request__Initialize(ls: Rc<LanguageServer>)
- ->
-     FnLanguageServerRequest<InitializeParams, InitializeResult,
-                             InitializeError> {
-    request("initialize", Box::new(move |params| { ls.initialize(params) }))
-}
+pub const Request__Initialize: &'static str = "initialize";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_InitializeParams: () =
     {
@@ -4243,12 +4175,15 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                                   > (  )));
                                 }
                                 __Field::__field3 => {
-                                    if __field3.is_some() {
+                                    if 
+                                       __field3.is_some() {
                                         return Err(<__V::Error as
                                                        _serde::de::Error>::duplicate_field("signatureHelpProvider"));
                                     }
                                     __field3 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+                                             //textDocumentSync?: number;
+                                             try!(visitor . visit_value :: <
                                                   Option <
                                                   SignatureHelpOptions > > (
                                                   )));
@@ -4313,6 +4248,7 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                                        _serde::de::Error>::duplicate_field("codeLensProvider"));
                                     }
                                     __field10 =
+
                                         Some(try!(visitor . visit_value :: <
                                                   Option < CodeLensOptions > >
                                                   (  )));
@@ -4323,7 +4259,9 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                                        _serde::de::Error>::duplicate_field("documentFormattingProvider"));
                                     }
                                     __field11 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+
+                                             try!(visitor . visit_value :: <
                                                   Option < boolean > > (  )));
                                 }
                                 __Field::__field12 => {
@@ -4332,7 +4270,9 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                                        _serde::de::Error>::duplicate_field("documentRangeFormattingProvider"));
                                     }
                                     __field12 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+
+                                             try!(visitor . visit_value :: <
                                                   Option < boolean > > (  )));
                                 }
                                 __Field::__field13 => {
@@ -4341,18 +4281,24 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                                        _serde::de::Error>::duplicate_field("documentOnTypeFormattingProvider"));
                                     }
                                     __field13 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+
+                                             try!(visitor . visit_value :: <
                                                   Option <
                                                   DocumentOnTypeFormattingOptions
                                                   > > (  )));
                                 }
                                 __Field::__field14 => {
                                     if __field14.is_some() {
-                                        return Err(<__V::Error as
+                                        return Err(
+
+                                                   <__V::Error as
                                                        _serde::de::Error>::duplicate_field("renameProvider"));
                                     }
                                     __field14 =
-                                        Some(try!(visitor . visit_value :: <
+                                        Some(
+
+                                             try!(visitor . visit_value :: <
                                                   Option < boolean > > (  )));
                                 }
                                 _ => {
@@ -4369,6 +4315,7 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "textDocumentSync" )),
                             };
+
                         let __field1 =
                             match __field1 {
                                 Some(__field1) => __field1,
@@ -4376,7 +4323,6 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field ( "hoverProvider"
                                      )),
                             };
-
                         let __field2 =
                             match __field2 {
                                 Some(__field2) => __field2,
@@ -4384,7 +4330,6 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "completionProvider" )),
                             };
-                        //textDocumentSync?: number;
                         let __field3 =
                             match __field3 {
                                 Some(__field3) => __field3,
@@ -4392,6 +4337,7 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "signatureHelpProvider" )),
                             };
+
                         let __field4 =
                             match __field4 {
                                 Some(__field4) => __field4,
@@ -4399,16 +4345,21 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "definitionProvider" )),
                             };
-                        let __field5 =
+                        let 
+
+                                __field5 =
                             match __field5 {
                                 Some(__field5) => __field5,
                                 None =>
-                                try!(visitor . missing_field (
-                                     "referencesProvider" )),
+
+                                    try!(visitor . missing_field (
+                                         "referencesProvider" )),
                             };
                         let __field6 =
                             match __field6 {
-                                Some(__field6) => __field6,
+                                Some(__field6) =>
+
+                                    __field6,
                                 None =>
                                 try!(visitor . missing_field (
                                      "documentHighlightProvider" )),
@@ -4420,6 +4371,7 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "documentSymbolProvider" )),
                             };
+
                         let __field8 =
                             match __field8 {
                                 Some(__field8) => __field8,
@@ -4427,6 +4379,7 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "workspaceSymbolProvider" )),
                             };
+
                         let __field9 =
                             match __field9 {
                                 Some(__field9) => __field9,
@@ -4436,11 +4389,14 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                             };
                         let __field10 =
                             match __field10 {
-                                Some(__field10) => __field10,
+                                Some(__field10) =>
+
+                                    __field10,
                                 None =>
                                 try!(visitor . missing_field (
                                      "codeLensProvider" )),
                             };
+
                         let __field11 =
                             match __field11 {
                                 Some(__field11) => __field11,
@@ -4450,6 +4406,8 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                             };
                         let __field12 =
                             match __field12 {
+
+
                                 Some(__field12) => __field12,
                                 None =>
                                 try!(visitor . missing_field (
@@ -4462,6 +4420,7 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "documentOnTypeFormattingProvider" )),
                             };
+
                         let __field14 =
                             match __field14 {
                                 Some(__field14) => __field14,
@@ -4469,8 +4428,11 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                                 try!(visitor . missing_field (
                                      "renameProvider" )),
                             };
-                        Ok(
 
+                        //settings: any;
+
+
+                        Ok(
 
 
                            ServerCapabilities{textDocumentSync: __field0,
@@ -4501,8 +4463,9 @@ const _IMPL_DESERIALIZE_FOR_ServerCapabilities: () =
                       "completionProvider", "signatureHelpProvider",
                       "definitionProvider", "referencesProvider",
                       "documentHighlightProvider", "documentSymbolProvider",
-                      "workspaceSymbolProvider", "codeActionProvider",
-                      "codeLensProvider", "documentFormattingProvider",
+                      "workspaceSymbolProvider",
+                      "codeActionProvider", "codeLensProvider",
+                      "documentFormattingProvider",
                       "documentRangeFormattingProvider",
                       "documentOnTypeFormattingProvider", "renameProvider"];
                 deserializer.deserialize_struct("ServerCapabilities", FIELDS,
@@ -4640,28 +4603,18 @@ pub struct ServerCapabilities {
  * but to not exit (otherwise the response might not be delivered correctly to the client).
  * There is a separate exit notification that asks the server to exit.
  */
-pub fn request__Shutdown(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<(), (), ()> {
-    request("shutdown", Box::new(move |params| { ls.shutdown(params) }))
-}
+pub const Request__Shutdown: &'static str = "shutdown";
 /**
  * A notification to ask the server to exit its process. 
  * The server should exit with success code 0 if the shutdown request has been received before; 
  * otherwise with error code 1.
  */
-pub fn notification__Exit(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<()> {
-    notification("exit", Box::new(move |params| { ls.exit(params) }))
-}
+pub const Notification__Exit: &'static str = "exit";
 /**
  * The show message notification is sent from a server to a client to ask the client to display a particular message
  * in the user interface.
  */
-pub fn notification__ShowMessage(ls: Rc<LanguageClient>)
- -> FnLanguageServerNotification<ShowMessageParams> {
-    notification("window/showMessage",
-                 Box::new(move |params| { ls.showMessage(params) }))
-}
+pub const Notification__ShowMessage: &'static str = "window/showMessage";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_ShowMessageParams: () =
     {
@@ -4822,14 +4775,12 @@ const _IMPL_SERIALIZE_FOR_ShowMessageParams: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct ShowMessageParams {
     /**
      * The message type. See {@link MessageType}.
      */
     pub type_: number,
-
     /**
      * The actual message.
      */
@@ -4979,7 +4930,6 @@ const _IMPL_SERIALIZE_FOR_MessageType: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub enum MessageType {
 
@@ -5003,17 +4953,13 @@ pub enum MessageType {
      */
     Log = 4,
 }
-
 /**
  * The show message request is sent from a server to a client to ask the client to display a particular message
  * in the user interface. In addition to the show message notification the request allows to pass actions and to
  * wait for an answer from the client.
  */
-pub fn request__ShowMessageRequest(ls: Rc<LanguageClient>)
- -> FnLanguageServerRequest<ShowMessageRequestParams, MessageActionItem, ()> {
-    request("window/showMessageRequest",
-            Box::new(move |params| { ls.showMessageRequest(params) }))
-}
+pub const Request__ShowMessageRequest: &'static str =
+    "window/showMessageRequest";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_ShowMessageRequestParams: () =
     {
@@ -5214,19 +5160,16 @@ const _IMPL_SERIALIZE_FOR_ShowMessageRequestParams: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct ShowMessageRequestParams {
     /**
      * The message type. See {@link MessageType}
      */
     pub type_: number,
-
     /**
      * The actual message
      */
     pub message: string,
-
     /**
      * The message action items to present.
      */
@@ -5361,7 +5304,6 @@ const _IMPL_SERIALIZE_FOR_MessageActionItem: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct MessageActionItem {
     /**
@@ -5369,15 +5311,10 @@ pub struct MessageActionItem {
      */
     title: string,
 }
-
 /**
  * The log message notification is sent from the server to the client to ask the client to log a particular message.
  */
-pub fn notification__LogMessage(ls: Rc<LanguageClient>)
- -> FnLanguageServerNotification<LogMessageParams> {
-    notification("window/logMessage",
-                 Box::new(move |params| { ls.logMessage(params) }))
-}
+pub const Notification__LogMessage: &'static str = "window/logMessage";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_LogMessageParams: () =
     {
@@ -5538,38 +5475,26 @@ const _IMPL_SERIALIZE_FOR_LogMessageParams: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct LogMessageParams {
     /**
      * The message type. See {@link MessageType}
      */
     pub type_: number,
-
     /**
      * The actual message
      */
     pub message: string,
 }
-
 /**
  * The telemetry notification is sent from the server to the client to ask the client to log a telemetry event.
  */
-pub fn notification__TelemetryEvent(ls: Rc<LanguageClient>)
- -> FnLanguageServerNotification<any> {
-    notification("telemetry/event",
-                 Box::new(move |params| { ls.telemetryEvent(params) }))
-}
-
+pub const Notification__TelemetryEvent: &'static str = "telemetry/event";
 /**
  * A notification sent from the client to the server to signal the change of configuration settings.
  */
-pub fn notification__WorkspaceChangeConfiguration(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<DidChangeConfigurationParams> {
-    notification("workspace/didChangeConfiguration",
-                 Box::new(move |params| {
-                          ls.workspaceChangeConfiguration(params) }))
-}
+pub const Notification__WorkspaceChangeConfiguration: &'static str =
+    "workspace/didChangeConfiguration";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DidChangeConfigurationParams: () =
     {
@@ -5705,27 +5630,20 @@ const _IMPL_SERIALIZE_FOR_DidChangeConfigurationParams: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct DidChangeConfigurationParams {
-    //settings: any;
     /**
      * The actual changed settings
      */
     pub settings: any,
 }
-
-
 /**
  * The document open notification is sent from the client to the server to signal newly opened text documents.
  * The document's truth is now managed by the client and the server must not try to read the document's truth
  * using the document's uri.
  */
-pub fn notification__DidOpenTextDocument(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<DidOpenTextDocumentParams> {
-    notification("textDocument/didOpen",
-                 Box::new(move |params| { ls.didOpenTextDocument(params) }))
-}
+pub const Notification__DidOpenTextDocument: &'static str =
+    "textDocument/didOpen";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DidOpenTextDocumentParams: () =
     {
@@ -5866,7 +5784,6 @@ const _IMPL_SERIALIZE_FOR_DidOpenTextDocumentParams: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct DidOpenTextDocumentParams {
     /**
@@ -5874,16 +5791,12 @@ pub struct DidOpenTextDocumentParams {
      */
     pub textDocument: TextDocumentItem,
 }
-
 /**
  * The document change notification is sent from the client to the server to signal changes to a text document.
  * In 2.0 the shape of the params has changed to include proper version numbers and language ids.
  */
-pub fn notification__DidChangeTextDocument(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<DidChangeTextDocumentParams> {
-    notification("textDocument/didChange",
-                 Box::new(move |params| { ls.didChangeTextDocument(params) }))
-}
+pub const Notification__DidChangeTextDocument: &'static str =
+    "textDocument/didChange";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DidChangeTextDocumentParams: () =
     {
@@ -6074,7 +5987,6 @@ const _IMPL_SERIALIZE_FOR_DidChangeTextDocumentParams: () =
             }
         }
     };
-
 #[derive(Debug, Clone)]
 pub struct DidChangeTextDocumentParams {
     /**
@@ -6324,11 +6236,8 @@ pub struct TextDocumentContentChangeEvent {
  * The document's truth now exists where the document's uri points to (e.g. if the document's uri is a file uri
  * the truth now exists on disk).
  */
-pub fn notification__DidCloseTextDocument(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<DidCloseTextDocumentParams> {
-    notification("textDocument/didClose",
-                 Box::new(move |params| { ls.didCloseTextDocument(params) }))
-}
+pub const Notification__DidCloseTextDocument: &'static str =
+    "textDocument/didClose";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DidCloseTextDocumentParams: () =
     {
@@ -6485,11 +6394,8 @@ pub struct DidCloseTextDocumentParams {
 /**
  * The document save notification is sent from the client to the server when the document was saved in the client.
  */
-pub fn notification__DidSaveTextDocument(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<DidSaveTextDocumentParams> {
-    notification("textDocument/didSave",
-                 Box::new(move |params| { ls.didSaveTextDocument(params) }))
-}
+pub const Notification__DidSaveTextDocument: &'static str =
+    "textDocument/didSave";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DidSaveTextDocumentParams: () =
     {
@@ -6645,11 +6551,8 @@ pub struct DidSaveTextDocumentParams {
  * The watched files notification is sent from the client to the server when the client detects changes to files
  * watched by the language client.
  */
-pub fn notification__DidChangeWatchedFiles(ls: Rc<LanguageServer>)
- -> FnLanguageServerNotification<DidChangeWatchedFilesParams> {
-    notification("workspace/didChangeWatchedFiles",
-                 Box::new(move |params| { ls.didChangeWatchedFiles(params) }))
-}
+pub const Notification__DidChangeWatchedFiles: &'static str =
+    "workspace/didChangeWatchedFiles";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DidChangeWatchedFilesParams: () =
     {
@@ -7118,11 +7021,8 @@ pub struct FileEvent {
 /**
  * Diagnostics notification are sent from the server to the client to signal results of validation runs.
  */
-pub fn notification__PublishDiagnostics(ls: Rc<LanguageClient>)
- -> FnLanguageServerNotification<PublishDiagnosticsParams> {
-    notification("textDocument/publishDiagnostics",
-                 Box::new(move |params| { ls.publishDiagnostics(params) }))
-}
+pub const Notification__PublishDiagnostics: &'static str =
+    "textDocument/publishDiagnostics";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_PublishDiagnosticsParams: () =
     {
@@ -7307,6 +7207,7 @@ pub struct PublishDiagnosticsParams {
     pub diagnostics: Vec<Diagnostic>,
 }
 
+// result: CompletionItem[] | CompletionList FIXME
 /**
  The Completion request is sent from the client to the server to compute completion items at a given cursor position. 
  Completion items are presented in the IntelliSense user interface. If computing full completion items is expensive, 
@@ -7317,13 +7218,7 @@ pub struct PublishDiagnosticsParams {
  request is sent with the selected completion item as a param. The returned completion item should have the 
  documentation property filled in.
 */
-pub fn request__Completion(ls: Rc<LanguageServer>)
- ->
-     // result: CompletionItem[] | CompletionList FIXME
-     FnLanguageServerRequest<TextDocumentPositionParams, CompletionList, ()> {
-    request("textDocument/completion",
-            Box::new(move |params| { ls.completion(params) }))
-}
+pub const Request__Completion: &'static str = "textDocument/completion";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_CompletionList: () =
     {
@@ -8421,22 +8316,15 @@ pub enum CompletionItemKind {
 /**
  * The request is sent from the client to the server to resolve additional information for a given completion item. 
  */
-pub fn request__ResolveCompletionItem(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<CompletionItem, CompletionItem, ()> {
-    request("completionItem/resolve",
-            Box::new(move |params| { ls.resolveCompletionItem(params) }))
-}
+pub const Request__ResolveCompletionItem: &'static str =
+    "completionItem/resolve";
 
 
 /**
  * The hover request is sent from the client to the server to request hover information at a given text 
  * document position.
  */
-pub fn request__Hover(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<TextDocumentPositionParams, Hover, ()> {
-    request("textDocument/hover",
-            Box::new(move |params| { ls.hover(params) }))
-}
+pub const Request__Hover: &'static str = "textDocument/hover";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_Hover: () =
     {
@@ -8636,11 +8524,7 @@ pub type MarkedString = string;
  * The signature help request is sent from the client to the server to request signature information at 
  * a given cursor position.
  */
-pub fn request__SignatureHelp(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<TextDocumentPositionParams, SignatureHelp, ()> {
-    request("textDocument/signatureHelp",
-            Box::new(move |params| { ls.signatureHelp(params) }))
-}
+pub const Request__SignatureHelp: &'static str = "textDocument/signatureHelp";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_SignatureHelp: () =
     {
@@ -9308,21 +9192,13 @@ pub struct ParameterInformation {
  * The goto definition request is sent from the client to the server to resolve the definition location of 
  * a symbol at a given text document position.
  */
-pub fn request__GotoDefinition(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<TextDocumentPositionParams, Vec<Location>, ()> {
-    request("textDocument/definition",
-            Box::new(move |params| { ls.gotoDefinition(params) }))
-}
+pub const Request__GotoDefinition: &'static str = "textDocument/definition";
 
 /**
  * The references request is sent from the client to the server to resolve project-wide references for the 
  * symbol denoted by the given text document position.
  */
-pub fn request__References(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<ReferenceParams, Vec<Location>, ()> {
-    request("textDocument/references",
-            Box::new(move |params| { ls.references(params) }))
-}
+pub const Request__References: &'static str = "textDocument/references";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_ReferenceParams: () =
     {
@@ -9697,13 +9573,8 @@ pub struct ReferenceContext {
  Symbol matches usually have a DocumentHighlightKind of Read or Write whereas fuzzy or textual matches 
  use Textas the kind.
 */
-pub fn request__DocumentHighlight(ls: Rc<LanguageServer>)
- ->
-     FnLanguageServerRequest<TextDocumentPositionParams, DocumentHighlight,
-                             ()> {
-    request("textDocument/documentHighlight",
-            Box::new(move |params| { ls.documentHighlight(params) }))
-}
+pub const Request__DocumentHighlight: &'static str =
+    "textDocument/documentHighlight";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DocumentHighlight: () =
     {
@@ -10038,13 +9909,8 @@ pub enum DocumentHighlightKind {
  * The document symbol request is sent from the client to the server to list all symbols found in a given 
  * text document.
  */
-pub fn request__DocumentSymbols(ls: Rc<LanguageServer>)
- ->
-     FnLanguageServerRequest<DocumentSymbolParams, Vec<SymbolInformation>,
-                             ()> {
-    request("textDocument/documentSymbol",
-            Box::new(move |params| { ls.documentSymbols(params) }))
-}
+pub const Request__DocumentSymbols: &'static str =
+    "textDocument/documentSymbol";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DocumentSymbolParams: () =
     {
@@ -10819,13 +10685,7 @@ pub enum SymbolKind {
  * The workspace symbol request is sent from the client to the server to list project-wide symbols 
  * matching the query string.
  */
-pub fn request__WorkspaceSymbols(ls: Rc<LanguageServer>)
- ->
-     FnLanguageServerRequest<WorkspaceSymbolParams, Vec<SymbolInformation>,
-                             ()> {
-    request("workspace/symbol",
-            Box::new(move |params| { ls.workspaceSymbols(params) }))
-}
+pub const Request__WorkspaceSymbols: &'static str = "workspace/symbol";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_WorkspaceSymbolParams: () =
     {
@@ -10976,11 +10836,7 @@ pub struct WorkspaceSymbolParams {
  * and range. The request is triggered when the user moves the cursor into a problem marker in the editor or 
  * presses the lightbulb associated with a marker.
  */
-pub fn request__CodeAction(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<CodeActionParams, Vec<Command>, ()> {
-    request("textDocument/codeAction",
-            Box::new(move |params| { ls.codeAction(params) }))
-}
+pub const Request__CodeAction: &'static str = "textDocument/codeAction";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_CodeActionParams: () =
     {
@@ -11354,11 +11210,7 @@ pub struct CodeActionContext {
 /**
  * The code lens request is sent from the client to the server to compute code lenses for a given text document.
  */
-pub fn request__CodeLens(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<CodeLensParams, Vec<CodeLens>, ()> {
-    request("textDocument/codeLens",
-            Box::new(move |params| { ls.codeLens(params) }))
-}
+pub const Request__CodeLens: &'static str = "textDocument/codeLens";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_CodeLensParams: () =
     {
@@ -11731,20 +11583,12 @@ pub struct CodeLens {
  * The code lens resolve request is sent from the client to the server to resolve the command for a 
  * given code lens item.
  */
-pub fn request__CodeLensResolve(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<CodeLens, CodeLens, ()> {
-    request("codeLens/resolve",
-            Box::new(move |params| { ls.codeLensResolve(params) }))
-}
+pub const Request__CodeLensResolve: &'static str = "codeLens/resolve";
 
 /**
  * The document formatting request is sent from the server to the client to format a whole document.
  */
-pub fn request__Formatting(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<DocumentFormattingParams, Vec<TextEdit>, ()> {
-    request("textDocument/formatting",
-            Box::new(move |params| { ls.formatting(params) }))
-}
+pub const Request__Formatting: &'static str = "textDocument/formatting";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DocumentFormattingParams: () =
     {
@@ -12125,13 +11969,8 @@ pub struct FormattingOptions {
 /**
  * The document range formatting request is sent from the client to the server to format a given range in a document.
  */
-pub fn request__RangeFormatting(ls: Rc<LanguageServer>)
- ->
-     FnLanguageServerRequest<DocumentRangeFormattingParams, Vec<TextEdit>,
-                             ()> {
-    request("textDocument/rangeFormatting",
-            Box::new(move |params| { ls.rangeFormatting(params) }))
-}
+pub const Request__RangeFormatting: &'static str =
+    "textDocument/rangeFormatting";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DocumentRangeFormattingParams: () =
     {
@@ -12365,13 +12204,8 @@ pub struct DocumentRangeFormattingParams {
  * The document on type formatting request is sent from the client to the server to format parts of 
  * the document during typing.
  */
-pub fn request__OnTypeFormatting(ls: Rc<LanguageServer>)
- ->
-     FnLanguageServerRequest<DocumentOnTypeFormattingParams, Vec<TextEdit>,
-                             ()> {
-    request("textDocument/onTypeFormatting",
-            Box::new(move |params| { ls.onTypeFormatting(params) }))
-}
+pub const Request__OnTypeFormatting: &'static str =
+    "textDocument/onTypeFormatting";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_DocumentOnTypeFormattingParams: () =
     {
@@ -12647,11 +12481,7 @@ pub struct DocumentOnTypeFormattingParams {
 /**
  * The rename request is sent from the client to the server to perform a workspace-wide rename of a symbol.
  */
-pub fn request__Rename(ls: Rc<LanguageServer>)
- -> FnLanguageServerRequest<RenameParams, WorkspaceEdit, ()> {
-    request("textDocument/rename",
-            Box::new(move |params| { ls.rename(params) }))
-}
+pub const Request__Rename: &'static str = "textDocument/rename";
 #[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
 const _IMPL_DESERIALIZE_FOR_RenameParams: () =
     {
