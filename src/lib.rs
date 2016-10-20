@@ -2,7 +2,7 @@
 #![allow(non_camel_case_types)]
 
 extern crate melnorme_util as util;
-pub extern crate melnorme_json_rpc as json_rpc;
+pub extern crate melnorme_jsonrpc as jsonrpc;
 extern crate serde_json;
 extern crate serde;
 #[macro_use] extern crate log;

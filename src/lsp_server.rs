@@ -14,17 +14,17 @@ use std::io::{self, Write};
 
 use util::core::*;
 
-use json_rpc;
-use json_rpc::*;
-use json_rpc::service_util::Provider;
-use json_rpc::service_util::MessageWriter;
-use json_rpc::service_util::ServiceError;
-use json_rpc::service_util::ServiceResult;
+use jsonrpc;
+use jsonrpc::*;
+use jsonrpc::service_util::Provider;
+use jsonrpc::service_util::MessageWriter;
+use jsonrpc::service_util::ServiceError;
+use jsonrpc::service_util::ServiceResult;
 
-use json_rpc::output_agent::OutputAgent;
+use jsonrpc::output_agent::OutputAgent;
 
-use json_rpc::jsonrpc_objects::JsonRpcParams;
-use json_rpc::jsonrpc_objects::JsonRpcResult_Or_Error;
+use jsonrpc::jsonrpc_objects::JsonRpcParams;
+use jsonrpc::jsonrpc_objects::JsonRpcResult_Or_Error;
 
 use lsp;
 use lsp_transport;
@@ -85,7 +85,7 @@ impl LSPServer {
 		// FIXME: todo LanguageServerEndpoint + LS
 		ls.connect(ls_client);
 		
-		let result = json_rpc::run_message_read_loop(jsonrpc_endpoint, LSPMessageReader(input));
+		let result = jsonrpc::run_message_read_loop(jsonrpc_endpoint, LSPMessageReader(input));
 		
 		if let Err(error) = result {
 			error!("Error handling the incoming stream: {}", error);

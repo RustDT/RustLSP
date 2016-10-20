@@ -1,5 +1,5 @@
 [package]
-name = "melnorme_json_rpc"
+name = "melnorme_jsonrpc"
 version = "0.1.0"
 authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 
@@ -13,5 +13,5 @@ serde_json = "0.8"
 melnorme_util = { path = "../melnorme_util", features = ["test_utils"] }
 
 [lib]
-name = "melnorme_json_rpc"
-path = "src/lib.rs"
+name = "melnorme_jsonrpc"
+path = "src/jsonrpc.rs"
