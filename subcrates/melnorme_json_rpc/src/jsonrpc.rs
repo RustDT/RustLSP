@@ -164,9 +164,112 @@ impl JsonRpcResponseCompletable {
 		}
 	}
 	
+	pub fn complete_with_error(self, error: JsonRpcError) {
+		self.complete(Some(JsonRpcResult_Or_Error::Error(error)));
+	}
+	
+	pub fn sync_handle_request<PARAMS, RET, RET_ERROR, METHOD>(
+		self, params: JsonRpcParams, method_fn: METHOD
+	) 
+	where 
+		PARAMS : serde::Deserialize, 
+		RET : serde::Serialize, 
+		RET_ERROR : serde::Serialize ,
+		METHOD : FnOnce(PARAMS) -> ServiceResult<RET, RET_ERROR>,
+	{
+		let method_fn = move |params| Some(method_fn(params));
+		let result = invoke_method_with_fn(params, method_fn);
+		self.complete(result);
+	}
+	
+	pub fn sync_handle_notification<PARAMS, METHOD>(
+		self, params: JsonRpcParams, method_fn: METHOD
+	) 
+	where 
+		PARAMS : serde::Deserialize, 
+		METHOD : FnOnce(PARAMS),
+	{
+		let method_fn = move |params| { method_fn(params); None };
+		let result = invoke_method_with_fn::<_, (), (), _>(params, method_fn);
+		self.complete(result);
+	}
+	
 }
 
-/* -----------------  ----------------- */
+pub fn invoke_method_with_fn<PARAMS, RET, RET_ERROR, METHOD>(
+	params: JsonRpcParams,
+	method_fn: METHOD
+) -> Option<JsonRpcResult_Or_Error>
+	where 
+	PARAMS : serde::Deserialize, 
+	RET : serde::Serialize, 
+	RET_ERROR : serde::Serialize,
+	METHOD : FnOnce(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>
+{
+	let params_value = params.into_value();
+	
+	let params_result : Result<PARAMS, _> = serde_json::from_value(params_value);
+	
+	let result = 
+	match params_result {
+		Ok(params) => { 
+			method_fn(params) 
+		} 
+		Err(error) => { 
+			return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams(error)));
+		}
+	};
+	
+	let result = 
+	if let Some(result) = result {
+		result
+	} else {
+		return None;
+	};
+	
+	match result {
+		Ok(ret) => {
+			let ret = serde_json::to_value(&ret);
+			return Some(JsonRpcResult_Or_Error::Result(ret)); 
+		} 
+		Err(error) => {
+			let error : ServiceError<RET_ERROR> = error; // FIXME cleanup syntax
+			let json_rpc_error = JsonRpcError { 
+				code : error.code as i64, // FIXME review truncation
+				message : error.message,
+				data : Some(serde_json::to_value(&error.data)),
+			};
+			
+			return Some(JsonRpcResult_Or_Error::Error(json_rpc_error));
+		}
+	}
+}
+	
+	
+pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: JsonRpcMessage) {
+	
+	let write_task : OutputAgentTask = Box::new(move |mut response_handler| {
+		info!("JSON-RPC message: {:?}", rpc_message);
+		
+		let response_str = serde_json::to_string(&rpc_message).unwrap_or_else(|error| -> String { 
+			panic!("Failed to serialize to JSON object: {}", error);
+		});
+		
+		let write_res = response_handler.write_message(&response_str);
+		if let Err(error) = write_res {
+			// FIXME handle output stream write error by shutting down
+			error!("Error writing JSON-RPC message: {}", error);
+		};
+	});
+	
+	let res = {
+		output_agent.lock().unwrap().try_submit_task(write_task)
+	}; 
+	// If res is error, panic here, outside of thread lock
+	res.expect("Output agent is shutdown or thread panicked!");
+}
+
+/* -----------------  Request sending  ----------------- */
 
 impl JsonRpcEndpoint {
 	
@@ -220,29 +323,6 @@ impl<T> Future<T> {
 	
 	pub fn complete(&self, _result: T) {
 	}
-}
-
-pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: JsonRpcMessage) {
-	
-	let write_task : OutputAgentTask = Box::new(move |mut response_handler| {
-		info!("JSON-RPC message: {:?}", rpc_message);
-		
-		let response_str = serde_json::to_string(&rpc_message).unwrap_or_else(|error| -> String { 
-			panic!("Failed to serialize to JSON object: {}", error);
-		});
-		
-		let write_res = response_handler.write_message(&response_str);
-		if let Err(error) = write_res {
-			// FIXME handle output stream write error by shutting down
-			error!("Error writing JSON-RPC message: {}", error);
-		};
-	});
-	
-	let res = {
-		output_agent.lock().unwrap().try_submit_task(write_task)
-	}; 
-	// If res is error, panic here, outside of thread lock
-	res.expect("Output agent is shutdown or thread panicked!");
 }
 
 /* -----------------  ----------------- */
@@ -331,97 +411,11 @@ impl<
 > RpcMethodHandler for Box<Fn(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>> {
 	
 	fn handle_invocation(&self, params: JsonRpcParams) -> Option<JsonRpcResult_Or_Error> {
-		handle_request(params, self.as_ref())
+		invoke_method_with_fn(params, self.as_ref())
 	}
 	
 }
 
-impl JsonRpcResponseCompletable {
-	
-	pub fn sync_handle_request<PARAMS, RET, RET_ERROR, METHOD>(
-		self,
-		params: JsonRpcParams,
-		method_fn: METHOD
-	) 
-	where 
-		PARAMS : serde::Deserialize, 
-		RET : serde::Serialize, 
-		RET_ERROR : serde::Serialize ,
-		METHOD : FnOnce(PARAMS) -> ServiceResult<RET, RET_ERROR>,
-	{
-		let method_fn = move |params| Some(method_fn(params));
-		let result = handle_request(params, method_fn);
-		self.complete(result);
-	}
-	
-	pub fn sync_handle_notification<PARAMS, METHOD>(
-		self,
-		params: JsonRpcParams,
-		method_fn: METHOD
-	) 
-	where 
-		PARAMS : serde::Deserialize, 
-		METHOD : FnOnce(PARAMS),
-	{
-		let method_fn = move |params| { method_fn(params); None };
-		let result = handle_request::<_, (), (), _>(params, method_fn);
-		self.complete(result);
-	}
-	
-	pub fn complete_with_error(self, error: JsonRpcError) {
-		self.complete(Some(JsonRpcResult_Or_Error::Error(error)));
-	}
-	
-}
-
-	pub fn handle_request<PARAMS, RET, RET_ERROR, METHOD>(
-		params: JsonRpcParams,
-		method_fn: METHOD
-	) -> Option<JsonRpcResult_Or_Error>
-		where 
-		PARAMS : serde::Deserialize, 
-		RET : serde::Serialize, 
-		RET_ERROR : serde::Serialize,
-		METHOD : FnOnce(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>
-	{
-		let params_value = params.into_value();
-		
-		let params_result : Result<PARAMS, _> = serde_json::from_value(params_value);
-		
-		let result = 
-		match params_result {
-			Ok(params) => { 
-				method_fn(params) 
-			} 
-			Err(error) => { 
-				return Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_InvalidParams(error)));
-			}
-		};
-		
-		let result = 
-		if let Some(result) = result {
-			result
-		} else {
-			return None;
-		};
-		
-		match result {
-			Ok(ret) => {
-				let ret = serde_json::to_value(&ret);
-				return Some(JsonRpcResult_Or_Error::Result(ret)); 
-			} 
-			Err(error) => {
-				let error : ServiceError<RET_ERROR> = error; // FIXME cleanup syntax
-				let json_rpc_error = JsonRpcError { 
-					code : error.code as i64, // FIXME review truncation
-					message : error.message,
-					data : Some(serde_json::to_value(&error.data)),
-				};
-				
-				return Some(JsonRpcResult_Or_Error::Error(json_rpc_error));
-			}
-		}
-	}
 
 /* ----------------- Tests ----------------- */
 
