@@ -6,10 +6,11 @@
 // except according to those terms.
 
 pub extern crate rust_lsp;
-extern crate melnorme_json_rpc as json_rpc;
+extern crate melnorme_jsonrpc as jsonrpc;
 
-use json_rpc::service_util::ServiceError;
+use jsonrpc::service_util::ServiceError;
 use rust_lsp::lsp::*;
+use rust_lsp::lsp_server::*;
 
 pub struct DummyLanguageServer {
 	
