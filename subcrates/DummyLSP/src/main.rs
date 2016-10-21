@@ -10,7 +10,7 @@ use std::io;
 use std::io::Write;
 use std::rc::Rc;
 
-use log::{LogRecord, LogLevelFilter};
+use log::LogLevelFilter;
 use env_logger::LogBuilder;
 
 

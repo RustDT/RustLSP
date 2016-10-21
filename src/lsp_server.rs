@@ -22,8 +22,7 @@ use jsonrpc::service_util::ServiceError;
 
 use jsonrpc::output_agent::OutputAgent;
 
-use jsonrpc::jsonrpc_objects::JsonRpcParams;
-use jsonrpc::jsonrpc_objects::JsonRpcResult_Or_Error;
+use jsonrpc::jsonrpc_objects::RequestParams;
 
 use lsp;
 use lsp_transport;
@@ -71,9 +70,9 @@ impl LSPServer {
 		let output_agent = OutputAgent::start_with_provider(|| {
 			LSPMessageWriter(out_stream_provider())
 		});
-		let mut jsonrpc_endpoint = JsonRpcEndpoint::start_with_output_agent(output_agent, new(MapRpcRequestHandler::new()));
+		let mut jsonrpc_endpoint = Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()));
 		
-		let mut request_handler = new(MapRpcRequestHandler::new());
+		let mut request_handler = new(MapRequestHandler::new());
 		//FIXME
 		//initialize_methods(ls.clone(), &mut request_handler);
 		jsonrpc_endpoint.request_handler = request_handler;
@@ -140,10 +139,10 @@ pub trait LanguageClient {
 
 
 
-impl RpcRequestHandler for LanguageServer {
+impl RequestHandler for LanguageServer {
 	
-	fn handle_request(&mut self, method_name: &str, params: JsonRpcParams, 
-		completable: JsonRpcResponseCompletable) 
+	fn handle_request(&mut self, method_name: &str, params: RequestParams, 
+		completable: ResponseCompletable) 
 	{
 		match method_name {
 			lsp::Request__Initialize => { completable.sync_handle_request(params, 
@@ -242,7 +241,7 @@ impl LanguageServerEndpoint for LanguageServer {
 }
 
 pub struct EndpointLSClient {
-	jsonrpc_endpoint: Arc<Mutex<JsonRpcEndpoint>>,
+	jsonrpc_endpoint: Arc<Mutex<Endpoint>>,
 }
 
 impl LanguageClient for EndpointLSClient {
