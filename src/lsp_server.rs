@@ -53,17 +53,14 @@ impl<T: io::Write> MessageWriter for LSPMessageWriter<T> {
 
 pub type EndpointHandle = Arc<Mutex<Endpoint>>;
 
-pub struct EndpointLSClient {
-	pub endpoint: EndpointHandle,
-}
-
 pub struct LSPServer {
 	
 }
 
 impl LSPServer {
 	
-	pub fn new_endpoint<OUT, OUT_P>(out_stream_provider: OUT_P) -> Endpoint
+	pub fn new_server_endpoint<OUT, OUT_P>(out_stream_provider: OUT_P) 
+		-> (EndpointHandle, Box<LanguageClientEndpoint>)
 	where 
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static
@@ -71,7 +68,11 @@ impl LSPServer {
 		let output_agent = OutputAgent::start_with_provider(|| {
 			LSPMessageWriter(out_stream_provider())
 		});
-		Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()))
+		let endpoint = Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()));
+		let endpoint = newArcMutex(endpoint);
+		let lsp_client = Box::new(endpoint.clone());
+		
+		(endpoint, lsp_client)
 	}
 	
 	pub fn run_server<LS>(ls: LS, input: &mut io::BufRead, endpoint: EndpointHandle) 
@@ -124,14 +125,14 @@ pub trait LanguageServer {
 }
 
 
-pub trait LanguageClient {
+pub trait LanguageClientEndpoint {
 	
-	fn showMessage(&self, params: ShowMessageParams);
-	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()>;
-	fn logMessage(&self, params: LogMessageParams);
-	fn telemetryEvent(&self, params: any);
+	fn showMessage(&self, params: ShowMessageParams) -> GResult<()>;
+	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>>;
+	fn logMessage(&self, params: LogMessageParams) -> GResult<()>;
+	fn telemetryEvent(&self, params: any) -> GResult<()>;
 	
-	fn publishDiagnostics(&self, params: PublishDiagnosticsParams);
+	fn publishDiagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()>;
 
 }
 
@@ -227,33 +228,36 @@ impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
 	
 }
 
-
-impl LanguageClient for EndpointLSClient {
+impl LanguageClientEndpoint for EndpointHandle {
 	
-    fn showMessage(&self, params: ShowMessageParams) {
-    	let mut endpoint = self.endpoint.lock().unwrap();
-    	endpoint.send_notification(lsp::Notification__ShowMessage, params);
+    fn showMessage(&self, params: ShowMessageParams) -> GResult<()> {
+    	let mut endpoint = self.lock().unwrap();
+    	try!(endpoint.send_notification(lsp::Notification__ShowMessage, params));
+    	Ok(())
     }
     
-    fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()> {
-    	let endpoint = self.endpoint.lock().unwrap();
+    fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
+    	let endpoint = self.lock().unwrap();
 //    	endpoint.send_request(lsp::Notification__ShowMessageRequest, params);
     	panic!("not implemented")
     }
     
-    fn logMessage(&self, params: LogMessageParams) {
-    	let mut endpoint = self.endpoint.lock().unwrap();
-    	endpoint.send_notification(lsp::Notification__LogMessage, params);
+    fn logMessage(&self, params: LogMessageParams) -> GResult<()> {
+    	let mut endpoint = self.lock().unwrap();
+    	try!(endpoint.send_notification(lsp::Notification__LogMessage, params));
+    	Ok(())
     }
     
-    fn telemetryEvent(&self, params: any) {
-    	let mut endpoint = self.endpoint.lock().unwrap();
-    	endpoint.send_notification(lsp::Notification__TelemetryEvent, params);
+    fn telemetryEvent(&self, params: any) -> GResult<()> {
+    	let mut endpoint = self.lock().unwrap();
+    	try!(endpoint.send_notification(lsp::Notification__TelemetryEvent, params));
+    	Ok(())
     }
     
-    fn publishDiagnostics(&self, params: PublishDiagnosticsParams) {
-    	let mut endpoint = self.endpoint.lock().unwrap();
-    	endpoint.send_notification(lsp::Notification__PublishDiagnostics, params);
+    fn publishDiagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()> {
+    	let mut endpoint = self.lock().unwrap();
+    	try!(endpoint.send_notification(lsp::Notification__PublishDiagnostics, params));
+    	Ok(())
     }
 	
 }

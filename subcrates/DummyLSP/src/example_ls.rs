@@ -23,7 +23,7 @@ use rust_lsp::lsp_server::*;
 use std::io;
 
 pub struct DummyLanguageServer {
-	lsp_client : Box<LanguageClient>,
+	lsp_client : Box<LanguageClientEndpoint>,
 }
 
 pub fn run_lsp_server<OUT, OUT_P>(input: &mut io::BufRead, out_stream_provider: OUT_P)
@@ -31,10 +31,9 @@ where
 	OUT: io::Write + 'static, 
 	OUT_P : FnOnce() -> OUT + Send + 'static
 {
-	let endpoint = LSPServer::new_endpoint(out_stream_provider);
-	let endpoint = newArcMutex(endpoint);
+	let (endpoint, lsp_client) = LSPServer::new_server_endpoint(out_stream_provider);
 	
-	let ls = DummyLanguageServer::new(Box::new(EndpointLSClient { endpoint : endpoint.clone() }));
+	let ls = DummyLanguageServer::new(lsp_client);
 	
 	LSPServer::run_server(ls, input, endpoint);
 }
@@ -44,7 +43,7 @@ where
  */ 
 impl DummyLanguageServer {
 	
-	pub fn new(lsp_client: Box<LanguageClient>) -> DummyLanguageServer {
+	pub fn new(lsp_client: Box<LanguageClientEndpoint>) -> DummyLanguageServer {
 		DummyLanguageServer{ lsp_client : lsp_client }	
 	}
 	
