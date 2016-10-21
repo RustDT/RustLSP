@@ -5,21 +5,48 @@
 // This file may not be copied, modified, or distributed
 // except according to those terms.
 
-pub extern crate rust_lsp;
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+
+
+extern crate melnorme_util as util;
 extern crate melnorme_jsonrpc as jsonrpc;
+extern crate rust_lsp;
+
+#[allow(unused_imports)]
+use util::core::*;
 
 use jsonrpc::service_util::ServiceError;
 use rust_lsp::lsp::*;
 use rust_lsp::lsp_server::*;
 
+use std::io;
+
 pub struct DummyLanguageServer {
+	lsp_client : Box<LanguageClient>,
+}
+
+pub fn run_lsp_server<OUT, OUT_P>(input: &mut io::BufRead, out_stream_provider: OUT_P)
+where 
+	OUT: io::Write + 'static, 
+	OUT_P : FnOnce() -> OUT + Send + 'static
+{
+	let endpoint = LSPServer::new_endpoint(out_stream_provider);
+	let endpoint = newArcMutex(endpoint);
 	
+	let ls = DummyLanguageServer::new(Box::new(EndpointLSClient { endpoint : endpoint.clone() }));
+	
+	LSPServer::run_server(ls, input, endpoint);
 }
 
 /**
  * A no-op language server
  */ 
 impl DummyLanguageServer {
+	
+	pub fn new(lsp_client: Box<LanguageClient>) -> DummyLanguageServer {
+		DummyLanguageServer{ lsp_client : lsp_client }	
+	}
 	
 	// FIXME: user general error
 	pub fn error_not_available<DATA>(data : DATA) -> ServiceError<DATA> {

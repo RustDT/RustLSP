@@ -28,7 +28,6 @@ use lsp;
 use lsp_transport;
 use lsp::*;
 
-use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -52,6 +51,11 @@ impl<T: io::Write> MessageWriter for LSPMessageWriter<T> {
 
 /* -----------------  ----------------- */
 
+pub type EndpointHandle = Arc<Mutex<Endpoint>>;
+
+pub struct EndpointLSClient {
+	pub endpoint: EndpointHandle,
+}
 
 pub struct LSPServer {
 	
@@ -59,31 +63,25 @@ pub struct LSPServer {
 
 impl LSPServer {
 	
-	pub fn start_new<OUT, OUT_P>(
-		ls: Rc<LanguageServer>, input: &mut io::BufRead, out_stream_provider: OUT_P
-	) 
+	pub fn new_endpoint<OUT, OUT_P>(out_stream_provider: OUT_P) -> Endpoint
 	where 
 		OUT: io::Write + 'static, 
-		OUT_P : FnOnce() -> OUT + Send + 'static 
+		OUT_P : FnOnce() -> OUT + Send + 'static
 	{
-		
 		let output_agent = OutputAgent::start_with_provider(|| {
 			LSPMessageWriter(out_stream_provider())
 		});
-		let mut jsonrpc_endpoint = Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()));
+		Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()))
+	}
+	
+	pub fn run_server<LS>(ls: LS, input: &mut io::BufRead, endpoint: EndpointHandle) 
+	where 
+		LS: LanguageServer + 'static,
+	{
+		let req_handler : Box<RequestHandler> = Box::new(LSRequestHandler(ls));
+		endpoint.lock().unwrap().request_handler = req_handler;
 		
-		let mut request_handler = new(MapRequestHandler::new());
-		//FIXME
-		//initialize_methods(ls.clone(), &mut request_handler);
-		jsonrpc_endpoint.request_handler = request_handler;
-		
-		let jsonrpc_endpoint = newArcMutex(jsonrpc_endpoint);
-		
-		let ls_client = EndpointLSClient { jsonrpc_endpoint : jsonrpc_endpoint.clone() };
-		// FIXME: todo LanguageServerEndpoint + LS
-		ls.connect(ls_client);
-		
-		let result = jsonrpc::run_message_read_loop(jsonrpc_endpoint, LSPMessageReader(input));
+		let result = jsonrpc::run_message_read_loop(endpoint, LSPMessageReader(input));
 		
 		if let Err(error) = result {
 			error!("Error handling the incoming stream: {}", error);
@@ -137,88 +135,88 @@ pub trait LanguageClient {
 
 }
 
+pub struct LSRequestHandler<LS : LanguageServer>(LS);
 
-
-impl RequestHandler for LanguageServer {
+impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
 	
 	fn handle_request(&mut self, method_name: &str, params: RequestParams, 
 		completable: ResponseCompletable) 
 	{
 		match method_name {
 			lsp::Request__Initialize => { completable.sync_handle_request(params, 
-				|params| self.initialize(params)) 
+				|params| self.0.initialize(params)) 
 			}
 			lsp::Request__Shutdown => { completable.sync_handle_request(params, 
-				|params| self.shutdown(params)) 
+				|params| self.0.shutdown(params)) 
 			}
 			lsp::Notification__Exit => { completable.sync_handle_notification(params, 
-				|params| self.exit(params)) 
+				|params| self.0.exit(params)) 
 			}
 			lsp::Notification__WorkspaceChangeConfiguration => { completable.sync_handle_notification(params, 
-				|params| self.workspaceChangeConfiguration(params)) 
+				|params| self.0.workspaceChangeConfiguration(params)) 
 			}
 			lsp::Notification__DidOpenTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.didOpenTextDocument(params)) 
+				|params| self.0.didOpenTextDocument(params)) 
 			}
 			lsp::Notification__DidChangeTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.didChangeTextDocument(params)) 
+				|params| self.0.didChangeTextDocument(params)) 
 			}
 			lsp::Notification__DidCloseTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.didCloseTextDocument(params)) 
+				|params| self.0.didCloseTextDocument(params)) 
 			}
 			lsp::Notification__DidSaveTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.didSaveTextDocument(params)) 
+				|params| self.0.didSaveTextDocument(params)) 
 			}
 			lsp::Notification__DidChangeWatchedFiles => { completable.sync_handle_notification(params, 
-				|params| self.didChangeWatchedFiles(params)) 
+				|params| self.0.didChangeWatchedFiles(params)) 
 			}
 			lsp::Request__Completion => { completable.sync_handle_request(params, 
-				|params| self.completion(params)) 
+				|params| self.0.completion(params)) 
 			}
 			lsp::Request__ResolveCompletionItem => { completable.sync_handle_request(params, 
-				|params| self.resolveCompletionItem(params)) 
+				|params| self.0.resolveCompletionItem(params)) 
 			}
 			lsp::Request__Hover => { completable.sync_handle_request(params, 
-				|params| self.hover(params)) 
+				|params| self.0.hover(params)) 
 			}
 			lsp::Request__SignatureHelp => { completable.sync_handle_request(params, 
-				|params| self.signatureHelp(params)) 
+				|params| self.0.signatureHelp(params)) 
 			}
 			lsp::Request__GotoDefinition => { completable.sync_handle_request(params, 
-				|params| self.gotoDefinition(params)) 
+				|params| self.0.gotoDefinition(params)) 
 			}
 			lsp::Request__References => { completable.sync_handle_request(params, 
-				|params| self.references(params)) 
+				|params| self.0.references(params)) 
 			}
 			lsp::Request__DocumentHighlight => { completable.sync_handle_request(params, 
-				|params| self.documentHighlight(params)) 
+				|params| self.0.documentHighlight(params)) 
 			}
 			lsp::Request__DocumentSymbols => { completable.sync_handle_request(params, 
-				|params| self.documentSymbols(params)) 
+				|params| self.0.documentSymbols(params)) 
 			}
 			lsp::Request__WorkspaceSymbols => { completable.sync_handle_request(params, 
-				|params| self.workspaceSymbols(params)) 
+				|params| self.0.workspaceSymbols(params)) 
 			}
 			lsp::Request__CodeAction => { completable.sync_handle_request(params, 
-				|params| self.codeAction(params)) 
+				|params| self.0.codeAction(params)) 
 			}
 			lsp::Request__CodeLens => { completable.sync_handle_request(params, 
-				|params| self.codeLens(params)) 
+				|params| self.0.codeLens(params)) 
 			}
 			lsp::Request__CodeLensResolve => { completable.sync_handle_request(params, 
-				|params| self.codeLensResolve(params)) 
+				|params| self.0.codeLensResolve(params)) 
 			}
 			lsp::Request__Formatting => { completable.sync_handle_request(params, 
-				|params| self.formatting(params)) 
+				|params| self.0.formatting(params)) 
 			}
 			lsp::Request__RangeFormatting => { completable.sync_handle_request(params, 
-				|params| self.rangeFormatting(params)) 
+				|params| self.0.rangeFormatting(params)) 
 			}
 			lsp::Request__OnTypeFormatting => { completable.sync_handle_request(params, 
-				|params| self.onTypeFormatting(params)) 
+				|params| self.0.onTypeFormatting(params)) 
 			}
 			lsp::Request__Rename => { completable.sync_handle_request(params, 
-				|params| self.rename(params)) 
+				|params| self.0.rename(params)) 
 			}
 			_ => {
 				completable.complete_with_error(jsonrpc_objects::error_JSON_RPC_MethodNotFound());
@@ -230,46 +228,32 @@ impl RequestHandler for LanguageServer {
 }
 
 
-pub trait LanguageServerEndpoint {
-	fn connect(&self, client_endpoint: EndpointLSClient);	
-}
-
-impl LanguageServerEndpoint for LanguageServer {
-	fn connect(&self, client_endpoint: EndpointLSClient) {
-		// FIXME: todo
-	}
-}
-
-pub struct EndpointLSClient {
-	jsonrpc_endpoint: Arc<Mutex<Endpoint>>,
-}
-
 impl LanguageClient for EndpointLSClient {
 	
     fn showMessage(&self, params: ShowMessageParams) {
-    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
-    	jsonrpc_endpoint.send_notification(lsp::Notification__ShowMessage, params);
+    	let mut endpoint = self.endpoint.lock().unwrap();
+    	endpoint.send_notification(lsp::Notification__ShowMessage, params);
     }
     
     fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> LSResult<MessageActionItem, ()> {
-    	let jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
-//    	jsonrpc_endpoint.send_request(lsp::Notification__ShowMessageRequest, params);
+    	let endpoint = self.endpoint.lock().unwrap();
+//    	endpoint.send_request(lsp::Notification__ShowMessageRequest, params);
     	panic!("not implemented")
     }
     
     fn logMessage(&self, params: LogMessageParams) {
-    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
-    	jsonrpc_endpoint.send_notification(lsp::Notification__LogMessage, params);
+    	let mut endpoint = self.endpoint.lock().unwrap();
+    	endpoint.send_notification(lsp::Notification__LogMessage, params);
     }
     
     fn telemetryEvent(&self, params: any) {
-    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
-    	jsonrpc_endpoint.send_notification(lsp::Notification__TelemetryEvent, params);
+    	let mut endpoint = self.endpoint.lock().unwrap();
+    	endpoint.send_notification(lsp::Notification__TelemetryEvent, params);
     }
     
     fn publishDiagnostics(&self, params: PublishDiagnosticsParams) {
-    	let mut jsonrpc_endpoint = self.jsonrpc_endpoint.lock().unwrap();
-    	jsonrpc_endpoint.send_notification(lsp::Notification__PublishDiagnostics, params);
+    	let mut endpoint = self.endpoint.lock().unwrap();
+    	endpoint.send_notification(lsp::Notification__PublishDiagnostics, params);
     }
 	
 }

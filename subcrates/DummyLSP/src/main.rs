@@ -2,17 +2,15 @@
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate dummy_lsp;
+extern crate rust_lsp;
 
 
-use dummy_lsp::*;
 use std::env;
 use std::io;
 use std::io::Write;
-use std::rc::Rc;
 
 use log::LogLevelFilter;
 use env_logger::LogBuilder;
-
 
 fn main() {
 	
@@ -29,14 +27,11 @@ fn main() {
 	
     info!("Starting example server.");
     
-	let ls = Rc::new(DummyLanguageServer{ });
-
 	if env::args().len() == 1  {
 		// Use stdin/stdout
 		
 		let stdin = std::io::stdin();
-		let out_provider = move || std::io::stdout();
-		rust_lsp::lsp_server::LSPServer::start_new(ls, &mut stdin.lock(), out_provider);
+		dummy_lsp::run_lsp_server(&mut stdin.lock(), move || std::io::stdout());
 	} else {
 		let mut args = env::args();
 		args.next();
@@ -83,11 +78,10 @@ fn tcp_server<A: ToSocketAddrs>(addr: A) {
 
 fn handle_client(stream: TcpStream) {
 	//FIXME use same server for each connection
-	let ls = Rc::new(DummyLanguageServer{ });
 	
 	let mut input = io::BufReader::new(stream.try_clone().expect("Failed to clone stream"));
 	
-	rust_lsp::lsp_server::LSPServer::start_new(ls, &mut input, || {
+	dummy_lsp::run_lsp_server(&mut input, || {
 		stream
 	});
 }
