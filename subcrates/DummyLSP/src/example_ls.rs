@@ -9,16 +9,12 @@
 #![allow(non_camel_case_types)]
 
 
-extern crate melnorme_util as util;
-extern crate melnorme_jsonrpc as jsonrpc;
 extern crate rust_lsp;
 
-#[allow(unused_imports)]
-use util::core::*;
 
-use jsonrpc::service_util::ServiceError;
 use rust_lsp::lsp::*;
 use rust_lsp::lsp_server::*;
+use rust_lsp::jsonrpc::service_util::ServiceError;
 
 use std::io;
 

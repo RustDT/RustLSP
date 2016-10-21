@@ -7,8 +7,6 @@ authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 log = "0.3"
 env_logger = "0.3"
 rust_lsp = { path = "../.." }
-melnorme_util = { path = "../../subcrates/melnorme_util" }
-melnorme_jsonrpc = { path = "../../subcrates/melnorme_json_rpc" }
 
 [lib]
 name = "example_ls"
