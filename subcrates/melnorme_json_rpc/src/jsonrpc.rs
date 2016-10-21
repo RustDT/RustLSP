@@ -325,7 +325,9 @@ impl<T> Future<T> {
 	}
 }
 
-/* -----------------  ----------------- */
+/* -----------------  MapRpcRequestHandler  ----------------- */
+
+pub type RpcMethodHandler = Fn(JsonRpcParams, JsonRpcResponseCompletable);
 
 pub struct MapRpcRequestHandler {
 	pub method_handlers : HashMap<String, Box<RpcMethodHandler>>,
@@ -344,8 +346,10 @@ impl MapRpcRequestHandler {
 		method_name: &'static str, 
 		method_fn: Box<Fn(PARAMS)>
 	) {
-		let handler : Box<Fn(_) -> Option<ServiceResult<(), ()>>> = new(move |p| { method_fn(p); None });
-		self.add_rpc_handler(method_name, handler);
+		let req_handler : Box<RpcMethodHandler> = new(move |params, completable| {
+			completable.sync_handle_notification(params, &*method_fn);
+		});
+		self.add_rpc_handler(method_name, req_handler);
 	}
 	
 	pub fn add_request<
@@ -357,16 +361,18 @@ impl MapRpcRequestHandler {
 		method_name: &'static str, 
 		method_fn: Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>
 	) {
-		let handler : Box<Fn(_) -> Option<_>> = new(move |p| { Some(method_fn(p)) });
-		self.add_rpc_handler(method_name, handler);
+		let req_handler : Box<RpcMethodHandler> = new(move |params, completable| {
+			completable.sync_handle_request(params, &*method_fn);
+		});
+		self.add_rpc_handler(method_name, req_handler);
 	}
 	
-	pub fn add_rpc_handler<METHOD_HANDLER: RpcMethodHandler + 'static>(
+	pub fn add_rpc_handler(
 		&mut self,
 		method_name: &'static str,
-		method_handler: METHOD_HANDLER
+		method_handler: Box<RpcMethodHandler>
 	) {
-		self.method_handlers.insert(method_name.to_string(), new(method_handler));
+		self.method_handlers.insert(method_name.to_string(), method_handler);
 	}
 	
 	fn do_invoke_method(
@@ -375,15 +381,13 @@ impl MapRpcRequestHandler {
 		completable: JsonRpcResponseCompletable,
 		request_params: JsonRpcParams,
 	) {
-		let rpc_result = 
-		if let Some(dispatcher_fn) = self.method_handlers.get(method_name) 
+		if let Some(method_fn) = self.method_handlers.get(method_name) 
 		{
-			// FIXME: asynchronous operation 
-			dispatcher_fn.handle_invocation(request_params)
+			let method_fn : &Box<RpcMethodHandler> = method_fn;
+			method_fn(request_params, completable);
 		} else {
-			Some(JsonRpcResult_Or_Error::Error(error_JSON_RPC_MethodNotFound()))
+			completable.complete_with_error(error_JSON_RPC_MethodNotFound());
 		};
-		completable.complete(rpc_result);
 	}
 	
 }
@@ -398,23 +402,6 @@ impl RpcRequestHandler for MapRpcRequestHandler {
 	
 }
 
-pub trait RpcMethodHandler {
-	
-	fn handle_invocation(&self, params: JsonRpcParams) -> Option<JsonRpcResult_Or_Error>;
-	
-}
-
-impl<
-	PARAMS : serde::Deserialize, 
-	RET : serde::Serialize,
-	RET_ERROR : serde::Serialize,
-> RpcMethodHandler for Box<Fn(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>> {
-	
-	fn handle_invocation(&self, params: JsonRpcParams) -> Option<JsonRpcResult_Or_Error> {
-		invoke_method_with_fn(params, self.as_ref())
-	}
-	
-}
 
 
 /* ----------------- Tests ----------------- */
