@@ -93,7 +93,7 @@ impl JsonRpcEndpoint {
 	pub fn handle_request(&mut self, request: JsonRpcRequest) {
 		let output_agent = self.output_agent.clone();
 		
-		let on_response : Box<FnMut(Option<JsonRpcResponse>)> = new(move |response: Option<JsonRpcResponse>| {
+		let on_response = new(move |response: Option<JsonRpcResponse>| {
 			if let Some(response) = response {
 				submit_write_task(&output_agent, response.to_message()); 
 			} else {
@@ -133,12 +133,12 @@ pub trait RpcRequestHandler {
 pub struct JsonRpcResponseCompletable {
 	completion_flag: FinishedFlag,
 	id: Option<RpcId>,
-	on_response: Box<FnMut(Option<JsonRpcResponse>)>,
+	on_response: Box<FnMut(Option<JsonRpcResponse>) + Send>,
 }
 
 impl JsonRpcResponseCompletable {
 	
-	pub fn new(id: Option<RpcId>, on_response: Box<FnMut(Option<JsonRpcResponse>)>) -> JsonRpcResponseCompletable {
+	pub fn new(id: Option<RpcId>, on_response: Box<FnMut(Option<JsonRpcResponse>) + Send>) -> JsonRpcResponseCompletable {
 		JsonRpcResponseCompletable { 
 			completion_flag : FinishedFlag(false), id : id, on_response: on_response
 		}
@@ -415,10 +415,11 @@ mod tests_ {
 	use util::core::*;
 	use util::tests::*;
 	use tests_sample_types::*;
-	use ::jsonrpc_objects::tests::*;
+	use std::thread;
 	
 	use service_util::*;
 	use jsonrpc_objects::*;
+	use jsonrpc_objects::tests::*;
 	
 	use json_util::JsonObject;
 	use output_agent::IoWriteHandler;
@@ -426,7 +427,7 @@ mod tests_ {
 	use serde_json::Value;
 	use serde_json;
 	
-	pub fn sample_fn(params: Point) -> Result<String, ServiceError<()>> {
+	pub fn sample_fn(params: Point) -> ServiceResult<String, ()> {
 		let x_str : String = params.x.to_string();
 		let y_str : String = params.y.to_string();
 		Ok(x_str + &y_str)
@@ -451,6 +452,11 @@ mod tests_ {
 		assert_equal(&result, &expected);
 	}
 	
+	pub fn async_method(request_params: JsonRpcParams, completable: JsonRpcResponseCompletable) {
+		thread::spawn(move || {
+			completable.sync_handle_request(request_params, sample_fn);
+        });
+	}
 		
 	fn invoke_method<FN>(
 		req_handler: &mut RpcRequestHandler, 
@@ -459,9 +465,9 @@ mod tests_ {
 		mut and_then: FN
 	) 
 	where 
-		FN : FnMut(Option<JsonRpcResult_Or_Error>) + 'static
+		FN : FnMut(Option<JsonRpcResult_Or_Error>) + 'static + Send
 	{
-		let on_response : Box<FnMut(Option<JsonRpcResponse>)> = new(move |response: Option<JsonRpcResponse>| {
+		let on_response : Box<FnMut(Option<JsonRpcResponse>) + Send> = new(move |response: Option<JsonRpcResponse>| {
 			and_then(response.and_then(|e| Some(e.result_or_error)));
 		});
 		
@@ -485,6 +491,7 @@ mod tests_ {
 		
 		let mut request_handler = MapRpcRequestHandler::new();
 		request_handler.add_request("my_method", Box::new(sample_fn));
+		request_handler.add_rpc_handler("async_method", Box::new(async_method));
 		
 		// test with invalid params = "{}" 
 		let request = JsonRpcRequest::new(1, "my_method".to_string(), JsonObject::new());
@@ -543,7 +550,9 @@ mod tests_ {
 		
 		
 		let params = new_sample_params(123, 66);
-		rpc.send_notification("my_method", params).unwrap();
+		rpc.send_notification("my_method", params.clone()).unwrap();
+		
+		rpc.send_notification("async_method", params.clone()).unwrap();
 		
 		rpc.shutdown();
 	}
