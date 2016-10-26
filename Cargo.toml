@@ -14,6 +14,8 @@ melnorme_jsonrpc = { path = "subcrates/melnorme_json_rpc" }
 log = "0.3.6"
 serde = "0.8"
 serde_json = "0.8"
+languageserver-types = { version = "0.2.0", git = "https://github.com/gluon-lang/languageserver-types" }
+
 
 [lib]
 name = "rust_lsp"

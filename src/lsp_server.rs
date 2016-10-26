@@ -6,11 +6,13 @@
 // except according to those terms.
 
 
-#![allow(non_camel_case_types)]
 
 extern crate serde;
+extern crate languageserver_types as vs_types;
 
 use std::io;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use util::core::*;
 
@@ -24,12 +26,9 @@ use jsonrpc::output_agent::OutputAgent;
 
 use jsonrpc::jsonrpc_objects::RequestParams;
 
-use lsp;
 use lsp_transport;
-use lsp::*;
-
-use std::sync::Arc;
-use std::sync::Mutex;
+use self::vs_types::*;
+use serde_json::Value;
 
 /* -----------------  ----------------- */
 
@@ -130,7 +129,7 @@ pub trait LanguageClientEndpoint {
 	fn showMessage(&self, params: ShowMessageParams) -> GResult<()>;
 	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>>;
 	fn logMessage(&self, params: LogMessageParams) -> GResult<()>;
-	fn telemetryEvent(&self, params: any) -> GResult<()>;
+	fn telemetryEvent(&self, params: Value) -> GResult<()>;
 	
 	fn publishDiagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()>;
 
@@ -144,79 +143,79 @@ impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
 		completable: ResponseCompletable) 
 	{
 		match method_name {
-			lsp::Request__Initialize => { completable.sync_handle_request(params, 
+			REQUEST__Initialize => { completable.sync_handle_request(params, 
 				|params| self.0.initialize(params)) 
 			}
-			lsp::Request__Shutdown => { completable.sync_handle_request(params, 
+			REQUEST__Shutdown => { completable.sync_handle_request(params, 
 				|params| self.0.shutdown(params)) 
 			}
-			lsp::Notification__Exit => { completable.sync_handle_notification(params, 
+			NOTIFICATION__Exit => { completable.sync_handle_notification(params, 
 				|params| self.0.exit(params)) 
 			}
-			lsp::Notification__WorkspaceChangeConfiguration => { completable.sync_handle_notification(params, 
+			NOTIFICATION__WorkspaceChangeConfiguration => { completable.sync_handle_notification(params, 
 				|params| self.0.workspaceChangeConfiguration(params)) 
 			}
-			lsp::Notification__DidOpenTextDocument => { completable.sync_handle_notification(params, 
+			NOTIFICATION__DidOpenTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.0.didOpenTextDocument(params)) 
 			}
-			lsp::Notification__DidChangeTextDocument => { completable.sync_handle_notification(params, 
+			NOTIFICATION__DidChangeTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.0.didChangeTextDocument(params)) 
 			}
-			lsp::Notification__DidCloseTextDocument => { completable.sync_handle_notification(params, 
+			NOTIFICATION__DidCloseTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.0.didCloseTextDocument(params)) 
 			}
-			lsp::Notification__DidSaveTextDocument => { completable.sync_handle_notification(params, 
+			NOTIFICATION__DidSaveTextDocument => { completable.sync_handle_notification(params, 
 				|params| self.0.didSaveTextDocument(params)) 
 			}
-			lsp::Notification__DidChangeWatchedFiles => { completable.sync_handle_notification(params, 
+			NOTIFICATION__DidChangeWatchedFiles => { completable.sync_handle_notification(params, 
 				|params| self.0.didChangeWatchedFiles(params)) 
 			}
-			lsp::Request__Completion => { completable.sync_handle_request(params, 
+			REQUEST__Completion => { completable.sync_handle_request(params, 
 				|params| self.0.completion(params)) 
 			}
-			lsp::Request__ResolveCompletionItem => { completable.sync_handle_request(params, 
+			REQUEST__ResolveCompletionItem => { completable.sync_handle_request(params, 
 				|params| self.0.resolveCompletionItem(params)) 
 			}
-			lsp::Request__Hover => { completable.sync_handle_request(params, 
+			REQUEST__Hover => { completable.sync_handle_request(params, 
 				|params| self.0.hover(params)) 
 			}
-			lsp::Request__SignatureHelp => { completable.sync_handle_request(params, 
+			REQUEST__SignatureHelp => { completable.sync_handle_request(params, 
 				|params| self.0.signatureHelp(params)) 
 			}
-			lsp::Request__GotoDefinition => { completable.sync_handle_request(params, 
+			REQUEST__GotoDefinition => { completable.sync_handle_request(params, 
 				|params| self.0.gotoDefinition(params)) 
 			}
-			lsp::Request__References => { completable.sync_handle_request(params, 
+			REQUEST__References => { completable.sync_handle_request(params, 
 				|params| self.0.references(params)) 
 			}
-			lsp::Request__DocumentHighlight => { completable.sync_handle_request(params, 
+			REQUEST__DocumentHighlight => { completable.sync_handle_request(params, 
 				|params| self.0.documentHighlight(params)) 
 			}
-			lsp::Request__DocumentSymbols => { completable.sync_handle_request(params, 
+			REQUEST__DocumentSymbols => { completable.sync_handle_request(params, 
 				|params| self.0.documentSymbols(params)) 
 			}
-			lsp::Request__WorkspaceSymbols => { completable.sync_handle_request(params, 
+			REQUEST__WorkspaceSymbols => { completable.sync_handle_request(params, 
 				|params| self.0.workspaceSymbols(params)) 
 			}
-			lsp::Request__CodeAction => { completable.sync_handle_request(params, 
+			REQUEST__CodeAction => { completable.sync_handle_request(params, 
 				|params| self.0.codeAction(params)) 
 			}
-			lsp::Request__CodeLens => { completable.sync_handle_request(params, 
+			REQUEST__CodeLens => { completable.sync_handle_request(params, 
 				|params| self.0.codeLens(params)) 
 			}
-			lsp::Request__CodeLensResolve => { completable.sync_handle_request(params, 
+			REQUEST__CodeLensResolve => { completable.sync_handle_request(params, 
 				|params| self.0.codeLensResolve(params)) 
 			}
-			lsp::Request__Formatting => { completable.sync_handle_request(params, 
+			REQUEST__Formatting => { completable.sync_handle_request(params, 
 				|params| self.0.formatting(params)) 
 			}
-			lsp::Request__RangeFormatting => { completable.sync_handle_request(params, 
+			REQUEST__RangeFormatting => { completable.sync_handle_request(params, 
 				|params| self.0.rangeFormatting(params)) 
 			}
-			lsp::Request__OnTypeFormatting => { completable.sync_handle_request(params, 
+			REQUEST__OnTypeFormatting => { completable.sync_handle_request(params, 
 				|params| self.0.onTypeFormatting(params)) 
 			}
-			lsp::Request__Rename => { completable.sync_handle_request(params, 
+			REQUEST__Rename => { completable.sync_handle_request(params, 
 				|params| self.0.rename(params)) 
 			}
 			_ => {
@@ -232,31 +231,31 @@ impl LanguageClientEndpoint for EndpointHandle {
 	
     fn showMessage(&self, params: ShowMessageParams) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
-    	try!(endpoint.send_notification(lsp::Notification__ShowMessage, params));
+    	try!(endpoint.send_notification(NOTIFICATION__ShowMessage, params));
     	Ok(())
     }
     
     fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
     	let endpoint = self.lock().unwrap();
-//    	endpoint.send_request(lsp::Notification__ShowMessageRequest, params);
+//    	endpoint.send_request(NOTIFICATION__ShowMessageRequest, params);
     	panic!("not implemented")
     }
     
     fn logMessage(&self, params: LogMessageParams) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
-    	try!(endpoint.send_notification(lsp::Notification__LogMessage, params));
+    	try!(endpoint.send_notification(NOTIFICATION__LogMessage, params));
     	Ok(())
     }
     
-    fn telemetryEvent(&self, params: any) -> GResult<()> {
+    fn telemetryEvent(&self, params: Value) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
-    	try!(endpoint.send_notification(lsp::Notification__TelemetryEvent, params));
+    	try!(endpoint.send_notification(NOTIFICATION__TelemetryEvent, params));
     	Ok(())
     }
     
     fn publishDiagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
-    	try!(endpoint.send_notification(lsp::Notification__PublishDiagnostics, params));
+    	try!(endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params));
     	Ok(())
     }
 	
