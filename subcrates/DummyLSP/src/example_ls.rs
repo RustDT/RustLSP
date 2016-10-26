@@ -12,7 +12,7 @@
 extern crate rust_lsp;
 
 
-use rust_lsp::lsp::*;
+use rust_lsp::ls_types::*;
 use rust_lsp::lsp_server::*;
 use rust_lsp::jsonrpc::service_util::ServiceError;
 

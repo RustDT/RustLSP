@@ -6,10 +6,6 @@
 // except according to those terms.
 
 
-
-extern crate serde;
-extern crate languageserver_types as vs_types;
-
 use std::io;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -27,7 +23,7 @@ use jsonrpc::output_agent::OutputAgent;
 use jsonrpc::jsonrpc_objects::RequestParams;
 
 use lsp_transport;
-use self::vs_types::*;
+use ls_types::*;
 use serde_json::Value;
 
 /* -----------------  ----------------- */
