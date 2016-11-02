@@ -9,8 +9,8 @@ use std::result::Result;
 
 use util::core::*;
 
-pub trait Provider<VALUE, ERR> {
-	fn obtain_next(&mut self) -> Result<VALUE, ERR>;
+pub trait MessageReader {
+    fn read_next(&mut self) -> Result<String, GError>;
 }
 
 pub trait MessageWriter {

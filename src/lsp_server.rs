@@ -7,14 +7,12 @@
 
 
 use std::io;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use util::core::*;
 
 use jsonrpc;
 use jsonrpc::*;
-use jsonrpc::service_util::Provider;
+use jsonrpc::service_util::MessageReader;
 use jsonrpc::service_util::MessageWriter;
 use jsonrpc::service_util::ServiceError;
 
@@ -30,8 +28,8 @@ use serde_json::Value;
 
 struct LSPMessageReader<'a>(&'a mut io::BufRead);
 
-impl<'a> Provider<String, GError> for LSPMessageReader<'a> {
-	fn obtain_next(&mut self) -> GResult<String> {
+impl<'a> MessageReader for LSPMessageReader<'a> {
+	fn read_next(&mut self) -> GResult<String> {
 		lsp_transport::parse_transport_message(&mut self.0)
 	}
 }
@@ -52,8 +50,8 @@ pub struct LSPServer {
 
 impl LSPServer {
 	
-	pub fn new_server_endpoint<OUT, OUT_P>(out_stream_provider: OUT_P) 
-		-> (EndpointHandle, Box<EndpointHandle>)
+	pub fn new_lsp_endpoint<OUT, OUT_P>(out_stream_provider: OUT_P) 
+		-> EndpointHandle
 	where 
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static
@@ -62,22 +60,27 @@ impl LSPServer {
 			LSPMessageWriter(out_stream_provider())
 		});
 		let endpoint = Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()));
-		let endpoint = newArcMutex(endpoint);
-		let lsp_client = Box::new(endpoint.clone());
-		
-		(endpoint, lsp_client)
+		newArcMutex(endpoint)
 	}
-	
-	pub fn run_server<LS>(ls: LS, input: &mut io::BufRead, endpoint: EndpointHandle) 
+
+	pub fn run_server_from_input<LS>(ls: LS, input: &mut io::BufRead, endpoint: EndpointHandle) 
 	where 
 		LS: LanguageServer + 'static,
+	{
+	    Self::run_server(ls, &mut LSPMessageReader(input), endpoint)
+	}
+	
+	pub fn run_server<LS, MSG_READER>(ls: LS, msg_reader: &mut MSG_READER, endpoint: EndpointHandle) 
+	where 
+		LS: LanguageServer + 'static,
+		MSG_READER : MessageReader,
 	{
        	info!("Starting LSP server");
         
 		let req_handler : Box<RequestHandler> = Box::new(LSRequestHandler(ls));
 		endpoint.lock().unwrap().request_handler = req_handler;
 		
-		let result = jsonrpc::run_message_read_loop(endpoint, LSPMessageReader(input));
+		let result = jsonrpc::run_message_read_loop(endpoint, msg_reader);
 		
 		if let Err(error) = result {
 			error!("Error handling the incoming stream: {}", error);
@@ -352,12 +355,12 @@ mod tests {
     pub fn test_run_lsp_server() {
         let out_stream_provider = || { Vec::<u8>::new() };
         
-        let (endpoint, lsp_client) = LSPServer::new_server_endpoint(out_stream_provider);
+        let endpoint = LSPServer::new_lsp_endpoint(out_stream_provider);
         
        	let ls = TestsLanguageServer{ };
     	
     	let mut input = BufReader::new("".as_bytes());
-    	LSPServer::run_server(ls, &mut input, endpoint);
+    	LSPServer::run_server_from_input(ls, &mut input, endpoint);
     }
     
 }

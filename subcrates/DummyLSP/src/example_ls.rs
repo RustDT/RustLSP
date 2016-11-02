@@ -15,11 +15,12 @@ extern crate rust_lsp;
 use rust_lsp::ls_types::*;
 use rust_lsp::lsp_server::*;
 use rust_lsp::jsonrpc::service_util::ServiceError;
+use rust_lsp::jsonrpc::EndpointHandle;
 
 use std::io;
 
 pub struct DummyLanguageServer {
-	lsp_client : Box<LanguageClientEndpoint>,
+	server_endpoint : EndpointHandle,
 }
 
 pub fn run_lsp_server<OUT, OUT_P>(input: &mut io::BufRead, out_stream_provider: OUT_P)
@@ -27,21 +28,17 @@ where
 	OUT: io::Write + 'static, 
 	OUT_P : FnOnce() -> OUT + Send + 'static
 {
-	let (endpoint, lsp_client) = LSPServer::new_server_endpoint(out_stream_provider);
+	let endpoint = LSPServer::new_lsp_endpoint(out_stream_provider);
 	
-	let ls = DummyLanguageServer::new(lsp_client);
+	let ls = DummyLanguageServer{ server_endpoint : endpoint.clone() };
 	
-	LSPServer::run_server(ls, input, endpoint);
+	LSPServer::run_server_from_input(ls, input, endpoint);
 }
 
 /**
  * A no-op language server
  */ 
 impl DummyLanguageServer {
-	
-	pub fn new(lsp_client: Box<LanguageClientEndpoint>) -> DummyLanguageServer {
-		DummyLanguageServer{ lsp_client : lsp_client }	
-	}
 	
 	// FIXME: user general error
 	pub fn error_not_available<DATA>(data : DATA) -> ServiceError<DATA> {

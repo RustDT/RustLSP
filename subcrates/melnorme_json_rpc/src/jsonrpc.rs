@@ -32,7 +32,7 @@ use std::sync::Mutex;
 
 use service_util::ServiceError;
 use service_util::ServiceResult;
-use service_util::Provider;
+use service_util::MessageReader;
 
 use jsonrpc_objects::*;
 
@@ -112,13 +112,13 @@ impl Endpoint {
 
 pub type EndpointHandle = Arc<Mutex<Endpoint>>;
 
-pub fn run_message_read_loop<PROVIDER>(endpoint: Arc<Mutex<Endpoint>>, mut input: PROVIDER) 
+pub fn run_message_read_loop<MSG_READER>(endpoint: Arc<Mutex<Endpoint>>, input: &mut MSG_READER) 
 	-> GResult<()>
 where
-	PROVIDER : Provider<String, GError>
+	MSG_READER : MessageReader
 {
 	loop {
-		let message = match input.obtain_next() {
+		let message = match input.read_next() {
 			Ok(ok) => { ok } 
 			Err(error) => { 
 				let mut endpoint = endpoint.lock().unwrap();
