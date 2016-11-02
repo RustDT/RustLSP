@@ -68,51 +68,51 @@ impl LanguageServer for DummyLanguageServer {
 	fn didChangeWatchedFiles(&self, _: DidChangeWatchedFilesParams) {}
 	
 	fn completion(&self, _: TextDocumentPositionParams) -> LSResult<CompletionList, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn resolveCompletionItem(&self, _: CompletionItem) -> LSResult<CompletionItem, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn hover(&self, _: TextDocumentPositionParams) -> LSResult<Hover, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn signatureHelp(&self, _: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn gotoDefinition(&self, _: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn references(&self, _: ReferenceParams) -> LSResult<Vec<Location>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn documentHighlight(&self, _: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn documentSymbols(&self, _: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn workspaceSymbols(&self, _: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn codeAction(&self, _: CodeActionParams) -> LSResult<Vec<Command>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn codeLens(&self, _: CodeLensParams) -> LSResult<Vec<CodeLens>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn codeLensResolve(&self, _: CodeLens) -> LSResult<CodeLens, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn formatting(&self, _: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn rangeFormatting(&self, _: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn onTypeFormatting(&self, _: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 	fn rename(&self, _: RenameParams) -> LSResult<WorkspaceEdit, ()> {
-		Err(DummyLanguageServer::error_not_available(()))
+		Err(Self::error_not_available(()))
 	}
 }

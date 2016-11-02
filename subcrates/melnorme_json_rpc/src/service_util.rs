@@ -9,6 +9,11 @@ use std::result::Result;
 
 use util::core::*;
 
+// This is a bit silly but couldn't find another way to do it
+// `pub use util::core::GError` has other problems, it can create name conflicts too.
+pub type _GError = GError; 
+
+
 pub trait MessageReader {
     fn read_next(&mut self) -> Result<String, GError>;
 }
@@ -20,9 +25,15 @@ pub trait MessageWriter {
 }
 
 pub struct ServiceError<DATA> {
-	pub code : u32,
-	pub message : String,
-	pub data : DATA
+	pub code: u32,
+	pub message: String,
+	pub data: DATA
+}
+
+impl<DATA> ServiceError<DATA> {
+	pub fn new(code: u32, msg: String, data : DATA) -> ServiceError<DATA> {
+		ServiceError::<DATA> { code : code, message : msg, data : data }
+	}
 }
 
 pub type ServiceResult<RETURN_VALUE, ERROR_DATA> = Result<RETURN_VALUE, ServiceError<ERROR_DATA>>;
