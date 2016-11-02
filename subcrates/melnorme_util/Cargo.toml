@@ -1,6 +1,6 @@
 [package]
 name = "melnorme_util"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 
 [dependencies]

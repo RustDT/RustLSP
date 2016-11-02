@@ -46,8 +46,7 @@ impl DummyLanguageServer {
 	// FIXME: user general error
 	pub fn error_not_available<DATA>(data : DATA) -> ServiceError<DATA> {
 		let msg = "Functionality not implemented.".to_string();
-		let err : ServiceError<DATA> = ServiceError { code : 1, message : msg, data : data };
-		err
+		ServiceError::<DATA> { code : 1, message : msg, data : data }
 	}
 	
 }

@@ -243,6 +243,9 @@ pub fn test_OutputAgent_API() {
 	use std::sync::Mutex;
 	use std::io::Read;
 	
+    // Test with Vec<u8>
+	let mut agent = OutputAgent::start_with_provider(|| IoWriteHandler(Vec::<u8>::new()));
+	agent.shutdown_and_join();
 	
 	// Test with StdOut
 	let mut agent = OutputAgent::start_with_provider(|| IoWriteHandler(std::io::stdout()));

@@ -24,6 +24,10 @@ pub type Void = GResult<()>;
 
 pub trait GErrorT : fmt::Display {
 	
+	fn to_string(&self) -> String {
+	    format!("{}", self)
+	}
+	
 }
 
 

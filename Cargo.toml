@@ -7,7 +7,7 @@ authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 serde_codegen = { version = "0.8", optional = true }
 
 [dependencies]
-melnorme_util = { path = "subcrates/melnorme_util" }
+melnorme_util = { version = "0.1.1", path = "subcrates/melnorme_util" }
 melnorme_jsonrpc = { path = "subcrates/melnorme_json_rpc" }
 log = "0.3.6"
 serde = "0.8"

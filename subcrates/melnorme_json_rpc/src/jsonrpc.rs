@@ -108,16 +108,27 @@ impl Endpoint {
 	
 }
 
-pub fn run_message_read_loop<PROVIDER>(jsonrpc: Arc<Mutex<Endpoint>>, mut input: PROVIDER) 
+/* -----------------  ----------------- */
+
+pub type EndpointHandle = Arc<Mutex<Endpoint>>;
+
+pub fn run_message_read_loop<PROVIDER>(endpoint: Arc<Mutex<Endpoint>>, mut input: PROVIDER) 
 	-> GResult<()>
 where
 	PROVIDER : Provider<String, GError>
 {
 	loop {
-		let message = try!(input.obtain_next());
+		let message = match input.obtain_next() {
+			Ok(ok) => { ok } 
+			Err(error) => { 
+				let mut endpoint = endpoint.lock().unwrap();
+				endpoint.shutdown();
+				return Err(error);
+			}
+		};
 		
-		let mut jsonrpc_lock = jsonrpc.lock().unwrap();
-		jsonrpc_lock.handle_message(&message);
+		let mut endpoint = endpoint.lock().unwrap();
+		endpoint.handle_message(&message);
 	}
 }
 

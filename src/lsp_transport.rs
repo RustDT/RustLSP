@@ -21,7 +21,7 @@ pub fn parse_transport_message<R : io::BufRead>(reader: &mut R) -> GResult<Strin
 	let mut content_length : u32 = 0; 
 	
 	loop {
-		let mut line : String = String::new();
+		let mut line = String::new();
 		
 		try!(reader.read_line(&mut line));
 		
@@ -33,6 +33,8 @@ pub fn parse_transport_message<R : io::BufRead>(reader: &mut R) -> GResult<Strin
 			
 		} else if line.eq("\r\n") {
 			break;
+		} else if line.is_empty() {
+		    return Err(ErrorMessage::create("End of stream reached.".into()));
 		}
 	}
 	if content_length == 0 {
@@ -50,17 +52,23 @@ pub fn parse_transport_message<R : io::BufRead>(reader: &mut R) -> GResult<Strin
 fn parse_transport_message__test() {
 	use std::io::BufReader;
 	
-	let string = String::from("Content-Length: 10 \r\n\r\n1234567890abcdef");
+	let string = "Content-Length: 10 \r\n\r\n1234567890abcdef";
 	assert_eq!(parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap(), "1234567890");
 	
 	// Allow other header fields
-	let string = String::from("Content-Length: 13 \r\nContent-Blah\r\n\r\n1234\n567\r\n890abcdef");
+	let string = "Content-Length: 13 \r\nContent-Blah\r\n\r\n1234\n567\r\n890abcdef";
 	assert_eq!(parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap(), "1234\n567\r\n890");
 	
 	// Test no-content	
-	let string = String::from("\r\n\r\n1234567890abcdef");
+	let string = "\r\n\r\n1234567890abcdef";
 	let err : GError = parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap_err();
-	assert_eq!(format!("{}", err), "Content-Length: not defined or invalid.");
+	assert_eq!(&err.to_string(), "Content-Length: not defined or invalid.");
+	
+	// Test EOS	
+	let string = "";
+	let err : GError = parse_transport_message(&mut BufReader::new(string.as_bytes())).unwrap_err();
+	assert_eq!(&err.to_string(), "End of stream reached.");
+    
 }
 
 pub fn write_transport_message<WRITE : io::Write>(message: & str, out: &mut WRITE) -> GResult<()>
