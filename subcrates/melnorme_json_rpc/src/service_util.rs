@@ -7,11 +7,8 @@
 
 use std::result::Result;
 
-use util::core::*;
-
-// This is a bit silly but couldn't find another way to do it
-// `pub use util::core::GError` has other problems, it can create name conflicts too.
-pub type _GError = GError; 
+pub use util::core::GError;
+pub use util::core::GResult;
 
 
 pub trait MessageReader {

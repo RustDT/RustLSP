@@ -15,7 +15,7 @@ use util::core::*;
 
 const CONTENT_LENGTH: &'static str = "Content-Length:";
 	
-pub fn parse_transport_message<R : io::BufRead>(reader: &mut R) -> GResult<String>
+pub fn parse_transport_message<R : io::BufRead + ?Sized>(reader: &mut R) -> GResult<String>
 {
 	
 	let mut content_length : u32 = 0; 

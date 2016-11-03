@@ -13,6 +13,7 @@
 #[macro_use] extern crate log;
 extern crate serde_json;
 extern crate serde;
+
 extern crate melnorme_util as util;
 
 pub mod json_util;
@@ -112,7 +113,7 @@ impl Endpoint {
 
 pub type EndpointHandle = Arc<Mutex<Endpoint>>;
 
-pub fn run_message_read_loop<MSG_READER>(endpoint: Arc<Mutex<Endpoint>>, input: &mut MSG_READER) 
+pub fn run_message_read_loop<MSG_READER : ?Sized>(endpoint: Arc<Mutex<Endpoint>>, input: &mut MSG_READER) 
 	-> GResult<()>
 where
 	MSG_READER : MessageReader
@@ -299,7 +300,9 @@ impl Endpoint {
 		PARAMS : serde::Serialize, 
 		RET: serde::Deserialize,
 		RET_ERROR : serde::Deserialize,
-	>(&mut self, id: Option<RpcId>, method_name: &str, params: PARAMS) -> GResult<Future<ServiceResult<RET, RET_ERROR>>> {
+	>(&mut self, id: Option<RpcId>, method_name: &str, params: PARAMS) 
+    	-> GResult<Future<ServiceResult<RET, RET_ERROR>>> 
+	{
 		let params_value = serde_json::to_value(&params);
 		let params = try!(jsonrpc_objects::parse_jsonrpc_params(params_value));
 		
@@ -428,7 +431,7 @@ mod tests_ {
 	use tests_sample_types::*;
 	use std::thread;
 	
-	use service_util::*;
+	use service_util::{ServiceResult, ServiceError};
 	use jsonrpc_objects::*;
 	use jsonrpc_objects::tests::*;
 	

@@ -64,23 +64,23 @@ pub struct OutputAgent {
 
 impl OutputAgent {
 	
-	pub fn start_with_provider<OUT, OUT_P>(out_stream_provider: OUT_P) 
+	pub fn start_with_provider<OUT, OUT_P>(msg_writer_provider: OUT_P) 
 		-> OutputAgent
 	where 
-		OUT: MessageWriter + 'static, 
+		OUT : MessageWriter + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static 
 	{
 		Self::start(move |inner_runner: AgentInnerRunner| {
-			let mut out_stream : OUT = out_stream_provider();
+			let mut msg_writer: OUT = msg_writer_provider();
 			
-			inner_runner.enter_agent_loop(&mut move |task| {
-				task(&mut out_stream); 
+			inner_runner.enter_agent_loop(&mut move |task: OutputAgentTask| {
+				task(&mut msg_writer); 
 			});
 		})
 	}
 	
 	
-	pub fn start<AGENT_RUNNER : Sized>(agent_runner: AGENT_RUNNER) 
+	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER) 
 		-> OutputAgent
 	where 
 		AGENT_RUNNER : AgentRunnable,
@@ -154,15 +154,15 @@ pub struct AgentInnerRunner {
 impl AgentInnerRunner {
 	
 	/// Enter agent loop, with given task runner
-	pub fn enter_agent_loop<TASK_RUNNER>(self, mut task_runner: &mut TASK_RUNNER,)
+	pub fn enter_agent_loop<TASK_RUNNER : ?Sized>(self, task_runner: &mut TASK_RUNNER)
 	where
 		 TASK_RUNNER : FnMut(OutputAgentTask) 
 	{
 		let mut rx = self.rx;
-		Self::run_agent_loop(&mut rx, &mut task_runner);
+		Self::run_agent_loop(&mut rx, task_runner);
 	}
 	
-	pub fn run_agent_loop<TASK_RUNNER>(rx: &mut Receiver<OutputAgentMessage>, mut task_runner: &mut TASK_RUNNER,)
+	pub fn run_agent_loop<TASK_RUNNER : ?Sized>(rx: &mut Receiver<OutputAgentMessage>, task_runner: &mut TASK_RUNNER)
 	where
 		 TASK_RUNNER : FnMut(OutputAgentTask) 
 	{

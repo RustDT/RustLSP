@@ -26,7 +26,7 @@ use serde_json::Value;
 
 /* -----------------  ----------------- */
 
-struct LSPMessageReader<'a>(&'a mut io::BufRead);
+pub struct LSPMessageReader<'a>(pub &'a mut io::BufRead);
 
 impl<'a> MessageReader for LSPMessageReader<'a> {
 	fn read_next(&mut self) -> GResult<String> {
@@ -34,7 +34,7 @@ impl<'a> MessageReader for LSPMessageReader<'a> {
 	}
 }
 
-struct LSPMessageWriter<T: io::Write>(pub T);
+pub struct LSPMessageWriter<T: io::Write>(pub T);
 
 impl<T: io::Write> MessageWriter for LSPMessageWriter<T> {
 	fn write_message(&mut self, msg: &str) -> Result<(), GError> {
@@ -44,21 +44,30 @@ impl<T: io::Write> MessageWriter for LSPMessageWriter<T> {
 
 /* -----------------  ----------------- */
 
-pub struct LSPServer {
+pub struct LSPEndpoint {
 	
 }
 
-impl LSPServer {
+impl LSPEndpoint {
 	
-	pub fn new_lsp_endpoint<OUT, OUT_P>(out_stream_provider: OUT_P) 
+	pub fn new_with_output_stream<OUT, OUT_P>(output_stream_provider: OUT_P) 
 		-> EndpointHandle
 	where 
 		OUT: io::Write + 'static, 
 		OUT_P : FnOnce() -> OUT + Send + 'static
 	{
-		let output_agent = OutputAgent::start_with_provider(|| {
-			LSPMessageWriter(out_stream_provider())
-		});
+		Self::new(|| {
+			LSPMessageWriter(output_stream_provider())
+		})
+	}
+	
+	pub fn new<OUT, OUT_P>(msg_writer_provider: OUT_P) 
+		-> EndpointHandle
+	where 
+		OUT : MessageWriter + 'static, 
+		OUT_P : FnOnce() -> OUT + Send + 'static 
+	{
+		let output_agent = OutputAgent::start_with_provider(msg_writer_provider);
 		let endpoint = Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()));
 		newArcMutex(endpoint)
 	}
@@ -70,7 +79,7 @@ impl LSPServer {
 	    Self::run_server(ls, &mut LSPMessageReader(input), endpoint)
 	}
 	
-	pub fn run_server<LS, MSG_READER>(ls: LS, msg_reader: &mut MSG_READER, endpoint: EndpointHandle) 
+	pub fn run_server<LS, MSG_READER: ?Sized>(ls: LS, msg_reader: &mut MSG_READER, endpoint: EndpointHandle) 
 	where 
 		LS: LanguageServer + 'static,
 		MSG_READER : MessageReader,
@@ -355,12 +364,12 @@ mod tests {
     pub fn test_run_lsp_server() {
         let out_stream_provider = || { Vec::<u8>::new() };
         
-        let endpoint = LSPServer::new_lsp_endpoint(out_stream_provider);
+        let endpoint = LSPEndpoint::new_with_output_stream(out_stream_provider);
         
        	let ls = TestsLanguageServer{ };
     	
     	let mut input = BufReader::new("".as_bytes());
-    	LSPServer::run_server_from_input(ls, &mut input, endpoint);
+    	LSPEndpoint::run_server_from_input(ls, &mut input, endpoint);
     }
     
 }
