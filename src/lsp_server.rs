@@ -105,28 +105,28 @@ pub trait LanguageServer {
 	fn initialize(&self, params: InitializeParams) -> LSResult<InitializeResult, InitializeError>;
 	fn shutdown(&self, params: ()) -> LSResult<(), ()>;
 	fn exit(&self, params: ());
-	fn workspaceChangeConfiguration(&self, params: DidChangeConfigurationParams);
-	fn didOpenTextDocument(&self, params: DidOpenTextDocumentParams);
-	fn didChangeTextDocument(&self, params: DidChangeTextDocumentParams);
-	fn didCloseTextDocument(&self, params: DidCloseTextDocumentParams);
-	fn didSaveTextDocument(&self, params: DidSaveTextDocumentParams);
-	fn didChangeWatchedFiles(&self, params: DidChangeWatchedFilesParams);
+	fn workspace_change_configuration(&self, params: DidChangeConfigurationParams);
+	fn did_open_text_document(&self, params: DidOpenTextDocumentParams);
+	fn did_change_text_document(&self, params: DidChangeTextDocumentParams);
+	fn did_close_text_document(&self, params: DidCloseTextDocumentParams);
+	fn did_save_text_document(&self, params: DidSaveTextDocumentParams);
+	fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams);
 	
 	fn completion(&self, params: TextDocumentPositionParams) -> LSResult<CompletionList, ()>;
-	fn resolveCompletionItem(&self, params: CompletionItem) -> LSResult<CompletionItem, ()>;
+	fn resolve_completion_item(&self, params: CompletionItem) -> LSResult<CompletionItem, ()>;
 	fn hover(&self, params: TextDocumentPositionParams) -> LSResult<Hover, ()>;
-	fn signatureHelp(&self, params: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()>;
-	fn gotoDefinition(&self, params: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()>;
+	fn signature_help(&self, params: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()>;
+	fn goto_definition(&self, params: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()>;
 	fn references(&self, params: ReferenceParams) -> LSResult<Vec<Location>, ()>;
-	fn documentHighlight(&self, params: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()>;
-	fn documentSymbols(&self, params: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
-	fn workspaceSymbols(&self, params: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
-	fn codeAction(&self, params: CodeActionParams) -> LSResult<Vec<Command>, ()>;
-	fn codeLens(&self, params: CodeLensParams) -> LSResult<Vec<CodeLens>, ()>;
-	fn codeLensResolve(&self, params: CodeLens) -> LSResult<CodeLens, ()>;
+	fn document_highlight(&self, params: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()>;
+	fn document_symbols(&self, params: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
+	fn workspace_symbols(&self, params: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
+	fn code_action(&self, params: CodeActionParams) -> LSResult<Vec<Command>, ()>;
+	fn code_lens(&self, params: CodeLensParams) -> LSResult<Vec<CodeLens>, ()>;
+	fn code_lens_resolve(&self, params: CodeLens) -> LSResult<CodeLens, ()>;
 	fn formatting(&self, params: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn rangeFormatting(&self, params: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn onTypeFormatting(&self, params: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
+	fn range_formatting(&self, params: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
+	fn on_type_formatting(&self, params: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
 	fn rename(&self, params: RenameParams) -> LSResult<WorkspaceEdit, ()>;
 	
 }
@@ -134,12 +134,12 @@ pub trait LanguageServer {
 
 pub trait LanguageClientEndpoint {
 	
-	fn showMessage(&self, params: ShowMessageParams) -> GResult<()>;
-	fn showMessageRequest(&self, params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>>;
-	fn logMessage(&self, params: LogMessageParams) -> GResult<()>;
-	fn telemetryEvent(&self, params: Value) -> GResult<()>;
+	fn show_message(&self, params: ShowMessageParams) -> GResult<()>;
+	fn show_message_request(&self, params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>>;
+	fn log_message(&self, params: LogMessageParams) -> GResult<()>;
+	fn telemetry_event(&self, params: Value) -> GResult<()>;
 	
-	fn publishDiagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()>;
+	fn publish_diagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()>;
 
 }
 
@@ -161,67 +161,67 @@ impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
 				|params| self.0.exit(params)) 
 			}
 			NOTIFICATION__WorkspaceChangeConfiguration => { completable.sync_handle_notification(params, 
-				|params| self.0.workspaceChangeConfiguration(params)) 
+				|params| self.0.workspace_change_configuration(params)) 
 			}
 			NOTIFICATION__DidOpenTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.0.didOpenTextDocument(params)) 
+				|params| self.0.did_open_text_document(params)) 
 			}
 			NOTIFICATION__DidChangeTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.0.didChangeTextDocument(params)) 
+				|params| self.0.did_change_text_document(params)) 
 			}
 			NOTIFICATION__DidCloseTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.0.didCloseTextDocument(params)) 
+				|params| self.0.did_close_text_document(params)) 
 			}
 			NOTIFICATION__DidSaveTextDocument => { completable.sync_handle_notification(params, 
-				|params| self.0.didSaveTextDocument(params)) 
+				|params| self.0.did_save_text_document(params)) 
 			}
 			NOTIFICATION__DidChangeWatchedFiles => { completable.sync_handle_notification(params, 
-				|params| self.0.didChangeWatchedFiles(params)) 
+				|params| self.0.did_change_watched_files(params)) 
 			}
 			REQUEST__Completion => { completable.sync_handle_request(params, 
 				|params| self.0.completion(params)) 
 			}
 			REQUEST__ResolveCompletionItem => { completable.sync_handle_request(params, 
-				|params| self.0.resolveCompletionItem(params)) 
+				|params| self.0.resolve_completion_item(params)) 
 			}
 			REQUEST__Hover => { completable.sync_handle_request(params, 
 				|params| self.0.hover(params)) 
 			}
 			REQUEST__SignatureHelp => { completable.sync_handle_request(params, 
-				|params| self.0.signatureHelp(params)) 
+				|params| self.0.signature_help(params)) 
 			}
 			REQUEST__GotoDefinition => { completable.sync_handle_request(params, 
-				|params| self.0.gotoDefinition(params)) 
+				|params| self.0.goto_definition(params)) 
 			}
 			REQUEST__References => { completable.sync_handle_request(params, 
 				|params| self.0.references(params)) 
 			}
 			REQUEST__DocumentHighlight => { completable.sync_handle_request(params, 
-				|params| self.0.documentHighlight(params)) 
+				|params| self.0.document_highlight(params)) 
 			}
 			REQUEST__DocumentSymbols => { completable.sync_handle_request(params, 
-				|params| self.0.documentSymbols(params)) 
+				|params| self.0.document_symbols(params)) 
 			}
 			REQUEST__WorkspaceSymbols => { completable.sync_handle_request(params, 
-				|params| self.0.workspaceSymbols(params)) 
+				|params| self.0.workspace_symbols(params)) 
 			}
 			REQUEST__CodeAction => { completable.sync_handle_request(params, 
-				|params| self.0.codeAction(params)) 
+				|params| self.0.code_action(params)) 
 			}
 			REQUEST__CodeLens => { completable.sync_handle_request(params, 
-				|params| self.0.codeLens(params)) 
+				|params| self.0.code_lens(params)) 
 			}
 			REQUEST__CodeLensResolve => { completable.sync_handle_request(params, 
-				|params| self.0.codeLensResolve(params)) 
+				|params| self.0.code_lens_resolve(params)) 
 			}
 			REQUEST__Formatting => { completable.sync_handle_request(params, 
 				|params| self.0.formatting(params)) 
 			}
 			REQUEST__RangeFormatting => { completable.sync_handle_request(params, 
-				|params| self.0.rangeFormatting(params)) 
+				|params| self.0.range_formatting(params)) 
 			}
 			REQUEST__OnTypeFormatting => { completable.sync_handle_request(params, 
-				|params| self.0.onTypeFormatting(params)) 
+				|params| self.0.on_type_formatting(params)) 
 			}
 			REQUEST__Rename => { completable.sync_handle_request(params, 
 				|params| self.0.rename(params)) 
@@ -237,31 +237,31 @@ impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
 
 impl LanguageClientEndpoint for EndpointHandle {
 	
-    fn showMessage(&self, params: ShowMessageParams) -> GResult<()> {
+    fn show_message(&self, params: ShowMessageParams) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
     	try!(endpoint.send_notification(NOTIFICATION__ShowMessage, params));
     	Ok(())
     }
     
-    fn showMessageRequest(&self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
+    fn show_message_request(&self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
     	let endpoint = self.lock().unwrap();
 //    	endpoint.send_request(NOTIFICATION__ShowMessageRequest, params);
     	panic!("not implemented")
     }
     
-    fn logMessage(&self, params: LogMessageParams) -> GResult<()> {
+    fn log_message(&self, params: LogMessageParams) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
     	try!(endpoint.send_notification(NOTIFICATION__LogMessage, params));
     	Ok(())
     }
     
-    fn telemetryEvent(&self, params: Value) -> GResult<()> {
+    fn telemetry_event(&self, params: Value) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
     	try!(endpoint.send_notification(NOTIFICATION__TelemetryEvent, params));
     	Ok(())
     }
     
-    fn publishDiagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()> {
+    fn publish_diagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()> {
     	let mut endpoint = self.lock().unwrap();
     	try!(endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params));
     	Ok(())
@@ -303,56 +303,56 @@ mod tests {
     	fn exit(&self, _: ()) {
     	}
     	
-    	fn workspaceChangeConfiguration(&self, _: DidChangeConfigurationParams) {}
-    	fn didOpenTextDocument(&self, _: DidOpenTextDocumentParams) {}
-    	fn didChangeTextDocument(&self, _: DidChangeTextDocumentParams) {}
-    	fn didCloseTextDocument(&self, _: DidCloseTextDocumentParams) {}
-    	fn didSaveTextDocument(&self, _: DidSaveTextDocumentParams) {}
-    	fn didChangeWatchedFiles(&self, _: DidChangeWatchedFilesParams) {}
+    	fn workspace_change_configuration(&self, _: DidChangeConfigurationParams) {}
+    	fn did_open_text_document(&self, _: DidOpenTextDocumentParams) {}
+    	fn did_change_text_document(&self, _: DidChangeTextDocumentParams) {}
+    	fn did_close_text_document(&self, _: DidCloseTextDocumentParams) {}
+    	fn did_save_text_document(&self, _: DidSaveTextDocumentParams) {}
+    	fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {}
     	
     	fn completion(&self, _: TextDocumentPositionParams) -> LSResult<CompletionList, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn resolveCompletionItem(&self, _: CompletionItem) -> LSResult<CompletionItem, ()> {
+    	fn resolve_completion_item(&self, _: CompletionItem) -> LSResult<CompletionItem, ()> {
     		Err(Self::error_not_available(()))
     	}
     	fn hover(&self, _: TextDocumentPositionParams) -> LSResult<Hover, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn signatureHelp(&self, _: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()> {
+    	fn signature_help(&self, _: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn gotoDefinition(&self, _: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()> {
+    	fn goto_definition(&self, _: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()> {
     		Err(Self::error_not_available(()))
     	}
     	fn references(&self, _: ReferenceParams) -> LSResult<Vec<Location>, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn documentHighlight(&self, _: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()> {
+    	fn document_highlight(&self, _: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn documentSymbols(&self, _: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
+    	fn document_symbols(&self, _: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn workspaceSymbols(&self, _: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
+    	fn workspace_symbols(&self, _: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn codeAction(&self, _: CodeActionParams) -> LSResult<Vec<Command>, ()> {
+    	fn code_action(&self, _: CodeActionParams) -> LSResult<Vec<Command>, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn codeLens(&self, _: CodeLensParams) -> LSResult<Vec<CodeLens>, ()> {
+    	fn code_lens(&self, _: CodeLensParams) -> LSResult<Vec<CodeLens>, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn codeLensResolve(&self, _: CodeLens) -> LSResult<CodeLens, ()> {
+    	fn code_lens_resolve(&self, _: CodeLens) -> LSResult<CodeLens, ()> {
     		Err(Self::error_not_available(()))
     	}
     	fn formatting(&self, _: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn rangeFormatting(&self, _: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
+    	fn range_formatting(&self, _: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
     		Err(Self::error_not_available(()))
     	}
-    	fn onTypeFormatting(&self, _: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
+    	fn on_type_formatting(&self, _: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
     		Err(Self::error_not_available(()))
     	}
     	fn rename(&self, _: RenameParams) -> LSResult<WorkspaceEdit, ()> {
