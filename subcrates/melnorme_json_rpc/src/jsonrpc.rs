@@ -31,7 +31,6 @@ use std::result::Result;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use service_util::ServiceError;
 use service_util::ServiceResult;
 use service_util::MessageReader;
 
@@ -182,8 +181,7 @@ impl ResponseCompletable {
 	
 	pub fn sync_handle_request<PARAMS, RET, RET_ERROR, METHOD>(
 		self, params: RequestParams, method_fn: METHOD
-	) 
-	where 
+	) where 
 		PARAMS : serde::Deserialize, 
 		RET : serde::Serialize, 
 		RET_ERROR : serde::Serialize ,
@@ -208,6 +206,8 @@ impl ResponseCompletable {
 	
 }
 
+
+
 pub fn invoke_method_with_fn<PARAMS, RET, RET_ERROR, METHOD>(
 	params: RequestParams,
 	method_fn: METHOD
@@ -222,42 +222,17 @@ pub fn invoke_method_with_fn<PARAMS, RET, RET_ERROR, METHOD>(
 	
 	let params_result : Result<PARAMS, _> = serde_json::from_value(params_value);
 	
-	let result = 
 	match params_result {
 		Ok(params) => { 
-			method_fn(params) 
-		} 
-		Err(error) => { 
-			return Some(ResponseResult::Error(error_JSON_RPC_InvalidParams(error)));
+        	let result = method_fn(params);
+        	result.map(ResponseResult::from_service_result)
 		}
-	};
-	
-	let result = 
-	if let Some(result) = result {
-		result
-	} else {
-		return None;
-	};
-	
-	match result {
-		Ok(ret) => {
-			let ret = serde_json::to_value(&ret);
-			return Some(ResponseResult::Result(ret)); 
-		} 
-		Err(error) => {
-			let error : ServiceError<RET_ERROR> = error; // FIXME cleanup syntax
-			let json_rpc_error = RpcError { 
-				code : error.code as i64, // FIXME review truncation
-				message : error.message,
-				data : Some(serde_json::to_value(&error.data)),
-			};
-			
-			return Some(ResponseResult::Error(json_rpc_error));
+		Err(error) => { 
+			Some(ResponseResult::Error(error_JSON_RPC_InvalidParams(error)))
 		}
 	}
 }
-	
-	
+
 pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: JsonRpcMessage) {
 	
 	let write_task : OutputAgentTask = Box::new(move |mut response_handler| {
@@ -301,7 +276,7 @@ impl Endpoint {
 		RET: serde::Deserialize,
 		RET_ERROR : serde::Deserialize,
 	>(&mut self, id: Option<RpcId>, method_name: &str, params: PARAMS) 
-    	-> GResult<Future<ServiceResult<RET, RET_ERROR>>> 
+		-> GResult<Future<ServiceResult<RET, RET_ERROR>>> 
 	{
 		let params_value = serde_json::to_value(&params);
 		let params = try!(jsonrpc_objects::parse_jsonrpc_params(params_value));
@@ -469,7 +444,7 @@ mod tests_ {
 	pub fn async_method(request_params: RequestParams, completable: ResponseCompletable) {
 		thread::spawn(move || {
 			completable.sync_handle_request(request_params, sample_fn);
-        });
+		});
 	}
 		
 	fn invoke_method<FN>(

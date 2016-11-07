@@ -10,12 +10,13 @@ extern crate serde_json;
 extern crate serde;
 
 
-use json_util::*;
-
 use std::fmt;
+use serde_json::Value;
+
 use util::core::GResult;
 use util::core::ErrorMessage;
-use serde_json::Value;
+use service_util::ServiceResult;
+use json_util::*;
 
 
 /* ----------------- JSON-RPC 2.0 object types ----------------- */
@@ -124,8 +125,34 @@ pub fn error_JSON_RPC_InternalError() -> RpcError {
 }
 
 
-/* -----------------  ----------------- */
+impl ResponseResult {
+	
+	pub fn from_service_result<RET, RET_ERROR>(svc_result : ServiceResult<RET, RET_ERROR>) -> ResponseResult 
+	where 
+		RET : serde::Serialize, 
+		RET_ERROR : serde::Serialize ,
+	{
+		match svc_result {
+			Ok(ret) => {
+				let ret = serde_json::to_value(&ret);
+				ResponseResult::Result(ret) 
+			} 
+			Err(error) => {
+				let code : u32 = error.code;
+				let json_rpc_error = RpcError { 
+					code : code as i64, // Safe convertion. TODO: use TryFrom when it's stable
+					message : error.message,
+					data : Some(serde_json::to_value(&error.data)),
+				};
+				
+				ResponseResult::Error(json_rpc_error)
+			}
+		}
+	}
+	
+}
 
+/* -----------------  ----------------- */
 
 impl serde::Serialize for RpcId {
 	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
@@ -469,5 +496,5 @@ pub mod tests {
 		));
 		
 	}
-    
+	
 }

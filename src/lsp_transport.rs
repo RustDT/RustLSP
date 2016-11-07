@@ -14,7 +14,7 @@ use util::core::*;
 /* ----------------- Parse content-length ----------------- */
 
 const CONTENT_LENGTH: &'static str = "Content-Length:";
-	
+
 pub fn parse_transport_message<R : io::BufRead + ?Sized>(reader: &mut R) -> GResult<String>
 {
 	
