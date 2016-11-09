@@ -45,7 +45,9 @@ fn main() {
 		}
 		
 		let port : u16 = port_str.parse::<u16>().expect(&format!("Invalid port number: {}", port_str));
-		tcp_server(("127.0.0.1", port));
+		
+		let listener = TcpListener::bind(("127.0.0.1", port)).unwrap(); //FIXME - unwrap
+		tcp_server(listener);
 	}
 	
 }
@@ -56,9 +58,7 @@ use std::net::ToSocketAddrs;
 use std::thread;
 
 
-fn tcp_server<A: ToSocketAddrs>(addr: A) {
-	
-	let listener = TcpListener::bind(addr).unwrap(); //FIXME - unwrap
+fn tcp_server(listener: TcpListener) {
 	
 	for stream in listener.incoming() {
 		match stream {

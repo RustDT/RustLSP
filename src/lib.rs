@@ -13,3 +13,6 @@ pub extern crate languageserver_types as ls_types;
 
 pub mod lsp_transport;
 pub mod lsp_server;
+
+#[cfg(test)]
+mod tests;
