@@ -99,11 +99,12 @@ impl LSPEndpoint {
 }
 
 pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
+pub type LSCompletable<RET> = MethodCompletable<RET, ()>;
 
 pub trait LanguageServer {
 	
-	fn initialize(&self, params: InitializeParams) -> LSResult<InitializeResult, InitializeError>;
-	fn shutdown(&self, params: ()) -> LSResult<(), ()>;
+	fn initialize(&self, params: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>);
+	fn shutdown(&self, params: (), completable: LSCompletable<()>);
 	fn exit(&self, params: ());
 	fn workspace_change_configuration(&self, params: DidChangeConfigurationParams);
 	fn did_open_text_document(&self, params: DidOpenTextDocumentParams);
@@ -112,22 +113,22 @@ pub trait LanguageServer {
 	fn did_save_text_document(&self, params: DidSaveTextDocumentParams);
 	fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams);
 	
-	fn completion(&self, params: TextDocumentPositionParams) -> LSResult<CompletionList, ()>;
-	fn resolve_completion_item(&self, params: CompletionItem) -> LSResult<CompletionItem, ()>;
-	fn hover(&self, params: TextDocumentPositionParams) -> LSResult<Hover, ()>;
-	fn signature_help(&self, params: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()>;
-	fn goto_definition(&self, params: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()>;
-	fn references(&self, params: ReferenceParams) -> LSResult<Vec<Location>, ()>;
-	fn document_highlight(&self, params: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()>;
-	fn document_symbols(&self, params: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
-	fn workspace_symbols(&self, params: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()>;
-	fn code_action(&self, params: CodeActionParams) -> LSResult<Vec<Command>, ()>;
-	fn code_lens(&self, params: CodeLensParams) -> LSResult<Vec<CodeLens>, ()>;
-	fn code_lens_resolve(&self, params: CodeLens) -> LSResult<CodeLens, ()>;
-	fn formatting(&self, params: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn range_formatting(&self, params: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn on_type_formatting(&self, params: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()>;
-	fn rename(&self, params: RenameParams) -> LSResult<WorkspaceEdit, ()>;
+	fn completion(&self, params: TextDocumentPositionParams, completable: LSCompletable<CompletionList>);
+	fn resolve_completion_item(&self, params: CompletionItem, completable: LSCompletable<CompletionItem>);
+	fn hover(&self, params: TextDocumentPositionParams, completable: LSCompletable<Hover>);
+	fn signature_help(&self, params: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>);
+	fn goto_definition(&self, params: TextDocumentPositionParams, completable: LSCompletable<Vec<Location>>);
+	fn references(&self, params: ReferenceParams, completable: LSCompletable<Vec<Location>>);
+	fn document_highlight(&self, params: TextDocumentPositionParams, completable: LSCompletable<DocumentHighlight>);
+	fn document_symbols(&self, params: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
+	fn workspace_symbols(&self, params: WorkspaceSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
+	fn code_action(&self, params: CodeActionParams, completable: LSCompletable<Vec<Command>>);
+	fn code_lens(&self, params: CodeLensParams, completable: LSCompletable<Vec<CodeLens>>);
+	fn code_lens_resolve(&self, params: CodeLens, completable: LSCompletable<CodeLens>);
+	fn formatting(&self, params: DocumentFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
+	fn range_formatting(&self, params: DocumentRangeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
+	fn on_type_formatting(&self, params: DocumentOnTypeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
+	fn rename(&self, params: RenameParams, completable: LSCompletable<WorkspaceEdit>);
 	
 }
 
@@ -152,79 +153,127 @@ impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
 	{
 		match method_name {
 			REQUEST__Initialize => {
-				completable.sync_handle_request(params, |params| self.0.initialize(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.initialize(params, completable)
+				) 
 			}
 			REQUEST__Shutdown => {
-				completable.sync_handle_request(params, |params| self.0.shutdown(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.shutdown(params, completable)
+				) 
 			}
 			NOTIFICATION__Exit => { 
-			    completable.sync_handle_notification(params, |params| self.0.exit(params)) 
+			    completable.handle_notification_with(params, 
+			        |params| self.0.exit(params)) 
 			}
 			NOTIFICATION__WorkspaceChangeConfiguration => {
-				completable.sync_handle_notification(params, |params| self.0.workspace_change_configuration(params)) 
+				completable.handle_notification_with(params, 
+				    |params| self.0.workspace_change_configuration(params)
+				) 
 			}
 			NOTIFICATION__DidOpenTextDocument => {
-				completable.sync_handle_notification(params, |params| self.0.did_open_text_document(params)) 
+				completable.handle_notification_with(params, 
+				    |params| self.0.did_open_text_document(params)
+				) 
 			}
 			NOTIFICATION__DidChangeTextDocument => {
-				completable.sync_handle_notification(params, |params| self.0.did_change_text_document(params)) 
+				completable.handle_notification_with(params, 
+				    |params| self.0.did_change_text_document(params)
+				) 
 			}
 			NOTIFICATION__DidCloseTextDocument => {
-				completable.sync_handle_notification(params, |params| self.0.did_close_text_document(params)) 
+				completable.handle_notification_with(params, 
+				    |params| self.0.did_close_text_document(params)
+				) 
 			}
 			NOTIFICATION__DidSaveTextDocument => {
-				completable.sync_handle_notification(params, |params| self.0.did_save_text_document(params)) 
+				completable.handle_notification_with(params, 
+				    |params| self.0.did_save_text_document(params)
+				) 
 			}
 			NOTIFICATION__DidChangeWatchedFiles => {
-				completable.sync_handle_notification(params, |params| self.0.did_change_watched_files(params)) 
+				completable.handle_notification_with(params, 
+				    |params| self.0.did_change_watched_files(params)) 
 			}
 			REQUEST__Completion => {
-				completable.sync_handle_request(params, |params| self.0.completion(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.completion(params, completable)
+				) 
 			}
 			REQUEST__ResolveCompletionItem => {
-				completable.sync_handle_request(params, |params| self.0.resolve_completion_item(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.resolve_completion_item(params, completable)
+				) 
 			}
 			REQUEST__Hover => {
-				completable.sync_handle_request(params, |params| self.0.hover(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.hover(params, completable)
+				) 
 			}
 			REQUEST__SignatureHelp => {
-				completable.sync_handle_request(params, |params| self.0.signature_help(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.signature_help(params, completable)
+				) 
 			}
 			REQUEST__GotoDefinition => {
-				completable.sync_handle_request(params, |params| self.0.goto_definition(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.goto_definition(params, completable)
+				) 
 			}
 			REQUEST__References => {
-				completable.sync_handle_request(params, |params| self.0.references(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.references(params, completable)
+				) 
 			}
 			REQUEST__DocumentHighlight => {
-				completable.sync_handle_request(params, |params| self.0.document_highlight(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.document_highlight(params, completable)
+				) 
 			}
 			REQUEST__DocumentSymbols => {
-				completable.sync_handle_request(params, |params| self.0.document_symbols(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.document_symbols(params, completable)
+				) 
 			}
 			REQUEST__WorkspaceSymbols => {
-				completable.sync_handle_request(params, |params| self.0.workspace_symbols(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.workspace_symbols(params, completable)
+				) 
 			}
 			REQUEST__CodeAction => {
-				completable.sync_handle_request(params, |params| self.0.code_action(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.code_action(params, completable)
+				) 
 			}
 			REQUEST__CodeLens => {
-				completable.sync_handle_request(params, |params| self.0.code_lens(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.code_lens(params, completable)
+				) 
 			}
 			REQUEST__CodeLensResolve => {
-				completable.sync_handle_request(params, |params| self.0.code_lens_resolve(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.code_lens_resolve(params, completable)
+				) 
 			}
 			REQUEST__Formatting => {
-				completable.sync_handle_request(params, |params| self.0.formatting(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.formatting(params, completable)
+				) 
 			}
 			REQUEST__RangeFormatting => {
-				completable.sync_handle_request(params, |params| self.0.range_formatting(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.range_formatting(params, completable)
+				) 
 			}
 			REQUEST__OnTypeFormatting => {
-				completable.sync_handle_request(params, |params| self.0.on_type_formatting(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.on_type_formatting(params, completable)
+				) 
 			}
 			REQUEST__Rename => {
-				completable.sync_handle_request(params, |params| self.0.rename(params)) 
+				completable.handle_request_with(params, 
+				    |params, completable| self.0.rename(params, completable)
+				) 
 			}
 			_ => {
 				completable.complete_with_error(jsonrpc_objects::error_JSON_RPC_MethodNotFound());
@@ -278,6 +327,7 @@ mod tests {
 	use jsonrpc::service_util::ServiceError;
 	use ls_types::*;
 	use std::io::BufReader;
+	use jsonrpc::*;
 	
 	
 	pub struct TestsLanguageServer;
@@ -293,12 +343,12 @@ mod tests {
 
 	impl LanguageServer for TestsLanguageServer {
 		
-		fn initialize(&self, _: InitializeParams) -> LSResult<InitializeResult, InitializeError> {
+		fn initialize(&self, _: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>) {
 			let capabilities = ServerCapabilities::default();
-			Ok(InitializeResult { capabilities : capabilities })
+			completable.complete(Ok(InitializeResult { capabilities : capabilities }))
 		}
-		fn shutdown(&self, _: ()) -> LSResult<(), ()> {
-			Ok(())
+		fn shutdown(&self, _: (), completable: LSCompletable<()>) {
+			completable.complete(Ok(()))
 		}
 		fn exit(&self, _: ()) {
 		}
@@ -310,53 +360,53 @@ mod tests {
 		fn did_save_text_document(&self, _: DidSaveTextDocumentParams) {}
 		fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {}
 		
-		fn completion(&self, _: TextDocumentPositionParams) -> LSResult<CompletionList, ()> {
-			Err(Self::error_not_available(()))
+		fn completion(&self, _: TextDocumentPositionParams, completable: LSCompletable<CompletionList>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn resolve_completion_item(&self, _: CompletionItem) -> LSResult<CompletionItem, ()> {
-			Err(Self::error_not_available(()))
+		fn resolve_completion_item(&self, _: CompletionItem, completable: LSCompletable<CompletionItem>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn hover(&self, _: TextDocumentPositionParams) -> LSResult<Hover, ()> {
-			Err(Self::error_not_available(()))
+		fn hover(&self, _: TextDocumentPositionParams, completable: LSCompletable<Hover>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn signature_help(&self, _: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()> {
-			Err(Self::error_not_available(()))
+		fn signature_help(&self, _: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn goto_definition(&self, _: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()> {
-			Err(Self::error_not_available(()))
+		fn goto_definition(&self, _: TextDocumentPositionParams, completable: LSCompletable<Vec<Location>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn references(&self, _: ReferenceParams) -> LSResult<Vec<Location>, ()> {
-			Err(Self::error_not_available(()))
+		fn references(&self, _: ReferenceParams, completable: LSCompletable<Vec<Location>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn document_highlight(&self, _: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()> {
-			Err(Self::error_not_available(()))
+		fn document_highlight(&self, _: TextDocumentPositionParams, completable: LSCompletable<DocumentHighlight>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn document_symbols(&self, _: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
-			Err(Self::error_not_available(()))
+		fn document_symbols(&self, _: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn workspace_symbols(&self, _: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
-			Err(Self::error_not_available(()))
+		fn workspace_symbols(&self, _: WorkspaceSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn code_action(&self, _: CodeActionParams) -> LSResult<Vec<Command>, ()> {
-			Err(Self::error_not_available(()))
+		fn code_action(&self, _: CodeActionParams, completable: LSCompletable<Vec<Command>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn code_lens(&self, _: CodeLensParams) -> LSResult<Vec<CodeLens>, ()> {
-			Err(Self::error_not_available(()))
+		fn code_lens(&self, _: CodeLensParams, completable: LSCompletable<Vec<CodeLens>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn code_lens_resolve(&self, _: CodeLens) -> LSResult<CodeLens, ()> {
-			Err(Self::error_not_available(()))
+		fn code_lens_resolve(&self, _: CodeLens, completable: LSCompletable<CodeLens>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn formatting(&self, _: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-			Err(Self::error_not_available(()))
+		fn formatting(&self, _: DocumentFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn range_formatting(&self, _: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-			Err(Self::error_not_available(()))
+		fn range_formatting(&self, _: DocumentRangeFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn on_type_formatting(&self, _: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-			Err(Self::error_not_available(()))
+		fn on_type_formatting(&self, _: DocumentOnTypeFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
-		fn rename(&self, _: RenameParams) -> LSResult<WorkspaceEdit, ()> {
-			Err(Self::error_not_available(()))
+		fn rename(&self, _: RenameParams, completable: LSCompletable<WorkspaceEdit>) {
+			completable.complete(Err(Self::error_not_available(())))
 		}
 	}
 	

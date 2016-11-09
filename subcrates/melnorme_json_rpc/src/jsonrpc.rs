@@ -179,57 +179,109 @@ impl ResponseCompletable {
 		self.complete(Some(ResponseResult::Error(error)));
 	}
 	
+	pub fn handle_request_with<PARAMS, RET, RET_ERROR, METHOD>(
+		self, params: RequestParams, method_handler: METHOD
+	) where 
+		PARAMS : serde::Deserialize, 
+		RET : serde::Serialize, 
+		RET_ERROR : serde::Serialize,
+		METHOD : FnOnce(PARAMS, MethodCompletable<RET, RET_ERROR>),
+	{
+		let mc = MethodCompletable::<RET, RET_ERROR>::new(self);
+		mc.parse_params_and_complete_with(params, method_handler);
+	}
+	
 	pub fn sync_handle_request<PARAMS, RET, RET_ERROR, METHOD>(
-		self, params: RequestParams, method_fn: METHOD
+		self, params: RequestParams, sync_method_handler: METHOD
 	) where 
 		PARAMS : serde::Deserialize, 
 		RET : serde::Serialize, 
 		RET_ERROR : serde::Serialize ,
 		METHOD : FnOnce(PARAMS) -> ServiceResult<RET, RET_ERROR>,
 	{
-		let method_fn = move |params| Some(method_fn(params));
-		let result = invoke_method_with_fn(params, method_fn);
-		self.complete(result);
+		self.handle_request_with(params, |params, completable| {
+			let result = sync_method_handler(params);
+			completable.complete(result);
+		})
 	}
 	
-	pub fn sync_handle_notification<PARAMS, METHOD>(
-		self, params: RequestParams, method_fn: METHOD
-	) 
-	where 
+	pub fn handle_notification_with<PARAMS, METHOD>(
+		self, params: RequestParams, method_handler: METHOD
+	) where 
 		PARAMS : serde::Deserialize, 
 		METHOD : FnOnce(PARAMS),
 	{
-		let method_fn = move |params| { method_fn(params); None };
-		let result = invoke_method_with_fn::<_, (), (), _>(params, method_fn);
-		self.complete(result);
+		let mc = MethodCompletable::<(), ()>::new(self);
+		mc.parse_params_and_complete_with(params, |params, completable| {
+            // early completion for notification
+            completable.completable.complete(None);
+            method_handler(params)
+	    });
+	}
+	
+	pub fn sync_handle_notification<PARAMS, METHOD>(
+		self, params: RequestParams, sync_method_handler: METHOD
+	) where 
+		PARAMS : serde::Deserialize, 
+		METHOD : FnOnce(PARAMS),
+	{
+		self.handle_notification_with(params, |params| {
+			sync_method_handler(params);
+		})
 	}
 	
 }
 
+use std::marker::PhantomData;
 
-
-pub fn invoke_method_with_fn<PARAMS, RET, RET_ERROR, METHOD>(
-	params: RequestParams,
-	method_fn: METHOD
-) -> Option<ResponseResult>
-	where 
-	PARAMS : serde::Deserialize, 
+pub struct MethodCompletable
+<
 	RET : serde::Serialize, 
 	RET_ERROR : serde::Serialize,
-	METHOD : FnOnce(PARAMS) -> Option<ServiceResult<RET, RET_ERROR>>
+>
 {
-	let params_value = params.into_value();
+	completable: ResponseCompletable,
+	p1: PhantomData<RET>,
+	p2: PhantomData<RET_ERROR>,
+}
+
+impl<
+	RET : serde::Serialize, 
+	RET_ERROR : serde::Serialize,
+> 
+MethodCompletable<RET, RET_ERROR>
+{
+	pub fn new(completable: ResponseCompletable) -> MethodCompletable<RET, RET_ERROR> {
+		MethodCompletable { completable : completable, p1 : PhantomData, p2 : PhantomData}
+	}
 	
-	let params_result : Result<PARAMS, _> = serde_json::from_value(params_value);
+	pub fn parse_params_and_complete_with<PARAMS, METHOD>(
+		self,
+		params: RequestParams,
+		method_fn: METHOD
+	)
+	where 
+		PARAMS : serde::Deserialize, 
+		RET : serde::Serialize, 
+		RET_ERROR : serde::Serialize,
+		METHOD : FnOnce(PARAMS, Self),
+	{
+		let params_value = params.into_value();
+		
+		let params_result : Result<PARAMS, _> = serde_json::from_value(params_value);
+		
+		match params_result {
+			Ok(params) => { 
+				method_fn(params, self);
+			}
+			Err(error) => {
+				self.completable.complete_with_error(error_JSON_RPC_InvalidParams(error));
+			}
+		}
+	}
 	
-	match params_result {
-		Ok(params) => { 
-        	let result = method_fn(params);
-        	result.map(ResponseResult::from_service_result)
-		}
-		Err(error) => { 
-			Some(ResponseResult::Error(error_JSON_RPC_InvalidParams(error)))
-		}
+	pub fn complete(self, result: ServiceResult<RET, RET_ERROR>) {
+	    self.completable.complete(Some(ResponseResult::from_service_result(result)));
 	}
 }
 

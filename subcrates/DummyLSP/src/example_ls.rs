@@ -16,6 +16,7 @@ use rust_lsp::ls_types::*;
 use rust_lsp::lsp_server::*;
 use rust_lsp::jsonrpc::service_util::ServiceError;
 use rust_lsp::jsonrpc::EndpointHandle;
+use rust_lsp::jsonrpc::MethodCompletable;
 
 use std::io;
 
@@ -28,11 +29,11 @@ where
 	OUT: io::Write + 'static, 
 	OUT_P : FnOnce() -> OUT + Send + 'static
 {
-	let endpoint = LSPServer::new_lsp_endpoint(out_stream_provider);
+	let endpoint = LSPEndpoint::new_with_output_stream(out_stream_provider);
 	
 	let ls = DummyLanguageServer{ server_endpoint : endpoint.clone() };
 	
-	LSPServer::run_server_from_input(ls, input, endpoint);
+	LSPEndpoint::run_server_from_input(ls, input, endpoint);
 }
 
 /**
@@ -50,69 +51,69 @@ impl DummyLanguageServer {
 
 impl LanguageServer for DummyLanguageServer {
 	
-	fn initialize(&self, _: InitializeParams) -> LSResult<InitializeResult, InitializeError> {
+	fn initialize(&self, _: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>) {
 		let capabilities = ServerCapabilities::default();
-		Ok(InitializeResult { capabilities : capabilities })
+		completable.complete(Ok(InitializeResult { capabilities : capabilities }))
 	}
-	fn shutdown(&self, _: ()) -> LSResult<(), ()> {
-		Ok(())
+	fn shutdown(&self, _: (), completable: LSCompletable<()>) {
+		completable.complete(Ok(()))
 	}
 	fn exit(&self, _: ()) {
 	}
 	
-	fn workspaceChangeConfiguration(&self, _: DidChangeConfigurationParams) {}
-	fn didOpenTextDocument(&self, _: DidOpenTextDocumentParams) {}
-	fn didChangeTextDocument(&self, _: DidChangeTextDocumentParams) {}
-	fn didCloseTextDocument(&self, _: DidCloseTextDocumentParams) {}
-	fn didSaveTextDocument(&self, _: DidSaveTextDocumentParams) {}
-	fn didChangeWatchedFiles(&self, _: DidChangeWatchedFilesParams) {}
+	fn workspace_change_configuration(&self, _: DidChangeConfigurationParams) {}
+	fn did_open_text_document(&self, _: DidOpenTextDocumentParams) {}
+	fn did_change_text_document(&self, _: DidChangeTextDocumentParams) {}
+	fn did_close_text_document(&self, _: DidCloseTextDocumentParams) {}
+	fn did_save_text_document(&self, _: DidSaveTextDocumentParams) {}
+	fn did_change_watched_files(&self, _: DidChangeWatchedFilesParams) {}
 	
-	fn completion(&self, _: TextDocumentPositionParams) -> LSResult<CompletionList, ()> {
-		Err(Self::error_not_available(()))
+	fn completion(&self, _: TextDocumentPositionParams, completable: LSCompletable<CompletionList>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn resolveCompletionItem(&self, _: CompletionItem) -> LSResult<CompletionItem, ()> {
-		Err(Self::error_not_available(()))
+	fn resolve_completion_item(&self, _: CompletionItem, completable: LSCompletable<CompletionItem>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn hover(&self, _: TextDocumentPositionParams) -> LSResult<Hover, ()> {
-		Err(Self::error_not_available(()))
+	fn hover(&self, _: TextDocumentPositionParams, completable: LSCompletable<Hover>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn signatureHelp(&self, _: TextDocumentPositionParams) -> LSResult<SignatureHelp, ()> {
-		Err(Self::error_not_available(()))
+	fn signature_help(&self, _: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn gotoDefinition(&self, _: TextDocumentPositionParams) -> LSResult<Vec<Location>, ()> {
-		Err(Self::error_not_available(()))
+	fn goto_definition(&self, _: TextDocumentPositionParams, completable: LSCompletable<Vec<Location>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn references(&self, _: ReferenceParams) -> LSResult<Vec<Location>, ()> {
-		Err(Self::error_not_available(()))
+	fn references(&self, _: ReferenceParams, completable: LSCompletable<Vec<Location>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn documentHighlight(&self, _: TextDocumentPositionParams) -> LSResult<DocumentHighlight, ()> {
-		Err(Self::error_not_available(()))
+	fn document_highlight(&self, _: TextDocumentPositionParams, completable: LSCompletable<DocumentHighlight>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn documentSymbols(&self, _: DocumentSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
-		Err(Self::error_not_available(()))
+	fn document_symbols(&self, _: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn workspaceSymbols(&self, _: WorkspaceSymbolParams) -> LSResult<Vec<SymbolInformation>, ()> {
-		Err(Self::error_not_available(()))
+	fn workspace_symbols(&self, _: WorkspaceSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn codeAction(&self, _: CodeActionParams) -> LSResult<Vec<Command>, ()> {
-		Err(Self::error_not_available(()))
+	fn code_action(&self, _: CodeActionParams, completable: LSCompletable<Vec<Command>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn codeLens(&self, _: CodeLensParams) -> LSResult<Vec<CodeLens>, ()> {
-		Err(Self::error_not_available(()))
+	fn code_lens(&self, _: CodeLensParams, completable: LSCompletable<Vec<CodeLens>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn codeLensResolve(&self, _: CodeLens) -> LSResult<CodeLens, ()> {
-		Err(Self::error_not_available(()))
+	fn code_lens_resolve(&self, _: CodeLens, completable: LSCompletable<CodeLens>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn formatting(&self, _: DocumentFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-		Err(Self::error_not_available(()))
+	fn formatting(&self, _: DocumentFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn rangeFormatting(&self, _: DocumentRangeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-		Err(Self::error_not_available(()))
+	fn range_formatting(&self, _: DocumentRangeFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn onTypeFormatting(&self, _: DocumentOnTypeFormattingParams) -> LSResult<Vec<TextEdit>, ()> {
-		Err(Self::error_not_available(()))
+	fn on_type_formatting(&self, _: DocumentOnTypeFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn rename(&self, _: RenameParams) -> LSResult<WorkspaceEdit, ()> {
-		Err(Self::error_not_available(()))
+	fn rename(&self, _: RenameParams, completable: LSCompletable<WorkspaceEdit>) {
+		completable.complete(Err(Self::error_not_available(())))
 	}
 }
