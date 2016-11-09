@@ -86,7 +86,7 @@ impl LanguageServer for DummyLanguageServer {
 	fn references(&self, _: ReferenceParams, completable: LSCompletable<Vec<Location>>) {
 		completable.complete(Err(Self::error_not_available(())))
 	}
-	fn document_highlight(&self, _: TextDocumentPositionParams, completable: LSCompletable<DocumentHighlight>) {
+	fn document_highlight(&self, _: TextDocumentPositionParams, completable: LSCompletable<Vec<DocumentHighlight>>) {
 		completable.complete(Err(Self::error_not_available(())))
 	}
 	fn document_symbols(&self, _: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>) {

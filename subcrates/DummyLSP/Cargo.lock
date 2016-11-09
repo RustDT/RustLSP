@@ -4,7 +4,7 @@ version = "0.1.0"
 dependencies = [
  "env_logger 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust_lsp 0.2.0",
+ "rust_lsp 0.3.0",
 ]
 
 [[package]]
@@ -175,7 +175,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "rust_lsp"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "languageserver-types 0.5.0 (git+https://github.com/gluon-lang/languageserver-types)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",

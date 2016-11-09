@@ -119,7 +119,7 @@ pub trait LanguageServer {
 	fn signature_help(&self, params: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>);
 	fn goto_definition(&self, params: TextDocumentPositionParams, completable: LSCompletable<Vec<Location>>);
 	fn references(&self, params: ReferenceParams, completable: LSCompletable<Vec<Location>>);
-	fn document_highlight(&self, params: TextDocumentPositionParams, completable: LSCompletable<DocumentHighlight>);
+	fn document_highlight(&self, params: TextDocumentPositionParams, completable: LSCompletable<Vec<DocumentHighlight>>);
 	fn document_symbols(&self, params: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
 	fn workspace_symbols(&self, params: WorkspaceSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
 	fn code_action(&self, params: CodeActionParams, completable: LSCompletable<Vec<Command>>);
