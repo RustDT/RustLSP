@@ -14,7 +14,6 @@ use std::fmt;
 use serde_json::Value;
 
 use util::core::GResult;
-use util::core::ErrorMessage;
 use service_util::ServiceResult;
 use json_util::*;
 
@@ -311,7 +310,7 @@ pub fn parse_jsonrpc_params(params: Value) -> GResult<RequestParams> {
 		Value::Object(object) => Ok(RequestParams::Object(object)),
 		Value::Array(array) => Ok(RequestParams::Array(array)),
 		Value::Null => Ok(RequestParams::None),
-		_ => Err(ErrorMessage::create("Property `params` not an Object, Array, or null.".into())),
+		_ => Err("Property `params` not an Object, Array, or null.".into()),
 	}
 }
 

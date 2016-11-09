@@ -15,4 +15,4 @@ pub mod lsp_transport;
 pub mod lsp_server;
 
 #[cfg(test)]
-mod tests;
+mod server_tests;

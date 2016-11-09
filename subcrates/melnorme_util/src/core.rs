@@ -6,109 +6,19 @@
 // except according to those terms.
 
 
-use std::convert;
-use std::io;
-
-use std::fmt;
 use std::result;
+use std::error::Error;
 
 pub fn new<T>(x: T) -> Box<T> {
 	Box::new(x)
 }
 
+/* -----------------  Error handling  ----------------- */
 
-pub type GError = Box<GErrorT>;
+pub type GError = Box<Error>;
 pub type GResult<T> = result::Result<T, GError>;
 pub type Void = GResult<()>;
 
-
-pub trait GErrorT : fmt::Display {
-	
-	fn to_string(&self) -> String {
-	    format!("{}", self)
-	}
-	
-}
-
-
-impl fmt::Debug for GErrorT {
-	
-	fn fmt(&self, fmt : &mut fmt::Formatter) -> fmt::Result {
-		<Self as fmt::Display>::fmt(self, fmt)
-	}
-	
-}
-
-
-pub struct ErrorMessage(String);
-
-impl ErrorMessage {
-	
-	pub fn create(string : String) -> Box<ErrorMessage> {
-		Box::new(ErrorMessage(string))
-	}
-	
-}
-
-impl fmt::Display for ErrorMessage {
-	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-		self.0.fmt(fmt)
-	}
-}
-impl GErrorT for ErrorMessage {
-}
-
-
-struct FmtDisplayError<T : fmt::Display>(T);
-
-impl<T : fmt::Display> fmt::Display for FmtDisplayError<T> {
-	fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-		self.0.fmt(fmt)
-	}
-}
-impl<T : fmt::Display> GErrorT for FmtDisplayError<T> {
-}
-
-/* ----------------- convert to GError ----------------- */
-
-
-impl convert::From<io::Error> for GError {
-	fn from(obj: io::Error) -> Self {
-		Box::new(FmtDisplayError(obj))
-	}
-}
-
-impl convert::From<fmt::Error> for GError {
-	fn from(obj: fmt::Error) -> Self {
-		Box::new(FmtDisplayError(obj))
-	}
-}
-
-impl convert::From<String> for GError {
-	fn from(obj: String) -> Self {
-		Box::new(ErrorMessage(obj))
-	}
-}
-
-use std::num;
-
-impl convert::From<num::ParseIntError> for GError {
-	fn from(obj: num::ParseIntError) -> Self {
-		Box::new(FmtDisplayError(obj))
-	}
-}
-
-
-#[test]
-fn test_convert() {
-	
-	fn test() -> Void {
-		try!(Err(String::from("ERROR")));
-		Ok(())
-	}
-	
-	test().unwrap_err();
-}
 
 /* -----------------  lifecycle / dispose  ----------------- */
 

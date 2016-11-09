@@ -34,11 +34,11 @@ pub fn parse_transport_message<R : io::BufRead + ?Sized>(reader: &mut R) -> GRes
 		} else if line.eq("\r\n") {
 			break;
 		} else if line.is_empty() {
-		    return Err(ErrorMessage::create("End of stream reached.".into()));
+		    return Err("End of stream reached.".into());
 		}
 	}
 	if content_length == 0 {
-		return Err(ErrorMessage::create(String::from(CONTENT_LENGTH) + " not defined or invalid."));
+		return Err((String::from(CONTENT_LENGTH) + " not defined or invalid.").into());
 	}
 	
 	let mut message_reader = reader.take(content_length as u64);
