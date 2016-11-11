@@ -110,7 +110,7 @@ fn handle_client(stream: TcpStream) {
 	let ls = TestsLanguageServer{ };
 	
 	let out_stream = stream.try_clone().expect("Failed to clone stream");
-	let endpoint = LSPEndpoint::new_with_output_stream(|| { out_stream });
+	let endpoint = LSPEndpoint::create_lsp_output_with_output_stream(|| { out_stream });
 	
 	let mut input = io::BufReader::new(stream);
 	LSPEndpoint::run_server_from_input(ls, &mut input, endpoint);
@@ -130,7 +130,7 @@ pub fn test_run_lsp_server() {
 	
 	let stream = TcpStream::connect(local_addr).unwrap();
 	let out_stream = stream.try_clone().expect("Failed to clone stream");
-	let endpoint = LSPEndpoint::new_with_output_stream(|| { out_stream });
+	let endpoint = LSPEndpoint::create_lsp_output_with_output_stream(|| { out_stream });
 	
 	// TODO LSP client
 	

@@ -15,13 +15,13 @@ extern crate rust_lsp;
 use rust_lsp::ls_types::*;
 use rust_lsp::lsp_server::*;
 use rust_lsp::jsonrpc::service_util::ServiceError;
-use rust_lsp::jsonrpc::EndpointHandle;
+use rust_lsp::jsonrpc::EndpointOutput;
 use rust_lsp::jsonrpc::MethodCompletable;
 
 use std::io;
 
 pub struct DummyLanguageServer {
-	server_endpoint : EndpointHandle,
+	server_endpoint : EndpointOutput,
 }
 
 pub fn run_lsp_server<OUT, OUT_P>(input: &mut io::BufRead, out_stream_provider: OUT_P)
@@ -29,11 +29,11 @@ where
 	OUT: io::Write + 'static, 
 	OUT_P : FnOnce() -> OUT + Send + 'static
 {
-	let endpoint = LSPEndpoint::new_with_output_stream(out_stream_provider);
+	let endpoint_out = LSPEndpoint::create_lsp_output_with_output_stream(out_stream_provider);
 	
-	let ls = DummyLanguageServer{ server_endpoint : endpoint.clone() };
+	let ls = DummyLanguageServer{ server_endpoint : endpoint_out.clone() };
 	
-	LSPEndpoint::run_server_from_input(ls, input, endpoint);
+	LSPEndpoint::run_server_from_input(ls, input, endpoint_out);
 }
 
 /**

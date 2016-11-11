@@ -10,7 +10,6 @@ use std::io;
 
 use util::core::*;
 
-use jsonrpc;
 use jsonrpc::*;
 use jsonrpc::service_util::MessageReader;
 use jsonrpc::service_util::MessageWriter;
@@ -26,9 +25,9 @@ use serde_json::Value;
 
 /* -----------------  ----------------- */
 
-pub struct LSPMessageReader<'a>(pub &'a mut io::BufRead);
+pub struct LSPMessageReader<T : io::BufRead>(pub T);
 
-impl<'a> MessageReader for LSPMessageReader<'a> {
+impl<T : io::BufRead> MessageReader for LSPMessageReader<T> {
 	fn read_next(&mut self) -> GResult<String> {
 		lsp_transport::parse_transport_message(&mut self.0)
 	}
@@ -50,46 +49,63 @@ pub struct LSPEndpoint {
 
 impl LSPEndpoint {
 	
-	pub fn new_with_output_stream<OUT, OUT_P>(output_stream_provider: OUT_P) 
-		-> EndpointHandle
+	/// Create an EndpointOutput output for use in the Language Server Protocol,
+	/// with given output stream provider.
+	pub fn create_lsp_output_with_output_stream<OUT, OUT_PROV>(output_stream_provider: OUT_PROV) 
+		-> EndpointOutput
 	where 
-		OUT: io::Write + 'static, 
-		OUT_P : FnOnce() -> OUT + Send + 'static
+		OUT : io::Write + 'static, 
+		OUT_PROV : FnOnce() -> OUT + Send + 'static
 	{
-		Self::new(|| {
+		Self::create_lsp_output(|| {
 			LSPMessageWriter(output_stream_provider())
 		})
 	}
 	
-	pub fn new<OUT, OUT_P>(msg_writer_provider: OUT_P) 
-		-> EndpointHandle
+	/// Create an EndpointOutput output for use in the Language Server Protocol
+	/// with given message write provider.
+	pub fn create_lsp_output<MW, MW_PROV>(msg_writer_provider: MW_PROV) 
+		-> EndpointOutput
 	where 
-		OUT : MessageWriter + 'static, 
-		OUT_P : FnOnce() -> OUT + Send + 'static 
+		MW : MessageWriter + 'static, 
+		MW_PROV : FnOnce() -> MW + Send + 'static 
 	{
 		let output_agent = OutputAgent::start_with_provider(msg_writer_provider);
-		let endpoint = Endpoint::start_with_output_agent(output_agent, new(MapRequestHandler::new()));
-		newArcMutex(endpoint)
-	}
-
-	pub fn run_server_from_input<LS>(ls: LS, input: &mut io::BufRead, endpoint: EndpointHandle) 
-	where 
-		LS: LanguageServer + 'static,
-	{
-		Self::run_server(ls, &mut LSPMessageReader(input), endpoint)
+	    EndpointOutput::start_with(output_agent)
 	}
 	
-	pub fn run_server<LS, MSG_READER: ?Sized>(ls: LS, msg_reader: &mut MSG_READER, endpoint: EndpointHandle) 
+	/* -----------------  ----------------- */
+	
+	pub fn run_server_from_input<LS>(ls: LS, input: &mut io::BufRead, endpoint_out: EndpointOutput) 
 	where 
-		LS: LanguageServer + 'static,
-		MSG_READER : MessageReader,
+		LS : LanguageServer + 'static,
+	{
+		Self::run_server(&mut LSPMessageReader(input), endpoint_out, ls)
+	}
+	
+	/// Run the message read loop on the server, for given msg_reader.
+	/// msg_reader must be a LSPMessageReader or compatible.
+	pub fn run_server<LS, MR>(
+	    mut msg_reader: &mut MR, endpoint_out: EndpointOutput, ls: LS
+	) 
+	where 
+		LS : LanguageServer + 'static,
+		MR : MessageReader,
+	{
+		Self::run_endpoint_loop(msg_reader, endpoint_out, new(LSRequestHandler(ls)))
+	}
+	
+	pub fn run_endpoint_loop<MR>(
+	    mut msg_reader: &mut MR, endpoint_out: EndpointOutput, request_handler: Box<RequestHandler>
+	) 
+	where 
+		MR : MessageReader,
 	{
 		info!("Starting LSP server");
 		
-		let req_handler : Box<RequestHandler> = Box::new(LSRequestHandler(ls));
-		endpoint.lock().unwrap().request_handler = req_handler;
+		let endpoint = EndpointHandler::create(endpoint_out, request_handler);
 		
-		let result = jsonrpc::run_message_read_loop(endpoint, msg_reader);
+		let result = endpoint.run_message_read_loop(msg_reader);
 		
 		if let Err(error) = result {
 			error!("Error handling the incoming stream: {}", error);
@@ -144,9 +160,9 @@ pub trait LanguageClientEndpoint {
 
 }
 
-pub struct LSRequestHandler<LS : LanguageServer>(LS);
+pub struct LSRequestHandler<LS : ?Sized>(pub LS);
 
-impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
+impl<LS : LanguageServer + ?Sized> RequestHandler for LSRequestHandler<LS> {
 	
 	fn handle_request(&mut self, method_name: &str, params: RequestParams, 
 		completable: ResponseCompletable) 
@@ -284,34 +300,34 @@ impl<LS : LanguageServer> RequestHandler for LSRequestHandler<LS> {
 	
 }
 
-impl LanguageClientEndpoint for EndpointHandle {
+impl LanguageClientEndpoint for EndpointOutput {
 	
 	fn show_message(&self, params: ShowMessageParams) -> GResult<()> {
-		let mut endpoint = self.lock().unwrap();
+	    let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__ShowMessage, params));
 		Ok(())
 	}
 	
 	fn show_message_request(&self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
-		let endpoint = self.lock().unwrap();
+		let endpoint = self;
 //		endpoint.send_request(NOTIFICATION__ShowMessageRequest, params);
 		panic!("not implemented")
 	}
 	
 	fn log_message(&self, params: LogMessageParams) -> GResult<()> {
-		let mut endpoint = self.lock().unwrap();
+		let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__LogMessage, params));
 		Ok(())
 	}
 	
 	fn telemetry_event(&self, params: Value) -> GResult<()> {
-		let mut endpoint = self.lock().unwrap();
+		let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__TelemetryEvent, params));
 		Ok(())
 	}
 	
 	fn publish_diagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()> {
-		let mut endpoint = self.lock().unwrap();
+		let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params));
 		Ok(())
 	}

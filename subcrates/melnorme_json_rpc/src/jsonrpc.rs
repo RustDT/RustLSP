@@ -41,42 +41,58 @@ use jsonrpc_objects::*;
 
 use output_agent::OutputAgent;
 use output_agent::OutputAgentTask;
-use output_agent::AgentRunnable;
 
 
-/// A JSON-RPC Server-role than can receive requests.
-/// TODO: Client role (send requests)
-pub struct Endpoint {
-	pub request_handler : Box<RequestHandler>,
+/// A JSON-RPC Server-role than can send responses to requests.
+/// TODO: Client role (send requests as well)
+/// TODO: review and clarify shutdown semantics
+#[derive(Clone)]
+pub struct EndpointOutput {
 	output_agent : Arc<Mutex<OutputAgent>>,
 }
 
-impl Endpoint {
-	
-	pub fn start<AGENT_RUNNER>(agent_runner: AGENT_RUNNER, request_handler: Box<RequestHandler>) 
-		-> Endpoint
-	where 
-		AGENT_RUNNER : AgentRunnable,
-		AGENT_RUNNER : Send + 'static,
+impl EndpointOutput {
+    
+    pub fn start_with(output_agent: OutputAgent) 
+		-> EndpointOutput
 	{
-		let output_agent = OutputAgent::start(agent_runner);
-		Self::start_with_output_agent(output_agent, request_handler)
+	    EndpointOutput { output_agent : newArcMutex(output_agent) }
 	}
-	
-	pub fn start_with_output_agent(output_agent: OutputAgent, request_handler: Box<RequestHandler>) 
-		-> Endpoint
-	{
-		Endpoint { request_handler: request_handler, output_agent : newArcMutex(output_agent) }
-	}
-	
+    
 	pub fn is_shutdown(& self) -> bool {
 		self.output_agent.lock().unwrap().is_shutdown()
 	}
 	
-	pub fn shutdown(&mut self) {
+	pub fn shutdown(&self) {
 		self.output_agent.lock().unwrap().shutdown_and_join();
 	}
+}
+
+/// Combine an EndpointOutput with a request handler, 
+/// to provide a full Endpoint capable of handling incoming requests from a message reader.
+///
+/// See also: EndpointOutput
+pub struct EndpointHandler {
+	pub output : EndpointOutput,
+	pub request_handler : Box<RequestHandler>,
+}
+
+impl EndpointHandler {
 	
+	pub fn create_with_output_agent(output_agent: OutputAgent, request_handler: Box<RequestHandler>) 
+		-> EndpointHandler
+	{
+	    let output = EndpointOutput::start_with(output_agent);
+		Self::create(output, request_handler)
+	}
+	
+	pub fn create(output: EndpointOutput, request_handler: Box<RequestHandler>) 
+		-> EndpointHandler
+	{
+		EndpointHandler { output : output, request_handler: request_handler }
+	}
+	
+	/// Handle an incoming message
 	pub fn handle_message(&mut self, message: &str) {
 		match parse_jsonrpc_request(message) {
 			Ok(rpc_request) => { 
@@ -85,13 +101,14 @@ impl Endpoint {
 			Err(error) => {
 				// If we can't parse JsonRpcRequest, send an error response with null id
 				let id = RpcId::Null;
-				submit_write_task(&mut self.output_agent, JsonRpcResponse::new_error(id, error).to_message()); 
+				submit_write_task(&self.output.output_agent, JsonRpcResponse::new_error(id, error).to_message()); 
 			}
 		}
 	}
 	
+	/// Handle a well formed JsonRpc request object
 	pub fn handle_request(&mut self, request: JsonRpcRequest) {
-		let output_agent = self.output_agent.clone();
+		let output_agent = self.output.output_agent.clone();
 		
 		let on_response = new(move |response: Option<JsonRpcResponse>| {
 			if let Some(response) = response {
@@ -101,41 +118,39 @@ impl Endpoint {
 				info!("JSON-RPC notification complete. {:?}", method_name);
 			} 
 		});
-		
 		let completable = ResponseCompletable::new(request.id, on_response);
+		
 		self.request_handler.handle_request(&request.method, request.params, completable); 
 	}
-	
-}
 
-/* -----------------  ----------------- */
+    /// Run a message read loop with given message reader.
+    /// Loop will be terminated only when there is an error reading a message.
+    ///
+    /// TODO: also provide a way for message handling to terminate the loop? 
+    pub fn run_message_read_loop<MSG_READER : ?Sized>(self, input: &mut MSG_READER) 
+    	-> GResult<()>
+    where
+    	MSG_READER : MessageReader
+    {
+        let mut endpoint = self;
+    	loop {
+    		let message = match input.read_next() {
+    			Ok(ok) => { ok } 
+    			Err(error) => { 
+    				endpoint.output.shutdown();
+    				return Err(error);
+    			}
+    		};
+    		
+    		endpoint.handle_message(&message);
+    	}
+    }
 
-pub type EndpointHandle = Arc<Mutex<Endpoint>>;
-
-pub fn run_message_read_loop<MSG_READER : ?Sized>(endpoint: Arc<Mutex<Endpoint>>, input: &mut MSG_READER) 
-	-> GResult<()>
-where
-	MSG_READER : MessageReader
-{
-	loop {
-		let message = match input.read_next() {
-			Ok(ok) => { ok } 
-			Err(error) => { 
-				let mut endpoint = endpoint.lock().unwrap();
-				endpoint.shutdown();
-				return Err(error);
-			}
-		};
-		
-		let mut endpoint = endpoint.lock().unwrap();
-		endpoint.handle_message(&message);
-	}
 }
 
 /* ----------------- Response handling ----------------- */
 
 pub trait RequestHandler {
-	
 	fn handle_request(
 		&mut self, request_method: &str, request_params: RequestParams, completable: ResponseCompletable
 	);
@@ -310,8 +325,8 @@ pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: Js
 
 /* -----------------  Request sending  ----------------- */
 
-impl Endpoint {
-	
+impl EndpointOutput {
+    
 	// TODO
 //	pub fn send_request<
 //		PARAMS : serde::Serialize, 
@@ -327,7 +342,7 @@ impl Endpoint {
 		PARAMS : serde::Serialize, 
 		RET: serde::Deserialize,
 		RET_ERROR : serde::Deserialize,
-	>(&mut self, id: Option<RpcId>, method_name: &str, params: PARAMS) 
+	>(&self, id: Option<RpcId>, method_name: &str, params: PARAMS) 
 		-> GResult<Future<ServiceResult<RET, RET_ERROR>>> 
 	{
 		let params_value = serde_json::to_value(&params);
@@ -343,7 +358,9 @@ impl Endpoint {
 	
 	pub fn send_notification<
 		PARAMS : serde::Serialize, 
-	>(&mut self, method_name: &str, params: PARAMS) -> GResult<()> {
+	>(&self, method_name: &str, params: PARAMS) 
+    	-> GResult<()> 
+	{
 		let id = None;
 		
 		let future: Future<ServiceResult<(), ()>> = try!(self.do_send_request(id, method_name, params));
@@ -570,7 +587,7 @@ mod tests_ {
 		// --- Endpoint:
 		let output = vec![];
 		let output_agent = OutputAgent::start_with_provider(move || IoWriteHandler(output));
-		let mut rpc = Endpoint::start_with_output_agent(output_agent, new(request_handler));
+		let mut eh = EndpointHandler::create_with_output_agent(output_agent, new(request_handler));
 		
 		// Test ResponseCompletable - missing id for notification method
 		let completable = ResponseCompletable::new(None, new(|_| {}));
@@ -587,15 +604,15 @@ mod tests_ {
 			method : "my_method".into(),
 			params : request.params.clone(),
 		}; 
-		rpc.handle_request(request);
+		eh.handle_request(request);
 		
 		
 		let params = new_sample_params(123, 66);
-		rpc.send_notification("my_method", params.clone()).unwrap();
+		eh.output.send_notification("my_method", params.clone()).unwrap();
 		
-		rpc.send_notification("async_method", params.clone()).unwrap();
+		eh.output.send_notification("async_method", params.clone()).unwrap();
 		
-		rpc.shutdown();
+		eh.output.shutdown();
 	}
 	
 }
