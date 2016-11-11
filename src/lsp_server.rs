@@ -119,44 +119,48 @@ pub type LSCompletable<RET> = MethodCompletable<RET, ()>;
 
 pub trait LanguageServer {
 	
-	fn initialize(&self, params: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>);
-	fn shutdown(&self, params: (), completable: LSCompletable<()>);
-	fn exit(&self, params: ());
-	fn workspace_change_configuration(&self, params: DidChangeConfigurationParams);
-	fn did_open_text_document(&self, params: DidOpenTextDocumentParams);
-	fn did_change_text_document(&self, params: DidChangeTextDocumentParams);
-	fn did_close_text_document(&self, params: DidCloseTextDocumentParams);
-	fn did_save_text_document(&self, params: DidSaveTextDocumentParams);
-	fn did_change_watched_files(&self, params: DidChangeWatchedFilesParams);
+	fn initialize(&mut self, params: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>);
+	fn shutdown(&mut self, params: (), completable: LSCompletable<()>);
+	fn exit(&mut self, params: ());
+	fn workspace_change_configuration(&mut self, params: DidChangeConfigurationParams);
+	fn did_open_text_document(&mut self, params: DidOpenTextDocumentParams);
+	fn did_change_text_document(&mut self, params: DidChangeTextDocumentParams);
+	fn did_close_text_document(&mut self, params: DidCloseTextDocumentParams);
+	fn did_save_text_document(&mut self, params: DidSaveTextDocumentParams);
+	fn did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams);
 	
-	fn completion(&self, params: TextDocumentPositionParams, completable: LSCompletable<CompletionList>);
-	fn resolve_completion_item(&self, params: CompletionItem, completable: LSCompletable<CompletionItem>);
-	fn hover(&self, params: TextDocumentPositionParams, completable: LSCompletable<Hover>);
-	fn signature_help(&self, params: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>);
-	fn goto_definition(&self, params: TextDocumentPositionParams, completable: LSCompletable<Vec<Location>>);
-	fn references(&self, params: ReferenceParams, completable: LSCompletable<Vec<Location>>);
-	fn document_highlight(&self, params: TextDocumentPositionParams, completable: LSCompletable<Vec<DocumentHighlight>>);
-	fn document_symbols(&self, params: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
-	fn workspace_symbols(&self, params: WorkspaceSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
-	fn code_action(&self, params: CodeActionParams, completable: LSCompletable<Vec<Command>>);
-	fn code_lens(&self, params: CodeLensParams, completable: LSCompletable<Vec<CodeLens>>);
-	fn code_lens_resolve(&self, params: CodeLens, completable: LSCompletable<CodeLens>);
-	fn formatting(&self, params: DocumentFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
-	fn range_formatting(&self, params: DocumentRangeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
-	fn on_type_formatting(&self, params: DocumentOnTypeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
-	fn rename(&self, params: RenameParams, completable: LSCompletable<WorkspaceEdit>);
+	fn completion(&mut self, params: TextDocumentPositionParams, completable: LSCompletable<CompletionList>);
+	fn resolve_completion_item(&mut self, params: CompletionItem, completable: LSCompletable<CompletionItem>);
+	fn hover(&mut self, params: TextDocumentPositionParams, completable: LSCompletable<Hover>);
+	fn signature_help(&mut self, params: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>);
+	fn goto_definition(&mut self, params: TextDocumentPositionParams, completable: LSCompletable<Vec<Location>>);
+	fn references(&mut self, params: ReferenceParams, completable: LSCompletable<Vec<Location>>);
+	fn document_highlight(&mut self, params: TextDocumentPositionParams, completable: LSCompletable<Vec<DocumentHighlight>>);
+	fn document_symbols(&mut self, params: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
+	fn workspace_symbols(&mut self, params: WorkspaceSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>);
+	fn code_action(&mut self, params: CodeActionParams, completable: LSCompletable<Vec<Command>>);
+	fn code_lens(&mut self, params: CodeLensParams, completable: LSCompletable<Vec<CodeLens>>);
+	fn code_lens_resolve(&mut self, params: CodeLens, completable: LSCompletable<CodeLens>);
+	fn formatting(&mut self, params: DocumentFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
+	fn range_formatting(&mut self, params: DocumentRangeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
+	fn on_type_formatting(&mut self, params: DocumentOnTypeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
+	fn rename(&mut self, params: RenameParams, completable: LSCompletable<WorkspaceEdit>);
 	
+	#[allow(unused_variables)]
+	fn handle_other_method(&mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable) {
+	    completable.complete_with_error(jsonrpc_objects::error_JSON_RPC_MethodNotFound()); 
+	}
 }
 
 
 pub trait LanguageClientEndpoint {
 	
-	fn show_message(&self, params: ShowMessageParams) -> GResult<()>;
-	fn show_message_request(&self, params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>>;
-	fn log_message(&self, params: LogMessageParams) -> GResult<()>;
-	fn telemetry_event(&self, params: Value) -> GResult<()>;
+	fn show_message(&mut self, params: ShowMessageParams) -> GResult<()>;
+	fn show_message_request(&mut self, params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>>;
+	fn log_message(&mut self, params: LogMessageParams) -> GResult<()>;
+	fn telemetry_event(&mut self, params: Value) -> GResult<()>;
 	
-	fn publish_diagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()>;
+	fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) -> GResult<()>;
 
 }
 
@@ -292,7 +296,7 @@ impl<LS : LanguageServer + ?Sized> RequestHandler for LSRequestHandler<LS> {
 				) 
 			}
 			_ => {
-				completable.complete_with_error(jsonrpc_objects::error_JSON_RPC_MethodNotFound());
+			    self.0.handle_other_method(method_name, params, completable);
 			}
 		};
 		
@@ -302,31 +306,31 @@ impl<LS : LanguageServer + ?Sized> RequestHandler for LSRequestHandler<LS> {
 
 impl LanguageClientEndpoint for EndpointOutput {
 	
-	fn show_message(&self, params: ShowMessageParams) -> GResult<()> {
+	fn show_message(&mut self, params: ShowMessageParams) -> GResult<()> {
 	    let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__ShowMessage, params));
 		Ok(())
 	}
 	
-	fn show_message_request(&self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
+	fn show_message_request(&mut self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
 		let endpoint = self;
 //		endpoint.send_request(NOTIFICATION__ShowMessageRequest, params);
 		panic!("not implemented")
 	}
 	
-	fn log_message(&self, params: LogMessageParams) -> GResult<()> {
+	fn log_message(&mut self, params: LogMessageParams) -> GResult<()> {
 		let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__LogMessage, params));
 		Ok(())
 	}
 	
-	fn telemetry_event(&self, params: Value) -> GResult<()> {
+	fn telemetry_event(&mut self, params: Value) -> GResult<()> {
 		let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__TelemetryEvent, params));
 		Ok(())
 	}
 	
-	fn publish_diagnostics(&self, params: PublishDiagnosticsParams) -> GResult<()> {
+	fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) -> GResult<()> {
 		let endpoint = self;
 		try!(endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params));
 		Ok(())

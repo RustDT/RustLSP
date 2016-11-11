@@ -156,6 +156,13 @@ pub trait RequestHandler {
 	);
 }
 
+/// A completable for a JSON-RPC request. This is an object that must be "completed", 
+/// that is, a result must be provided. (this is the inverse of a future)
+/// 
+/// Must be completed once and only once, otherwise a panic is generated upon drop.
+/// 
+/// On completion, the on_response callback is invoked. 
+/// Typically: this will write an appropriate JSON-RPC response to the endpoint output.
 pub struct ResponseCompletable {
 	completion_flag: FinishedFlag,
 	id: Option<RpcId>,
@@ -249,6 +256,8 @@ impl ResponseCompletable {
 
 use std::marker::PhantomData;
 
+/// Helper type that wraps a ResponseCompletable, 
+/// and binds the possible completion to a result `ServiceResult<RET, RET_ERROR>` 
 pub struct MethodCompletable
 <
 	RET : serde::Serialize, 

@@ -6,7 +6,7 @@ authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 [dependencies]
 log = "0.3"
 env_logger = "0.3"
-rust_lsp = { path = "../.." }
+rust_lsp = { version = "0.4.0" , path = "../.." }
 
 [lib]
 name = "example_ls"
