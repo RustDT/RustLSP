@@ -22,6 +22,20 @@ use json_util::*;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Id { Number(u64), String(String), Null, }
 
+impl serde::Serialize for Id {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer,
+	{
+		match *self {
+			Id::Null => serializer.serialize_none(),
+			Id::Number(number) => serializer.serialize_u64(number), 
+			Id::String(ref string) => serializer.serialize_str(string),
+		}
+	}
+}
+
+/* -----------------  Request  ----------------- */
+
 /// A JSON RPC request, version 2.0
 #[derive(Debug, PartialEq, Clone)]
 pub struct Request {
@@ -32,6 +46,40 @@ pub struct Request {
 	pub params : RequestParams,
 }
 
+impl Request {
+	pub fn new(id_number: u64, method: String, params: JsonObject) -> Request {
+		Request { 	
+			id : Some(Id::Number(id_number)),
+			method : method,
+			params : RequestParams::Object(params),
+		} 
+	}
+	
+	pub fn to_message(self) -> Message {
+		Message::Request(self)
+	}
+}
+
+impl serde::Serialize for Request {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		// TODO: need to investigate if elem_count = 4 is actually valid when id is missing
+		// serializing to JSON seems to not be a problem, but there might be other issues
+		let elem_count = 4;
+		let mut state = try!(serializer.serialize_struct("Request", elem_count)); 
+		{
+			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
+			if let Some(ref id) = self.id {
+				try!(serializer.serialize_struct_elt(&mut state, "id", id));
+			}
+			try!(serializer.serialize_struct_elt(&mut state, "method", &self.method));
+			try!(serializer.serialize_struct_elt(&mut state, "params", &self.params));
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum RequestParams {
 	Object(JsonObject),
@@ -39,6 +87,32 @@ pub enum RequestParams {
 	None,
 }
 
+impl RequestParams {
+	pub fn into_value(self) -> Value {
+		// Note, we could use serde_json::to_value(&params) but that is less efficient:
+		// it reserializes the value, instead of just obtaining the underlying one 
+		
+		match self {
+			RequestParams::Object(object) => Value::Object(object),
+			RequestParams::Array(array) => Value::Array(array),
+			RequestParams::None => Value::Null,
+		}
+	}
+}
+
+impl serde::Serialize for RequestParams {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		match *self {
+			RequestParams::Object(ref object) => object.serialize(serializer),
+			RequestParams::Array(ref array) => array.serialize(serializer),
+			RequestParams::None => serializer.serialize_none(),
+		}
+	}
+}
+
+/* ----------------- Response ----------------- */
 
 /// A JSON RPC response, version 2.0.
 /// Only one of 'result' or 'error' is defined.
@@ -57,28 +131,6 @@ pub enum ResponseResult {
 	Error(RequestError)
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct RequestError {
-	pub code : i64,
-	pub message : String,
-	pub data : Option<Value>,
-}
-
-/* ----------------- Impls ----------------- */
-
-impl Request {
-	pub fn new(id_number: u64, method: String, params: JsonObject) -> Request {
-		Request { 	
-			id : Some(Id::Number(id_number)),
-			method : method,
-			params : RequestParams::Object(params),
-		} 
-	}
-	
-	pub fn to_message(self) -> Message {
-		Message::Request(self)
-	}
-}
 
 impl Response {
 	pub fn new_result(id: Id, result: Value) -> Response {
@@ -92,6 +144,39 @@ impl Response {
 	pub fn to_message(self) -> Message {
 		Message::Response(self)
 	}
+}
+
+
+impl serde::Serialize for Response {
+	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+		where S: serde::Serializer
+	{
+		let elem_count = 3;
+		let mut state = try!(serializer.serialize_struct("Response", elem_count));
+		{
+			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
+			try!(serializer.serialize_struct_elt(&mut state, "id", &self.id));
+			
+			match self.result_or_error {
+				ResponseResult::Result(ref value) => {
+					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
+				}
+				ResponseResult::Error(ref json_rpc_error) => {
+					try!(serializer.serialize_struct_elt(&mut state, "error", &json_rpc_error)); 
+				}
+			}
+		}
+		serializer.serialize_struct_end(state)
+	}
+}
+
+/* -----------------  Error  ----------------- */
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct RequestError {
+	pub code : i64,
+	pub message : String,
+	pub data : Option<Value>,
 }
 
 impl RequestError {
@@ -118,93 +203,6 @@ pub fn error_JSON_RPC_InternalError() -> RequestError {
 
 pub fn error_JSON_RPC_InvalidResponse<T: fmt::Display>(error: T) -> RequestError { 
 	RequestError::new(-32000, format!("Invalid method response: {}", error).to_string())
-}
-
-
-
-/* -----------------  ----------------- */
-
-impl serde::Serialize for Id {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer,
-	{
-		match *self {
-			Id::Null => serializer.serialize_none(),
-			Id::Number(number) => serializer.serialize_u64(number), 
-			Id::String(ref string) => serializer.serialize_str(string),
-		}
-	}
-}
-
-
-impl serde::Serialize for RequestParams {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer
-	{
-		match *self {
-			RequestParams::Object(ref object) => object.serialize(serializer),
-			RequestParams::Array(ref array) => array.serialize(serializer),
-			RequestParams::None => serializer.serialize_none(),
-		}
-	}
-}
-
-impl RequestParams {
-	
-	pub fn into_value(self) -> Value {
-		// Note, we could use serde_json::to_value(&params) but that is less efficient:
-		// it reserializes the value, instead of just obtaining the underlying one 
-		
-		match self {
-			RequestParams::Object(object) => Value::Object(object),
-			RequestParams::Array(array) => Value::Array(array),
-			RequestParams::None => Value::Null,
-		}
-	}
-	
-}
-
-impl serde::Serialize for Request {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer
-	{
-		// TODO: need to investigate if elem_count = 4 is actually valid when id is missing
-		// serializing to JSON seems to not be a problem, but there might be other issues
-		let elem_count = 4;
-		let mut state = try!(serializer.serialize_struct("Request", elem_count)); 
-		{
-			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
-			if let Some(ref id) = self.id {
-				try!(serializer.serialize_struct_elt(&mut state, "id", id));
-			}
-			try!(serializer.serialize_struct_elt(&mut state, "method", &self.method));
-			try!(serializer.serialize_struct_elt(&mut state, "params", &self.params));
-		}
-		serializer.serialize_struct_end(state)
-	}
-}
-
-impl serde::Serialize for Response {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer
-	{
-		let elem_count = 3;
-		let mut state = try!(serializer.serialize_struct("Response", elem_count));
-		{
-			try!(serializer.serialize_struct_elt(&mut state, "jsonrpc", "2.0"));
-			try!(serializer.serialize_struct_elt(&mut state, "id", &self.id));
-			
-			match self.result_or_error {
-				ResponseResult::Result(ref value) => {
-					try!(serializer.serialize_struct_elt(&mut state, "result", &value));
-				}
-				ResponseResult::Error(ref json_rpc_error) => {
-					try!(serializer.serialize_struct_elt(&mut state, "error", &json_rpc_error)); 
-				}
-			}
-		}
-		serializer.serialize_struct_end(state)
-	}
 }
 
 impl serde::Serialize for RequestError {
@@ -299,7 +297,7 @@ pub fn parse_jsonrpc_id(id: Option<Value>) -> JsonRpcParseResult<Option<Id>> {
 	}
 }
 
-/* -----------------  ----------------- */
+/* -----------------  Message  ----------------- */
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Message {
