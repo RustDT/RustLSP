@@ -5,7 +5,7 @@
 
 use serde;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
@@ -15,6 +15,11 @@ pub enum PointField {
     X,
     Y,
 }
+
+pub fn new_sample_params(x: i32, y: i32) -> Point {
+	Point { x : x, y : y }
+}
+
 
 impl serde::Deserialize for PointField {
     fn deserialize<D>(deserializer: &mut D) -> Result<PointField, D::Error>

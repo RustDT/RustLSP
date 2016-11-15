@@ -15,6 +15,7 @@ extern crate serde_json;
 extern crate serde;
 
 extern crate melnorme_util as util;
+extern crate futures;
 
 pub mod json_util;
 pub mod jsonrpc_objects;
@@ -30,10 +31,13 @@ use std::result::Result;
 
 use std::sync::Arc;
 use std::sync::Mutex;
+ 
+use futures::Future;
+use futures::BoxFuture;
+use futures::Complete;
 
 use service_util::ServiceResult;
 use service_util::MessageReader;
-
 use jsonrpc_objects::*;
 
 
@@ -48,23 +52,35 @@ use output_agent::OutputAgentTask;
 /// TODO: review and clarify shutdown semantics
 #[derive(Clone)]
 pub struct EndpointOutput {
+	id_counter : Arc<Mutex<u64>>,
+	pending_requests : Arc<Mutex<HashMap<RpcId, Complete<ResponseResult>>>>,
 	output_agent : Arc<Mutex<OutputAgent>>,
 }
 
 impl EndpointOutput {
-    
-    pub fn start_with(output_agent: OutputAgent) 
+	
+	pub fn start_with(output_agent: OutputAgent) 
 		-> EndpointOutput
 	{
-	    EndpointOutput { output_agent : newArcMutex(output_agent) }
+		EndpointOutput {
+			id_counter : newArcMutex(0),
+			pending_requests : newArcMutex(HashMap::new()),
+			output_agent : newArcMutex(output_agent) 
+		}
 	}
-    
+	
 	pub fn is_shutdown(& self) -> bool {
 		self.output_agent.lock().unwrap().is_shutdown()
 	}
 	
 	pub fn shutdown(&self) {
 		self.output_agent.lock().unwrap().shutdown_and_join();
+	}
+	
+	pub fn next_id(&self) -> RpcId {
+   		let id_num : &mut u64 = &mut *self.id_counter.lock().unwrap();
+		*id_num += 1;
+		RpcId::Number(*id_num)
 	}
 }
 
@@ -82,7 +98,7 @@ impl EndpointHandler {
 	pub fn create_with_output_agent(output_agent: OutputAgent, request_handler: Box<RequestHandler>) 
 		-> EndpointHandler
 	{
-	    let output = EndpointOutput::start_with(output_agent);
+		let output = EndpointOutput::start_with(output_agent);
 		Self::create(output, request_handler)
 	}
 	
@@ -123,28 +139,28 @@ impl EndpointHandler {
 		self.request_handler.handle_request(&request.method, request.params, completable); 
 	}
 
-    /// Run a message read loop with given message reader.
-    /// Loop will be terminated only when there is an error reading a message.
-    ///
-    /// TODO: also provide a way for message handling to terminate the loop? 
-    pub fn run_message_read_loop<MSG_READER : ?Sized>(self, input: &mut MSG_READER) 
-    	-> GResult<()>
-    where
-    	MSG_READER : MessageReader
-    {
-        let mut endpoint = self;
-    	loop {
-    		let message = match input.read_next() {
-    			Ok(ok) => { ok } 
-    			Err(error) => { 
-    				endpoint.output.shutdown();
-    				return Err(error);
-    			}
-    		};
-    		
-    		endpoint.handle_message(&message);
-    	}
-    }
+	/// Run a message read loop with given message reader.
+	/// Loop will be terminated only when there is an error reading a message.
+	///
+	/// TODO: also provide a way for message handling to terminate the loop? 
+	pub fn run_message_read_loop<MSG_READER : ?Sized>(self, input: &mut MSG_READER) 
+		-> GResult<()>
+	where
+		MSG_READER : MessageReader
+	{
+		let mut endpoint = self;
+		loop {
+			let message = match input.read_next() {
+				Ok(ok) => { ok } 
+				Err(error) => { 
+					endpoint.output.shutdown();
+					return Err(error);
+				}
+			};
+			
+			endpoint.handle_message(&message);
+		}
+	}
 
 }
 
@@ -235,10 +251,10 @@ impl ResponseCompletable {
 	{
 		let mc = MethodCompletable::<(), ()>::new(self);
 		mc.parse_params_and_complete_with(params, |params, completable| {
-            // early completion for notification
-            completable.completable.complete(None);
-            method_handler(params)
-	    });
+			// early completion for notification
+			completable.completable.complete(None);
+			method_handler(params)
+		});
 	}
 	
 	pub fn sync_handle_notification<PARAMS, METHOD>(
@@ -305,7 +321,7 @@ MethodCompletable<RET, RET_ERROR>
 	}
 	
 	pub fn complete(self, result: ServiceResult<RET, RET_ERROR>) {
-	    self.completable.complete(Some(ResponseResult::from_service_result(result)));
+		self.completable.complete(Some(ResponseResult::from(result)));
 	}
 }
 
@@ -334,63 +350,60 @@ pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: Js
 
 /* -----------------  Request sending  ----------------- */
 
+pub type RequestFuture<RET, RET_ERROR> = BoxFuture<RequestResult<RET, RET_ERROR>, futures::Canceled>;
+
+
 impl EndpointOutput {
-    
-	// TODO
-//	pub fn send_request<
-//		PARAMS : serde::Serialize, 
-//		RET: serde::Deserialize,
-//		RET_ERROR : serde::Deserialize,
-//	>(&mut self, method_name: &str, params: PARAMS) -> GResult<Future<ServiceResult<RET, RET_ERROR>>> {
-//		let id = None; // FIXME
-//			
-//		self.do_send_request(id, method_name, params)
-//	}
 	
-	pub fn do_send_request<
+	pub fn send_request<
 		PARAMS : serde::Serialize, 
-		RET: serde::Deserialize,
-		RET_ERROR : serde::Deserialize,
-	>(&self, id: Option<RpcId>, method_name: &str, params: PARAMS) 
-		-> GResult<Future<ServiceResult<RET, RET_ERROR>>> 
+		RET: serde::Deserialize, 
+		RET_ERROR : serde::Deserialize, 
+	>(&mut self, method_name: &str, params: PARAMS) 
+		-> GResult<RequestFuture<RET, RET_ERROR>> 
 	{
-		let params_value = serde_json::to_value(&params);
-		let params = try!(jsonrpc_objects::parse_jsonrpc_params(params_value));
+		let (completable, future) = futures::oneshot::<ResponseResult>();
+		let future : futures::Oneshot<ResponseResult> = future;
 		
-		let rpc_request = JsonRpcRequest { id: id, method : method_name.into(), params : params };
+		let id = self.next_id();
 		
-		let future = Future(None);
-		submit_write_task(&self.output_agent, JsonRpcMessage::Request(rpc_request));
+		self.pending_requests.lock().unwrap().insert(id.clone(), completable);
 		
-		Ok(future)
+		self.write_request(Some(id), method_name, params)?;
+		
+		let future = future.map(|response_result : ResponseResult| {
+			RequestResult::<RET, RET_ERROR>::from(response_result)
+		});
+		
+		Ok(new(future))
 	}
+	
 	
 	pub fn send_notification<
 		PARAMS : serde::Serialize, 
 	>(&self, method_name: &str, params: PARAMS) 
-    	-> GResult<()> 
+		-> GResult<()> 
 	{
 		let id = None;
+		self.write_request::<_>(id, method_name, params)
+	}
+	
+	pub fn write_request<
+		PARAMS : serde::Serialize, 
+	>(&self, id: Option<RpcId>, method_name: &str, params: PARAMS) 
+		-> GResult<()> 
+	{
+		let params_value = serde_json::to_value(&params);
+		let params = jsonrpc_objects::to_jsonrpc_params(params_value)?;
 		
-		let future: Future<ServiceResult<(), ()>> = try!(self.do_send_request(id, method_name, params));
-		future.complete(Ok(()));
+		let rpc_request = JsonRpcRequest { id: id.clone(), method : method_name.into(), params : params };
+		
+		submit_write_task(&self.output_agent, JsonRpcMessage::Request(rpc_request));
 		Ok(())
 	}
 	
 }
 
-// FIXME: use upcoming futures API, this is just a mock ATM
-pub struct Future<T>(Option<T>); 
-
-impl<T> Future<T> {
-	pub fn is_completed(&self) -> bool {
-		// TODO
-		true
-	}
-	
-	pub fn complete(&self, _result: T) {
-	}
-}
 
 /* -----------------  MapRequestHandler  ----------------- */
 
@@ -484,7 +497,8 @@ mod tests_ {
 	use tests_sample_types::*;
 	use std::thread;
 	
-	use service_util::{ServiceResult, ServiceError};
+	use service_util::ServiceResult;
+	use service_util::ServiceError;
 	use jsonrpc_objects::*;
 	use jsonrpc_objects::tests::*;
 	
@@ -498,9 +512,6 @@ mod tests_ {
 		let x_str : String = params.x.to_string();
 		let y_str : String = params.y.to_string();
 		Ok(x_str + &y_str)
-	}
-	pub fn new_sample_params(x: i32, y: i32) -> Point {
-		Point { x : x, y : y }
 	}
 	pub fn no_params_method(_params: ()) -> Result<String, ServiceError<()>> {
 		Ok("okay".into())
@@ -549,7 +560,7 @@ mod tests_ {
 			// Test handle unknown method
 			let mut request_handler = MapRequestHandler::new();
 			
-			let request = JsonRpcRequest::new(1, "my_method".to_string(), JsonObject::new());
+			let request = JsonRpcRequest::new(1, "unknown_method".to_string(), JsonObject::new());
 			invoke_method(&mut request_handler, &request.method, request.params,
 				|result| 
 				check_request(result.unwrap(), ResponseResult::Error(error_JSON_RPC_MethodNotFound())) 
@@ -557,11 +568,11 @@ mod tests_ {
 		}
 		
 		let mut request_handler = MapRequestHandler::new();
-		request_handler.add_request("my_method", Box::new(sample_fn));
+		request_handler.add_request("sample_fn", Box::new(sample_fn));
 		request_handler.add_rpc_handler("async_method", Box::new(async_method));
 		
 		// test with invalid params = "{}" 
-		let request = JsonRpcRequest::new(1, "my_method".to_string(), JsonObject::new());
+		let request = JsonRpcRequest::new(1, "sample_fn".to_string(), JsonObject::new());
 		invoke_method(&mut request_handler, &request.method, request.params, 
 			|result| 
 			check_request(result.unwrap(), ResponseResult::Error(error_JSON_RPC_InvalidParams(r#"missing field "x""#)))
@@ -572,7 +583,7 @@ mod tests_ {
 			Value::Object(object) => object, 
 			_ => panic!("Not serialized into Object") 
 		};
-		let request = JsonRpcRequest::new(1, "my_method".to_string(), params_value);
+		let request = JsonRpcRequest::new(1, "sample_fn".to_string(), params_value);
 		invoke_method(&mut request_handler, &request.method, request.params.clone(),
 			|result| 
 			assert_equal(result.unwrap(), ResponseResult::Result(
@@ -610,18 +621,47 @@ mod tests_ {
 		// TODO review this code
 		let request = JsonRpcRequest { 	
 			id : None,
-			method : "my_method".into(),
+			method : "sample_fn".into(),
 			params : request.params.clone(),
 		}; 
 		eh.handle_request(request);
 		
+		// Test send_request
 		
 		let params = new_sample_params(123, 66);
-		eh.output.send_notification("my_method", params.clone()).unwrap();
+		eh.output.send_notification("sample_fn", params.clone()).unwrap();
 		
 		eh.output.send_notification("async_method", params.clone()).unwrap();
+		
+		assert_eq!(*eh.output.id_counter.lock().unwrap(), 0);
+		
+		let my_method = "sample_fn".to_string();
+		let future : RequestFuture<String, ()> = eh.output.send_request(&my_method, params.clone()).unwrap();
+		
+		assert_eq!(*eh.output.id_counter.lock().unwrap(), 1);
+		
+		// TODO: test future is not completed
+	   
+//		let request = RequestResponse { 	
+//			id : id,
+//			method : my_method,
+//			params : request.params.clone(),
+//		}; 
+//		eh.output.send_request("sample_fn", params.clone()).unwrap();
+
+		if false {
+			let result = super::wait_future(future);
+		}
 		
 		eh.output.shutdown();
 	}
 	
+}
+
+// TODO: investigate: only necessary because of compiler bug?
+#[cfg(test)]
+fn wait_future<ITEM, ERROR>(future : BoxFuture<ITEM, ERROR>)
+	-> Result<ITEM, ERROR> 
+{
+	future.wait()
 }

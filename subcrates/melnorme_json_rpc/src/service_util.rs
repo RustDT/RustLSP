@@ -16,11 +16,10 @@ pub trait MessageReader {
 }
 
 pub trait MessageWriter {
-	
 	fn write_message(&mut self, msg: &str) -> Result<(), GError>;
-	
 }
 
+#[derive(Debug, PartialEq)]
 pub struct ServiceError<DATA> {
 	pub code: u32,
 	pub message: String,
@@ -28,11 +27,9 @@ pub struct ServiceError<DATA> {
 }
 
 impl<DATA> ServiceError<DATA> {
-	pub fn new(code: u32, msg: String, data : DATA) -> ServiceError<DATA> {
+	pub fn new(code: u32, msg: String, data : DATA) -> Self {
 		ServiceError::<DATA> { code : code, message : msg, data : data }
 	}
 }
 
 pub type ServiceResult<RETURN_VALUE, ERROR_DATA> = Result<RETURN_VALUE, ServiceError<ERROR_DATA>>;
-
-pub type ServiceHandler<PARAMS, RETURN_VALUE, ERROR_DATA> = Fn(PARAMS) -> ServiceResult<RETURN_VALUE, ERROR_DATA>;

@@ -8,6 +8,7 @@ melnorme_util = { path = "../melnorme_util", version = "0.1.0" }
 log = "0.3.6"
 serde = "0.8"
 serde_json = "0.8"
+futures = "0.1.3"
 
 [dev-dependencies]
 melnorme_util = { path = "../melnorme_util", features = ["test_utils"] }

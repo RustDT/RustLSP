@@ -14,13 +14,13 @@ use std::fmt;
 use serde_json::Value;
 
 use util::core::GResult;
-use service_util::ServiceResult;
 use json_util::*;
+
 
 
 /* ----------------- JSON-RPC 2.0 object types ----------------- */
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RpcId { Number(u64), String(String), Null, }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -123,13 +123,17 @@ pub fn error_JSON_RPC_InternalError() -> RpcError {
 	RpcError::new(-32603, "Internal JSON-RPC error.".to_string())
 }
 
+pub fn error_JSON_RPC_InvalidResponse<T: fmt::Display>(error: T) -> RpcError { 
+	RpcError::new(-32000, format!("Invalid method response: {}", error).to_string())
+}
 
-impl ResponseResult {
-	
-	pub fn from_service_result<RET, RET_ERROR>(svc_result : ServiceResult<RET, RET_ERROR>) -> ResponseResult 
-	where 
-		RET : serde::Serialize, 
-		RET_ERROR : serde::Serialize ,
+
+impl<RET, RET_ERROR> From<ServiceResult<RET, RET_ERROR>> for ResponseResult
+where 
+	RET : serde::Serialize, 
+	RET_ERROR : serde::Serialize,
+{
+	fn from(svc_result: ServiceResult<RET, RET_ERROR>) -> Self 
 	{
 		match svc_result {
 			Ok(ret) => {
@@ -295,7 +299,7 @@ pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> Jso
 	let method = try!(helper.obtain_String(&mut request_map, "method"));
 	let params = try!(helper.obtain_Value(&mut request_map, "params"));
 	
-	let params : RequestParams = match parse_jsonrpc_params(params) {
+	let params : RequestParams = match to_jsonrpc_params(params) {
 		Ok(ok) => ok,
 		Err(error) => return Err(error_JSON_RPC_InvalidRequest(error)),
 	};
@@ -305,7 +309,7 @@ pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> Jso
 	Ok(jsonrpc_request)
 }
 
-pub fn parse_jsonrpc_params(params: Value) -> GResult<RequestParams> {
+pub fn to_jsonrpc_params(params: Value) -> GResult<RequestParams> {
 	match params {
 		Value::Object(object) => Ok(RequestParams::Object(object)),
 		Value::Array(array) => Ok(RequestParams::Array(array)),
@@ -347,7 +351,43 @@ impl serde::Serialize for JsonRpcMessage {
 	}
 }
 
+/* -----------------  ----------------- */
 
+use service_util::ServiceResult;
+use service_util::ServiceError;
+
+#[derive(Debug, PartialEq)]
+pub enum RequestResult<RET, RET_ERROR> {
+	MethodResult(ServiceResult<RET, RET_ERROR>),
+	JsonRpcError(RpcError),
+}
+
+impl<
+	RET : serde::Deserialize, 
+	RET_ERROR : serde::Deserialize, 
+> From<ResponseResult> for RequestResult<RET, RET_ERROR> {
+    
+	fn from(response_result : ResponseResult) -> Self 
+	{
+		match response_result {
+			ResponseResult::Result(result_value) => { 
+				let ret_result : Result<RET, _> = serde_json::from_value(result_value);
+				match ret_result {
+					Ok(ret) => { 
+						RequestResult::MethodResult(Ok(ret)) 
+					}
+					Err(error) => { 
+						RequestResult::JsonRpcError(error_JSON_RPC_InvalidResponse(error))
+					}
+				}
+			} 
+			ResponseResult::Error(error) => {
+				RequestResult::JsonRpcError(error)
+			}
+		}
+	}
+
+}
 /* ----------------- Tests ----------------- */
 
 #[cfg(test)]
@@ -361,6 +401,7 @@ pub mod tests {
 	use serde_json::Value;
 	use serde_json::builder::ObjectBuilder;
 	use json_util::*;
+	use tests_sample_types::*;
 
 	pub fn to_json<T: serde::Serialize>(value: &T) -> String {
 		serde_json::to_string(value).unwrap()
@@ -384,7 +425,7 @@ pub mod tests {
 	
 	fn test__jsonrpc_params_serde(params: RequestParams) {
 		let params_string = to_json(&params);
-		let params2 = parse_jsonrpc_params(serde_json::from_str(&params_string).unwrap()).unwrap();
+		let params2 = to_jsonrpc_params(serde_json::from_str(&params_string).unwrap()).unwrap();
 		
 		assert_equal(params, params2);
 	}
@@ -494,6 +535,34 @@ pub mod tests {
 			))
 		));
 		
+	}
+	
+	
+	#[test]
+	fn test__RequestResult_from() {
+	    // Test JSON RPC error
+	    let error = error_JSON_RPC_InvalidParams(r#"RPC_ERROR"#);
+	    let response_result = ResponseResult::Error(error.clone());
+	    assert_eq!(
+	        RequestResult::<Point, ()>::from(response_result), 
+	        RequestResult::JsonRpcError(error)
+	    );
+	    
+	    // Test Ok
+	    let params = new_sample_params(10, 20);
+	    let response_result = ResponseResult::Result(serde_json::to_value(&params));
+	    assert_eq!(
+            RequestResult::<Point, ()>::from(response_result), 
+	        RequestResult::MethodResult(Ok(params.clone()))
+	    );
+	    
+	    // Test invalid MethodResult response 
+	    let response_result = ResponseResult::Result(serde_json::to_value(&new_sample_params(10, 20)));
+	    assert_eq!(
+	        RequestResult::<String, ()>::from(response_result), 
+	        RequestResult::JsonRpcError(error_JSON_RPC_InvalidResponse(
+                r#"invalid type: map at line 0 column 0"#))
+	    );
 	}
 	
 }
