@@ -5,9 +5,6 @@
 // This file may not be copied, modified, or distributed
 // except according to those terms.
 
-
-// WARNING: Rust newbie code ahead (-_-)'
-
 //use core::*;
 
 use std;
@@ -22,6 +19,18 @@ pub fn assert_equal<T>(left: T, right: T)
 		println!("====");
 	}
 	assert_eq!(left, right);
+}
+
+pub fn check_equal<T>(obtained: T, expected: T)
+	where T : std::fmt::Debug + std::cmp::PartialEq, 
+{
+	if obtained != expected {
+		println!("\n========= Equals failed:");
+		println!("Obtained: {:?}", obtained);
+		println!("Expected: {:?}", expected);
+		println!("====");
+	}
+	assert_eq!(obtained, expected);
 }
 
 pub fn assert_starts_with(string: &str, prefix: &str)

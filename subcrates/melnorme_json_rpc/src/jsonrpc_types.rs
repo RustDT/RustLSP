@@ -11,15 +11,20 @@ extern crate serde;
 
 
 use std::fmt;
+
+use serde::de::Visitor;
+use serde::Error;
 use serde_json::Value;
 
 use util::core::GResult;
 use json_util::*;
 
 
-/* ----------------- JSON-RPC 2.0 object types ----------------- */
+/* ----------------- Id ----------------- */
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// A JSON RPC Id
+/// Note: only supports u64 numbers
 pub enum Id { Number(u64), String(String), Null, }
 
 impl serde::Serialize for Id {
@@ -32,6 +37,49 @@ impl serde::Serialize for Id {
 			Id::String(ref string) => serializer.serialize_str(string),
 		}
 	}
+}
+
+impl serde::Deserialize for Id {
+	fn deserialize<DE>(deserializer: &mut DE) -> Result<Self, DE::Error>
+		where DE: serde::Deserializer 
+	{
+		deserializer.deserialize(IdVisitor)
+	}
+}
+
+struct IdVisitor;
+
+impl Visitor for IdVisitor {
+	type Value = Id;
+	
+    fn visit_unit<E>(&mut self) -> Result<Self::Value, E> where E: Error,
+    {
+		Ok(Id::Null)
+    }	
+	
+	fn visit_u64<E>(&mut self, value: u64) -> Result<Self::Value, E> where E: Error,
+    {
+        Ok(Id::Number(value))
+    }
+	
+    fn visit_str<E>(&mut self, value: &str) -> Result<Self::Value, E> where E: Error,
+    {
+        Ok(Id::String(value.to_string()))
+    }
+}
+
+#[test]
+fn test_Id() {
+    use json_util::test_util::*;
+	
+	check_deser(Id::Null);
+	check_deser(Id::Number(123));
+	check_deser(Id::String("123".into()));
+    check_deser(Id::String("".into()));
+    check_deser(Id::String("foo".into()));
+    
+    // FIXME better handling of non-u64 numbers?
+//    assert_eq!(from_json::<Id>("-123"), Id::Number(123)); 
 }
 
 /* -----------------  Request  ----------------- */
@@ -260,7 +308,8 @@ pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> Jso
 	if jsonrpc != "2.0" {
 		return Err(error_JSON_RPC_InvalidRequest(r#"Property `jsonrpc` is not "2.0". "#))
 	}
-	let id = try!(parse_jsonrpc_id(request_map.remove("id")));
+	let id = request_map.remove("id");
+	let id = try!(id.map_or(Ok(None), parse_jsonrpc_id));
 	let method = try!(helper.obtain_String(&mut request_map, "method"));
 	let params = try!(helper.obtain_Value(&mut request_map, "params"));
 	
@@ -283,18 +332,9 @@ pub fn to_jsonrpc_params(params: Value) -> GResult<RequestParams> {
 	}
 }
 
-pub fn parse_jsonrpc_id(id: Option<Value>) -> JsonRpcParseResult<Option<Id>> {
-	let id : Value = match id {
-		None => return Ok(None),
-		Some(id) => id,
-	};
-	match id {
-		Value::I64(number) => Ok(Some(Id::Number(number as u64))), // FIXME truncation
-		Value::U64(number) => Ok(Some(Id::Number(number))),
-		Value::String(string) => Ok(Some(Id::String(string))),
-		Value::Null => Ok(None),
-		_ => Err(error_JSON_RPC_InvalidRequest("Property `id` not a String or integer.")),
-	}
+pub fn parse_jsonrpc_id(id: Value) -> JsonRpcParseResult<Option<Id>> {
+   	serde_json::from_value(id)
+    	.map_err(|err| error_JSON_RPC_InvalidRequest(format!("Invalid id: {}", err)))
 }
 
 /* -----------------  Message  ----------------- */
@@ -329,11 +369,8 @@ pub mod tests {
 	use serde_json::Value;
 	use serde_json::builder::ObjectBuilder;
 	use json_util::*;
+	use json_util::test_util::*;
 
-	pub fn to_json<T: serde::Serialize>(value: &T) -> String {
-		serde_json::to_string(value).unwrap()
-	}
-	
 	pub fn check_error(result: RequestError, expected: RequestError) {
 		assert_starts_with(&result.message, &expected.message);
 		assert_eq!(result, RequestError { message : result.message.clone(), .. expected }); 

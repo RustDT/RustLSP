@@ -289,7 +289,7 @@ impl<
 	RET : serde::Serialize, 
 	RET_ERROR : serde::Serialize,
 > 
-MethodCompletable<RET, RET_ERROR>
+    MethodCompletable<RET, RET_ERROR>
 {
 	pub fn new(completable: ResponseCompletable) -> MethodCompletable<RET, RET_ERROR> {
 		MethodCompletable { completable : completable, p1 : PhantomData, p2 : PhantomData}

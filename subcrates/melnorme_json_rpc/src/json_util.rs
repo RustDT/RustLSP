@@ -110,3 +110,32 @@ pub trait JsonDeserializerHelper<ERR> {
 	}
 
 }
+
+#[cfg(test)]
+pub mod test_util {
+    
+    use util::tests::*;
+    use serde::Serialize;
+    use serde::Deserialize;
+    use serde_json;
+    use std::fmt::Debug;
+    
+   	pub fn to_json<T: Serialize>(value: &T) -> String {
+		serde_json::to_string(value).unwrap()
+	}
+    
+   	pub fn from_json<T: Deserialize>(json: &str) -> T {
+		serde_json::from_str(json).unwrap()
+	}
+
+    pub fn check_deser<T>(obj: T) 
+        -> String
+        where T : Serialize + Deserialize + PartialEq + Debug
+    {
+        let json = serde_json::to_string(&obj).unwrap();
+    	let reserialized : T = serde_json::from_str(&json).unwrap();
+    	check_equal(reserialized, obj);
+    	json
+    }
+    
+}
