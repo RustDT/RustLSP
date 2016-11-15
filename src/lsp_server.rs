@@ -13,11 +13,11 @@ use util::core::*;
 use jsonrpc::*;
 use jsonrpc::service_util::MessageReader;
 use jsonrpc::service_util::MessageWriter;
-use jsonrpc::service_util::ServiceError;
 
 use jsonrpc::output_agent::OutputAgent;
 
-use jsonrpc::jsonrpc_objects::RequestParams;
+use jsonrpc::method_types::MethodError;
+use jsonrpc::jsonrpc_types::RequestParams;
 
 use lsp_transport;
 use ls_types::*;
@@ -114,7 +114,7 @@ impl LSPEndpoint {
 	
 }
 
-pub type LSResult<RET, ERR_DATA> = Result<RET, ServiceError<ERR_DATA>>;
+pub type LSResult<RET, ERR_DATA> = Result<RET, MethodError<ERR_DATA>>;
 pub type LSCompletable<RET> = MethodCompletable<RET, ()>;
 
 pub trait LanguageServer {
@@ -148,7 +148,7 @@ pub trait LanguageServer {
 	
 	#[allow(unused_variables)]
 	fn handle_other_method(&mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable) {
-	    completable.complete_with_error(jsonrpc_objects::error_JSON_RPC_MethodNotFound()); 
+	    completable.complete_with_error(jsonrpc_types::error_JSON_RPC_MethodNotFound()); 
 	}
 }
 

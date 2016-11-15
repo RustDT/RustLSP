@@ -2,7 +2,7 @@
 
 
 use lsp_server::*;
-use jsonrpc::service_util::ServiceError;
+use jsonrpc::method_types::MethodError;
 use jsonrpc::*;
 use ls_types::*;
 
@@ -17,9 +17,9 @@ pub struct TestsLanguageServer {
 
 impl TestsLanguageServer {
 	
-	pub fn error_not_available<DATA>(data : DATA) -> ServiceError<DATA> {
+	pub fn error_not_available<DATA>(data : DATA) -> MethodError<DATA> {
 		let msg = "Functionality not implemented.".to_string();
-		ServiceError::<DATA> { code : 1, message : msg, data : data }
+		MethodError::<DATA> { code : 1, message : msg, data : data }
 	}
 	
 }

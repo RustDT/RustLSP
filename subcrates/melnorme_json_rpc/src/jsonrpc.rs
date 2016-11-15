@@ -18,7 +18,8 @@ extern crate melnorme_util as util;
 extern crate futures;
 
 pub mod json_util;
-pub mod jsonrpc_objects;
+pub mod jsonrpc_types;
+pub mod method_types;
 pub mod service_util;
 pub mod output_agent;
 
@@ -36,10 +37,9 @@ use futures::Future;
 use futures::BoxFuture;
 use futures::Complete;
 
-use service_util::ServiceResult;
 use service_util::MessageReader;
-use jsonrpc_objects::*;
-
+use jsonrpc_types::*;
+use method_types::*;
 
 /* -----------------  Endpoint  ----------------- */
 
@@ -53,7 +53,7 @@ use output_agent::OutputAgentTask;
 #[derive(Clone)]
 pub struct EndpointOutput {
 	id_counter : Arc<Mutex<u64>>,
-	pending_requests : Arc<Mutex<HashMap<RpcId, Complete<ResponseResult>>>>,
+	pending_requests : Arc<Mutex<HashMap<Id, Complete<ResponseResult>>>>,
 	output_agent : Arc<Mutex<OutputAgent>>,
 }
 
@@ -77,10 +77,10 @@ impl EndpointOutput {
 		self.output_agent.lock().unwrap().shutdown_and_join();
 	}
 	
-	pub fn next_id(&self) -> RpcId {
+	pub fn next_id(&self) -> Id {
    		let id_num : &mut u64 = &mut *self.id_counter.lock().unwrap();
 		*id_num += 1;
-		RpcId::Number(*id_num)
+		Id::Number(*id_num)
 	}
 }
 
@@ -115,18 +115,18 @@ impl EndpointHandler {
 				self.handle_request(rpc_request);
 			} 
 			Err(error) => {
-				// If we can't parse JsonRpcRequest, send an error response with null id
-				let id = RpcId::Null;
-				submit_write_task(&self.output.output_agent, JsonRpcResponse::new_error(id, error).to_message()); 
+				// If we can't parse Request, send an error response with null id
+				let id = Id::Null;
+				submit_write_task(&self.output.output_agent, Response::new_error(id, error).to_message()); 
 			}
 		}
 	}
 	
 	/// Handle a well formed JsonRpc request object
-	pub fn handle_request(&mut self, request: JsonRpcRequest) {
+	pub fn handle_request(&mut self, request: Request) {
 		let output_agent = self.output.output_agent.clone();
 		
-		let on_response = new(move |response: Option<JsonRpcResponse>| {
+		let on_response = new(move |response: Option<Response>| {
 			if let Some(response) = response {
 				submit_write_task(&output_agent, response.to_message()); 
 			} else {
@@ -181,29 +181,29 @@ pub trait RequestHandler {
 /// Typically: this will write an appropriate JSON-RPC response to the endpoint output.
 pub struct ResponseCompletable {
 	completion_flag: FinishedFlag,
-	id: Option<RpcId>,
-	on_response: Box<FnMut(Option<JsonRpcResponse>) + Send>,
+	id: Option<Id>,
+	on_response: Box<FnMut(Option<Response>) + Send>,
 }
 
 impl ResponseCompletable {
 	
-	pub fn new(id: Option<RpcId>, on_response: Box<FnMut(Option<JsonRpcResponse>) + Send>) -> ResponseCompletable {
+	pub fn new(id: Option<Id>, on_response: Box<FnMut(Option<Response>) + Send>) -> ResponseCompletable {
 		ResponseCompletable { 
 			completion_flag : FinishedFlag(false), id : id, on_response: on_response
 		}
 	}
 	
-	pub fn complete(mut self, rpc_result: Option<ResponseResult>) {
+	pub fn complete(mut self, response_result: Option<ResponseResult>) {
 		self.completion_flag.finish();
 		
 		// From the spec: `A Notification is a Request object without an "id" member.`
-		if let Some(rpc_result) = rpc_result {
+		if let Some(response_result) = response_result {
 			
 			let response =
 			if let Some(id) = self.id {
-				JsonRpcResponse{ id : id, result_or_error : rpc_result }
+				Response{ id : id, result_or_error : response_result }
 			} else {
-				JsonRpcResponse::new_error(RpcId::Null, 
+				Response::new_error(Id::Null, 
 					error_JSON_RPC_InvalidRequest("Property `id` not provided for request."))
 			};
 			
@@ -213,7 +213,7 @@ impl ResponseCompletable {
 		}
 	}
 	
-	pub fn complete_with_error(self, error: RpcError) {
+	pub fn complete_with_error(self, error: RequestError) {
 		self.complete(Some(ResponseResult::Error(error)));
 	}
 	
@@ -235,7 +235,7 @@ impl ResponseCompletable {
 		PARAMS : serde::Deserialize, 
 		RET : serde::Serialize, 
 		RET_ERROR : serde::Serialize ,
-		METHOD : FnOnce(PARAMS) -> ServiceResult<RET, RET_ERROR>,
+		METHOD : FnOnce(PARAMS) -> MethodResult<RET, RET_ERROR>,
 	{
 		self.handle_request_with(params, |params, completable| {
 			let result = sync_method_handler(params);
@@ -273,7 +273,7 @@ impl ResponseCompletable {
 use std::marker::PhantomData;
 
 /// Helper type that wraps a ResponseCompletable, 
-/// and binds the possible completion to a result `ServiceResult<RET, RET_ERROR>` 
+/// and binds the possible completion to a result `MethodResult<RET, RET_ERROR>` 
 pub struct MethodCompletable
 <
 	RET : serde::Serialize, 
@@ -320,17 +320,17 @@ MethodCompletable<RET, RET_ERROR>
 		}
 	}
 	
-	pub fn complete(self, result: ServiceResult<RET, RET_ERROR>) {
+	pub fn complete(self, result: MethodResult<RET, RET_ERROR>) {
 		self.completable.complete(Some(ResponseResult::from(result)));
 	}
 }
 
-pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, rpc_message: JsonRpcMessage) {
+pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, jsonrpc_message: Message) {
 	
 	let write_task : OutputAgentTask = Box::new(move |mut response_handler| {
-		info!("JSON-RPC message: {:?}", rpc_message);
+		info!("JSON-RPC message: {:?}", jsonrpc_message);
 		
-		let response_str = serde_json::to_string(&rpc_message).unwrap_or_else(|error| -> String { 
+		let response_str = serde_json::to_string(&jsonrpc_message).unwrap_or_else(|error| -> String { 
 			panic!("Failed to serialize to JSON object: {}", error);
 		});
 		
@@ -390,98 +390,21 @@ impl EndpointOutput {
 	
 	pub fn write_request<
 		PARAMS : serde::Serialize, 
-	>(&self, id: Option<RpcId>, method_name: &str, params: PARAMS) 
+	>(&self, id: Option<Id>, method_name: &str, params: PARAMS) 
 		-> GResult<()> 
 	{
 		let params_value = serde_json::to_value(&params);
-		let params = jsonrpc_objects::to_jsonrpc_params(params_value)?;
+		let params = jsonrpc_types::to_jsonrpc_params(params_value)?;
 		
-		let rpc_request = JsonRpcRequest { id: id.clone(), method : method_name.into(), params : params };
+		let rpc_request = Request { id: id.clone(), method : method_name.into(), params : params };
 		
-		submit_write_task(&self.output_agent, JsonRpcMessage::Request(rpc_request));
+		submit_write_task(&self.output_agent, Message::Request(rpc_request));
 		Ok(())
 	}
 	
 }
 
-
-/* -----------------  MapRequestHandler  ----------------- */
-
-pub type RpcMethodHandler = Fn(RequestParams, ResponseCompletable);
-
-pub struct MapRequestHandler {
-	pub method_handlers : HashMap<String, Box<RpcMethodHandler>>,
-}
-
-impl MapRequestHandler {
-	
-	pub fn new() -> MapRequestHandler {
-		 MapRequestHandler { method_handlers : HashMap::new() }
-	}
-	
-	pub fn add_notification<
-		PARAMS : serde::Deserialize + 'static,
-	>(
-		&mut self,
-		method_name: &'static str, 
-		method_fn: Box<Fn(PARAMS)>
-	) {
-		let req_handler : Box<RpcMethodHandler> = new(move |params, completable| {
-			completable.sync_handle_notification(params, &*method_fn);
-		});
-		self.add_rpc_handler(method_name, req_handler);
-	}
-	
-	pub fn add_request<
-		PARAMS : serde::Deserialize + 'static, 
-		RET : serde::Serialize + 'static, 
-		RET_ERROR : serde::Serialize + 'static
-	>(
-		&mut self,
-		method_name: &'static str, 
-		method_fn: Box<Fn(PARAMS) -> ServiceResult<RET, RET_ERROR>>
-	) {
-		let req_handler : Box<RpcMethodHandler> = new(move |params, completable| {
-			completable.sync_handle_request(params, &*method_fn);
-		});
-		self.add_rpc_handler(method_name, req_handler);
-	}
-	
-	pub fn add_rpc_handler(
-		&mut self,
-		method_name: &'static str,
-		method_handler: Box<RpcMethodHandler>
-	) {
-		self.method_handlers.insert(method_name.to_string(), method_handler);
-	}
-	
-	fn do_invoke_method(
-		&mut self, 
-		method_name: &str, 
-		completable: ResponseCompletable,
-		request_params: RequestParams,
-	) {
-		if let Some(method_fn) = self.method_handlers.get(method_name) 
-		{
-			let method_fn : &Box<RpcMethodHandler> = method_fn;
-			method_fn(request_params, completable);
-		} else {
-			completable.complete_with_error(error_JSON_RPC_MethodNotFound());
-		};
-	}
-	
-}
-
-impl RequestHandler for MapRequestHandler {
-	
-	fn handle_request(&mut self, request_method: &str, request_params: RequestParams, 
-		completable: ResponseCompletable) 
-	{
-		self.do_invoke_method(request_method, completable, request_params);
-	}
-	
-}
-
+pub mod map_request_handler;
 
 
 /* ----------------- Tests ----------------- */
@@ -495,12 +418,13 @@ mod tests_ {
 	use util::core::*;
 	use util::tests::*;
 	use tests_sample_types::*;
+	use super::map_request_handler::MapRequestHandler;
+	
 	use std::thread;
 	
-	use service_util::ServiceResult;
-	use service_util::ServiceError;
-	use jsonrpc_objects::*;
-	use jsonrpc_objects::tests::*;
+	use method_types::*;
+	use jsonrpc_types::*;
+	use jsonrpc_types::tests::*;
 	
 	use json_util::JsonObject;
 	use output_agent::IoWriteHandler;
@@ -508,12 +432,12 @@ mod tests_ {
 	use serde_json::Value;
 	use serde_json;
 	
-	pub fn sample_fn(params: Point) -> ServiceResult<String, ()> {
+	pub fn sample_fn(params: Point) -> MethodResult<String, ()> {
 		let x_str : String = params.x.to_string();
 		let y_str : String = params.y.to_string();
 		Ok(x_str + &y_str)
 	}
-	pub fn no_params_method(_params: ()) -> Result<String, ServiceError<()>> {
+	pub fn no_params_method(_params: ()) -> Result<String, MethodError<()>> {
 		Ok("okay".into())
 	}
 	
@@ -545,11 +469,11 @@ mod tests_ {
 	where 
 		FN : FnMut(Option<ResponseResult>) + 'static + Send
 	{
-		let on_response : Box<FnMut(Option<JsonRpcResponse>) + Send> = new(move |response: Option<JsonRpcResponse>| {
+		let on_response : Box<FnMut(Option<Response>) + Send> = new(move |response: Option<Response>| {
 			and_then(response.and_then(|e| Some(e.result_or_error)));
 		});
 		
-		let completable = ResponseCompletable::new(Some(RpcId::Number(123)), on_response);
+		let completable = ResponseCompletable::new(Some(Id::Number(123)), on_response);
 		req_handler.handle_request(method_name, request_params, completable);
 	}
 	
@@ -560,7 +484,7 @@ mod tests_ {
 			// Test handle unknown method
 			let mut request_handler = MapRequestHandler::new();
 			
-			let request = JsonRpcRequest::new(1, "unknown_method".to_string(), JsonObject::new());
+			let request = Request::new(1, "unknown_method".to_string(), JsonObject::new());
 			invoke_method(&mut request_handler, &request.method, request.params,
 				|result| 
 				check_request(result.unwrap(), ResponseResult::Error(error_JSON_RPC_MethodNotFound())) 
@@ -572,7 +496,7 @@ mod tests_ {
 		request_handler.add_rpc_handler("async_method", Box::new(async_method));
 		
 		// test with invalid params = "{}" 
-		let request = JsonRpcRequest::new(1, "sample_fn".to_string(), JsonObject::new());
+		let request = Request::new(1, "sample_fn".to_string(), JsonObject::new());
 		invoke_method(&mut request_handler, &request.method, request.params, 
 			|result| 
 			check_request(result.unwrap(), ResponseResult::Error(error_JSON_RPC_InvalidParams(r#"missing field "x""#)))
@@ -583,7 +507,7 @@ mod tests_ {
 			Value::Object(object) => object, 
 			_ => panic!("Not serialized into Object") 
 		};
-		let request = JsonRpcRequest::new(1, "sample_fn".to_string(), params_value);
+		let request = Request::new(1, "sample_fn".to_string(), params_value);
 		invoke_method(&mut request_handler, &request.method, request.params.clone(),
 			|result| 
 			assert_equal(result.unwrap(), ResponseResult::Result(
@@ -595,8 +519,8 @@ mod tests_ {
 		// Test valid request with params = "null"
 		request_handler.add_request("no_params_method", Box::new(no_params_method));
 		
-		let id1 = Some(RpcId::Number(1));
-		let request = JsonRpcRequest { id : id1, method : "no_params_method".into(), params : RequestParams::None, };
+		let id1 = Some(Id::Number(1));
+		let request = Request { id : id1, method : "no_params_method".into(), params : RequestParams::None, };
 		invoke_method(&mut request_handler, &request.method, request.params.clone(), 
 			|result| 
 			assert_equal(result.unwrap(), ResponseResult::Result(
@@ -619,7 +543,7 @@ mod tests_ {
 		
 		// test again using handle_request
 		// TODO review this code
-		let request = JsonRpcRequest { 	
+		let request = Request { 	
 			id : None,
 			method : "sample_fn".into(),
 			params : request.params.clone(),

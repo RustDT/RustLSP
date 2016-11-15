@@ -14,7 +14,7 @@ extern crate rust_lsp;
 
 use rust_lsp::ls_types::*;
 use rust_lsp::lsp_server::*;
-use rust_lsp::jsonrpc::service_util::ServiceError;
+use rust_lsp::jsonrpc::method_types::MethodError;
 use rust_lsp::jsonrpc::EndpointOutput;
 use rust_lsp::jsonrpc::MethodCompletable;
 
@@ -42,9 +42,9 @@ where
 impl DummyLanguageServer {
 	
 	// FIXME: user general error
-	pub fn error_not_available<DATA>(data : DATA) -> ServiceError<DATA> {
+	pub fn error_not_available<DATA>(data : DATA) -> MethodError<DATA> {
 		let msg = "Functionality not implemented.".to_string();
-		ServiceError::<DATA> { code : 1, message : msg, data : data }
+		MethodError::<DATA> { code : 1, message : msg, data : data }
 	}
 	
 }
