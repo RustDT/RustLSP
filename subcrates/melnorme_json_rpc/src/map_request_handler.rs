@@ -14,7 +14,8 @@ use super::RequestHandler;
 use super::serde;
 
 use method_types::*;
-use jsonrpc_types::*;
+use jsonrpc_common::*;
+use jsonrpc_request::*;
 
 
 /* -----------------  MapRequestHandler  ----------------- */

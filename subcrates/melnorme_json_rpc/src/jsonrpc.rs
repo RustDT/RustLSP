@@ -18,7 +18,10 @@ extern crate melnorme_util as util;
 extern crate futures;
 
 pub mod json_util;
+pub mod jsonrpc_common;
 pub mod jsonrpc_types;
+pub mod jsonrpc_request;
+pub mod jsonrpc_response;
 pub mod method_types;
 pub mod service_util;
 pub mod output_agent;
@@ -38,7 +41,10 @@ use futures::BoxFuture;
 use futures::Complete;
 
 use service_util::MessageReader;
+use jsonrpc_common::*;
 use jsonrpc_types::*;
+use jsonrpc_request::*;
+use jsonrpc_response::*;
 use method_types::*;
 
 /* -----------------  Endpoint  ----------------- */
@@ -398,7 +404,7 @@ impl EndpointOutput {
         -> GResult<()> 
     {
         let params_value = serde_json::to_value(&params);
-        let params = jsonrpc_types::to_jsonrpc_params(params_value)?;
+        let params = jsonrpc_request::to_jsonrpc_params(params_value)?;
         
         let rpc_request = Request { id: id.clone(), method : method_name.into(), params : params };
         
@@ -422,19 +428,22 @@ mod tests_ {
     use util::core::*;
     use util::tests::*;
     use tests_sample_types::*;
-    use super::map_request_handler::MapRequestHandler;
+    use map_request_handler::MapRequestHandler;
     
     use std::thread;
     
+    use serde_json::Value;
+    use serde_json;
+    
+    use jsonrpc_common::*;
+    use jsonrpc_response::*;
+    use jsonrpc_request::*;
+    use jsonrpc_request::request_tests::check_error;
     use method_types::*;
-    use jsonrpc_types::*;
-    use jsonrpc_types::tests::*;
     
     use json_util::JsonObject;
     use output_agent::IoWriteHandler;
     use output_agent::OutputAgent;
-    use serde_json::Value;
-    use serde_json;
     
     pub fn sample_fn(params: Point) -> MethodResult<String, ()> {
         let x_str : String = params.x.to_string();
