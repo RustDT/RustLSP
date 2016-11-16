@@ -15,99 +15,99 @@ pub type JsonObject = Map<String, Value>;
 /* ----------------- deserialize helpers ----------------- */
 
 pub fn new_object() -> JsonObject {
-	BTreeMap::new()
+    BTreeMap::new()
 }
 
 pub fn unwrap_object_builder(ob: ObjectBuilder) -> JsonObject {
-	unwrap_object(ob.build())
+    unwrap_object(ob.build())
 }
 
 pub fn unwrap_object(value: Value) -> JsonObject {
-	match value {
-		Value::Object(o) => o ,
-		_ => { panic!() },
-	}
+    match value {
+        Value::Object(o) => o ,
+        _ => { panic!() },
+    }
 }
 
 
 pub trait JsonDeserializerHelper<ERR> {
-	
-	fn new_error(&self, error_message: &str) -> ERR;
-	
-	fn obtain_Value(&mut self, mut json_map : &mut JsonObject, key: & str) 
-		-> Result<Value, ERR> 
-	{
-		let value = json_map.remove(key);
-		match value {
-			Some(value) => { Ok(value) }, 
-			None => { return Err(self.new_error(&format!("Property `{}` is missing.", key))) }
-		}
-	}
-	
-	fn obtain_Value_or(&mut self, mut json_map : &mut JsonObject, key: & str, default: & Fn() -> Value) 
-		-> Value 
-	{
-		if let Some(value) = json_map.remove(key) {
-			if let Value::Null = value {
-				default()
-			} else {
-				value
-			}
-		} else {
-			default()
-		}
-	}
-	
-	fn as_String(&mut self, value: Value) -> Result<String, ERR> {
-		match value {
-			Value::String(string) => Ok(string),
-			_ => Err(self.new_error(&format!("Value `{}` is not a String.", value))),
-		}
-	}
-	
-	fn as_Object(&mut self, value: Value) -> Result<JsonObject, ERR> {
-		match value {
-			Value::Object(map) => Ok(map),
-			_ => Err(self.new_error(&format!("Value `{}` is not an Object.", value))),
-		}
-	}
-	
-	fn as_u32(&mut self, value: Value) -> Result<u32, ERR> {
-		match value {
-			Value::I64(num) => Ok(num as u32), // TODO: check for truncation
-			Value::U64(num) => Ok(num as u32), // TODO: check for truncation
-			_ => Err(self.new_error(&format!("Value `{}` is not an Integer.", value))),
-		}
-	}
-	
-	
-	fn obtain_String(&mut self, json_map : &mut JsonObject, key: &str) 
-		-> Result<String, ERR> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_String(value)
-	}
-	
-	fn obtain_Object(&mut self, json_map : &mut JsonObject, key: &str) 
-		-> Result<JsonObject, ERR> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_Object(value)
-	}
-	
-	fn obtain_Object_or(&mut self, json_map : &mut JsonObject, key: &str, default: & Fn() -> JsonObject) 
-		-> Result<JsonObject, ERR> 
-	{
-		let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
-		self.as_Object(value)
-	}
-	
-	fn obtain_u32(&mut self, json_map: &mut JsonObject, key: &str) 
-		-> Result<u32, ERR> 
-	{
-		let value = try!(self.obtain_Value(json_map, key));
-		self.as_u32(value)
-	}
+    
+    fn new_error(&self, error_message: &str) -> ERR;
+    
+    fn obtain_Value(&mut self, mut json_map : &mut JsonObject, key: & str) 
+        -> Result<Value, ERR>
+    {
+        let value = json_map.remove(key);
+        match value {
+            Some(value) => { Ok(value) },
+            None => { return Err(self.new_error(&format!("Property `{}` is missing.", key))) }
+        }
+    }
+    
+    fn obtain_Value_or(&mut self, mut json_map : &mut JsonObject, key: & str, default: & Fn() -> Value) 
+        -> Value 
+    {
+        if let Some(value) = json_map.remove(key) {
+            if let Value::Null = value {
+                default()
+            } else {
+                value
+            }
+        } else {
+            default()
+        }
+    }
+    
+    fn as_String(&mut self, value: Value) -> Result<String, ERR> {
+        match value {
+            Value::String(string) => Ok(string),
+            _ => Err(self.new_error(&format!("Value `{}` is not a String.", value))),
+        }
+    }
+    
+    fn as_Object(&mut self, value: Value) -> Result<JsonObject, ERR> {
+        match value {
+            Value::Object(map) => Ok(map),
+            _ => Err(self.new_error(&format!("Value `{}` is not an Object.", value))),
+        }
+    }
+    
+    fn as_u32(&mut self, value: Value) -> Result<u32, ERR> {
+        match value {
+            Value::I64(num) => Ok(num as u32), // TODO: check for truncation
+            Value::U64(num) => Ok(num as u32), // TODO: check for truncation
+            _ => Err(self.new_error(&format!("Value `{}` is not an Integer.", value))),
+        }
+    }
+    
+    
+    fn obtain_String(&mut self, json_map : &mut JsonObject, key: &str) 
+        -> Result<String, ERR> 
+    {
+        let value = try!(self.obtain_Value(json_map, key));
+        self.as_String(value)
+    }
+    
+    fn obtain_Object(&mut self, json_map : &mut JsonObject, key: &str) 
+        -> Result<JsonObject, ERR> 
+    {
+        let value = try!(self.obtain_Value(json_map, key));
+        self.as_Object(value)
+    }
+    
+    fn obtain_Object_or(&mut self, json_map : &mut JsonObject, key: &str, default: & Fn() -> JsonObject) 
+        -> Result<JsonObject, ERR> 
+    {
+        let value = self.obtain_Value_or(json_map, key, &|| { Value::Object(default()) });
+        self.as_Object(value)
+    }
+    
+    fn obtain_u32(&mut self, json_map: &mut JsonObject, key: &str) 
+        -> Result<u32, ERR> 
+    {
+        let value = try!(self.obtain_Value(json_map, key));
+        self.as_u32(value)
+    }
 
 }
 
@@ -120,22 +120,22 @@ pub mod test_util {
     use serde_json;
     use std::fmt::Debug;
     
-   	pub fn to_json<T: Serialize>(value: &T) -> String {
-		serde_json::to_string(value).unwrap()
-	}
+    pub fn to_json<T: Serialize>(value: &T) -> String {
+        serde_json::to_string(value).unwrap()
+    }
     
-   	pub fn from_json<T: Deserialize>(json: &str) -> T {
-		serde_json::from_str(json).unwrap()
-	}
+    pub fn from_json<T: Deserialize>(json: &str) -> T {
+        serde_json::from_str(json).unwrap()
+    }
 
     pub fn check_deser<T>(obj: T) 
         -> String
         where T : Serialize + Deserialize + PartialEq + Debug
     {
         let json = serde_json::to_string(&obj).unwrap();
-    	let reserialized : T = serde_json::from_str(&json).unwrap();
-    	check_equal(reserialized, obj);
-    	json
+        let reserialized : T = serde_json::from_str(&json).unwrap();
+        check_equal(reserialized, obj);
+        json
     }
     
 }

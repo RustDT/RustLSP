@@ -16,5 +16,5 @@ pub trait MessageReader {
 }
 
 pub trait MessageWriter {
-	fn write_message(&mut self, msg: &str) -> Result<(), GError>;
+    fn write_message(&mut self, msg: &str) -> Result<(), GError>;
 }

@@ -17,7 +17,7 @@ pub enum PointField {
 }
 
 pub fn new_sample_params(x: i32, y: i32) -> Point {
-	Point { x : x, y : y }
+    Point { x : x, y : y }
 }
 
 
@@ -91,15 +91,15 @@ impl serde::de::Visitor for PointVisitor {
 
 
 impl serde::Serialize for Point {
-	fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
-		where S: serde::Serializer,
-	{
-		let elem_count = 2;
-		let mut state = try!(serializer.serialize_struct("Point", elem_count)); 
-		{
-			try!(serializer.serialize_struct_elt(&mut state, "x", &self.x));
-			try!(serializer.serialize_struct_elt(&mut state, "y", &self.y));
-		}
-		serializer.serialize_struct_end(state)
-	}
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer,
+    {
+        let elem_count = 2;
+        let mut state = try!(serializer.serialize_struct("Point", elem_count)); 
+        {
+            try!(serializer.serialize_struct_elt(&mut state, "x", &self.x));
+            try!(serializer.serialize_struct_elt(&mut state, "y", &self.y));
+        }
+        serializer.serialize_struct_end(state)
+    }
 }
