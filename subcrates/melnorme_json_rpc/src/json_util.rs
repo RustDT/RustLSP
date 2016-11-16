@@ -6,6 +6,10 @@
 // except according to those terms.
 
 use std::collections::BTreeMap;
+
+use serde;
+use serde::Error;
+
 use serde_json::Map;
 use serde_json::Value;
 use serde_json::builder::ObjectBuilder;
@@ -27,6 +31,24 @@ pub fn unwrap_object(value: Value) -> JsonObject {
         Value::Object(o) => o ,
         _ => { panic!() },
     }
+}
+
+
+pub struct SerdeJsonDeserializerHelper<DE>(pub DE);
+
+impl<'a, DE : serde::Deserializer> 
+    JsonDeserializerHelper<DE::Error> for SerdeJsonDeserializerHelper<&'a mut DE> 
+{
+    fn new_error(&self, error_message: &str) -> DE::Error {
+        to_de_error::<DE>(error_message.into())
+    }
+}
+
+pub fn to_de_error<DE>(message: String) 
+    -> DE::Error  
+    where DE: serde::Deserializer 
+{
+    DE::Error::custom(message)
 }
 
 
@@ -74,8 +96,16 @@ pub trait JsonDeserializerHelper<ERR> {
     
     fn as_u32(&mut self, value: Value) -> Result<u32, ERR> {
         match value {
-            Value::I64(num) => Ok(num as u32), // TODO: check for truncation
-            Value::U64(num) => Ok(num as u32), // TODO: check for truncation
+            Value::I64(num) => Ok(num as u32), // FIXME: check for truncation
+            Value::U64(num) => Ok(num as u32), // FIXME: check for truncation
+            _ => Err(self.new_error(&format!("Value `{}` is not an Integer.", value))),
+        }
+    }
+    
+    fn as_i64(&mut self, value: Value) -> Result<i64, ERR> {
+        match value {
+            Value::I64(num) => Ok(num),
+            Value::U64(num) => Ok(num as i64), // FIXME: check for truncation
             _ => Err(self.new_error(&format!("Value `{}` is not an Integer.", value))),
         }
     }
@@ -108,6 +138,13 @@ pub trait JsonDeserializerHelper<ERR> {
         let value = try!(self.obtain_Value(json_map, key));
         self.as_u32(value)
     }
+    
+    fn obtain_i64(&mut self, json_map: &mut JsonObject, key: &str) 
+        -> Result<i64, ERR> 
+    {
+        let value = try!(self.obtain_Value(json_map, key));
+        self.as_i64(value)
+    }
 
 }
 
@@ -128,7 +165,7 @@ pub mod test_util {
         serde_json::from_str(json).unwrap()
     }
 
-    pub fn check_deser<T>(obj: T) 
+    pub fn check_serde<T>(obj: T) 
         -> String
         where T : Serialize + Deserialize + PartialEq + Debug
     {

@@ -17,7 +17,7 @@ use jsonrpc::service_util::MessageWriter;
 use jsonrpc::output_agent::OutputAgent;
 
 use jsonrpc::method_types::MethodError;
-use jsonrpc::jsonrpc_types::RequestParams;
+use jsonrpc::jsonrpc_request::RequestParams;
 
 use lsp_transport;
 use ls_types::*;
@@ -148,7 +148,7 @@ pub trait LanguageServer {
     
     #[allow(unused_variables)]
     fn handle_other_method(&mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable) {
-        completable.complete_with_error(jsonrpc_types::error_JSON_RPC_MethodNotFound()); 
+        completable.complete_with_error(jsonrpc_common::error_JSON_RPC_MethodNotFound()); 
     }
 }
 

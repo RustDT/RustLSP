@@ -44,6 +44,36 @@ pub fn assert_starts_with(string: &str, prefix: &str)
     }
 }
 
+use std::fmt;
+
+pub fn check_err_contains<ERR>(error: ERR, sub_string: &str)
+where
+    ERR : fmt::Display + fmt::Debug,
+{
+    let error_msg = format!("{}", error); 
+    if !error_msg.contains(sub_string) {
+        println!("\n========= Result Err:");
+        println!("{}", error);
+        println!("  doesn't contain:");
+        println!("{}", sub_string);
+        println!("====");
+        assert!(false);
+    }
+}
+
+pub fn check_err_res_contains<OK, ERR>(result : Result<OK, ERR>, sub_string: &str)
+where
+    OK : fmt::Debug,
+    ERR : fmt::Display + fmt::Debug,
+{
+    if let Ok(ok) = result {
+        assert!(false, "\n========= Result {:?} is not an Err.\n Needed error to contain: {}", ok, sub_string);
+        panic!()
+    }
+    let error = result.unwrap_err(); 
+    check_err_contains(error, sub_string);
+}
+
 
 use std::sync::Arc;
 use std::sync::Mutex; 
