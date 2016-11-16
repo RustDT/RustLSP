@@ -219,7 +219,8 @@ impl ResponseCompletable {
 	
 	pub fn handle_request_with<PARAMS, RET, RET_ERROR, METHOD>(
 		self, params: RequestParams, method_handler: METHOD
-	) where 
+	) 
+	where 
 		PARAMS : serde::Deserialize, 
 		RET : serde::Serialize, 
 		RET_ERROR : serde::Serialize,
@@ -231,7 +232,8 @@ impl ResponseCompletable {
 	
 	pub fn sync_handle_request<PARAMS, RET, RET_ERROR, METHOD>(
 		self, params: RequestParams, sync_method_handler: METHOD
-	) where 
+	) 
+	where 
 		PARAMS : serde::Deserialize, 
 		RET : serde::Serialize, 
 		RET_ERROR : serde::Serialize ,
@@ -245,7 +247,8 @@ impl ResponseCompletable {
 	
 	pub fn handle_notification_with<PARAMS, METHOD>(
 		self, params: RequestParams, method_handler: METHOD
-	) where 
+	) 
+	where 
 		PARAMS : serde::Deserialize, 
 		METHOD : FnOnce(PARAMS),
 	{
@@ -259,7 +262,8 @@ impl ResponseCompletable {
 	
 	pub fn sync_handle_notification<PARAMS, METHOD>(
 		self, params: RequestParams, sync_method_handler: METHOD
-	) where 
+	) 
+	where 
 		PARAMS : serde::Deserialize, 
 		METHOD : FnOnce(PARAMS),
 	{
