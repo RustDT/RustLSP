@@ -17,9 +17,20 @@ use serde_json::Value;
 use util::core::GResult;
 
 use jsonrpc_common::*;
-use jsonrpc_types::Message;
 use json_util::*;
 
+/* -----------------  ----------------- */
+
+pub fn check_jsonrpc_field<ERR, HELPER>(helper: &mut HELPER, json_obj: &mut JsonObject) -> Result<(), ERR>
+where 
+    HELPER: JsonDeserializerHelper<ERR>, 
+{
+    let jsonrpc = try!(helper.obtain_String(json_obj, "jsonrpc"));
+    if jsonrpc != "2.0" {
+        return Err(helper.new_error(r#"Property `jsonrpc` is not "2.0". "#))
+    };
+    Ok(())
+}
 
 /* -----------------  Request  ----------------- */
 
@@ -40,10 +51,6 @@ impl Request {
             method : method,
             params : RequestParams::Object(params),
         } 
-    }
-    
-    pub fn to_message(self) -> Message {
-        Message::Request(self)
     }
 }
 
@@ -79,10 +86,8 @@ impl serde::Deserialize for Request {
         let value = try!(Value::deserialize(helper.0));
         let mut json_obj = try!(helper.as_Object(value));
         
-        let jsonrpc = try!(helper.obtain_String(&mut json_obj, "jsonrpc"));
-        if jsonrpc != "2.0" {
-            return Err(new_de_error(r#"Property `jsonrpc` is not "2.0". "#.into()))
-        }
+        try!(check_jsonrpc_field(&mut helper, &mut json_obj));
+        
         let id = json_obj.remove("id");
         let id = try!(id.map_or(Ok(None), |value| serde_json::from_value(value).map_err(to_de_error)));
         let method = try!(helper.obtain_String(&mut json_obj, "method"));

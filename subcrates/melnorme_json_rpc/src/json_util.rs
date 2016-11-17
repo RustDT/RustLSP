@@ -33,32 +33,7 @@ pub fn unwrap_object(value: Value) -> JsonObject {
     }
 }
 
-
-pub struct SerdeJsonDeserializerHelper<DE>(pub DE);
-
-impl<'a, DE : serde::Deserializer> 
-    JsonDeserializerHelper<DE::Error> for SerdeJsonDeserializerHelper<&'a mut DE> 
-{
-    fn new_error(&self, error_message: &str) -> DE::Error {
-        new_de_error(error_message.into())
-    }
-}
-
-pub fn to_de_error<DISPLAY, DE_ERROR>(display: DISPLAY) 
-    -> DE_ERROR   
-where 
-    DISPLAY: fmt::Display,
-    DE_ERROR: serde::Error, 
-{
-    DE_ERROR::custom(format!("{}", display))
-}
-
-pub fn new_de_error<DE_ERROR>(message: String) 
-    -> DE_ERROR
-    where DE_ERROR: serde::Error 
-{
-    DE_ERROR::custom(message)
-}
+/* -----------------  ----------------- */
 
 pub trait JsonDeserializerHelper<ERR> {
     
@@ -155,6 +130,34 @@ pub trait JsonDeserializerHelper<ERR> {
     }
 
 }
+
+pub struct SerdeJsonDeserializerHelper<DE>(pub DE);
+
+impl<'a, DE : serde::Deserializer> 
+    JsonDeserializerHelper<DE::Error> for SerdeJsonDeserializerHelper<&'a mut DE> 
+{
+    fn new_error(&self, error_message: &str) -> DE::Error {
+        new_de_error(error_message.into())
+    }
+}
+
+pub fn to_de_error<DISPLAY, DE_ERROR>(display: DISPLAY) 
+    -> DE_ERROR   
+where 
+    DISPLAY: fmt::Display,
+    DE_ERROR: serde::Error, 
+{
+    DE_ERROR::custom(format!("{}", display))
+}
+
+pub fn new_de_error<DE_ERROR>(message: String) 
+    -> DE_ERROR
+    where DE_ERROR: serde::Error 
+{
+    DE_ERROR::custom(message)
+}
+
+/* -----------------  ----------------- */
 
 #[cfg(test)]
 pub mod test_util {

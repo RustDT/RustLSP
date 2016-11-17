@@ -11,7 +11,7 @@ use serde_json;
 use serde_json::Value;
 
 use jsonrpc_common::*;
-use jsonrpc_types::Message;
+use jsonrpc_request::check_jsonrpc_field;
 use json_util::*;
 
 
@@ -42,10 +42,6 @@ impl Response {
     
     pub fn new_error(id: Id, error: RequestError) -> Response {
         Response { id : id, result_or_error : ResponseResult::Error(error) }
-    }
-    
-    pub fn to_message(self) -> Message {
-        Message::Response(self)
     }
 }
 
@@ -81,6 +77,8 @@ impl serde::Deserialize for Response {
         let value = try!(Value::deserialize(helper.0));
         let mut json_obj = try!(helper.as_Object(value));
         
+        try!(check_jsonrpc_field(&mut helper, &mut json_obj));
+        
         let id_value = try!(helper.obtain_Value(&mut json_obj, "id"));
         let id : Id = try!(serde_json::from_value(id_value).map_err(to_de_error));
         
@@ -101,7 +99,7 @@ impl serde::Deserialize for Response {
 }
 
 #[cfg(test)]
-mod response_tests {
+pub mod response_tests {
 
     use super::*;
     use jsonrpc_common::*;
@@ -112,16 +110,30 @@ mod response_tests {
     use serde_json::Value;
     use serde_json::builder::ObjectBuilder;
 
-    fn sample_json_obj(foo: u32) -> Value {
+    pub fn sample_json_obj(foo: u32) -> Value {
         ObjectBuilder::new().insert("foo", foo).build()
     }
     
     #[test]
     fn test_Response() {
         
-        test_error_de::<Response>("{}", "Property `id` is missing");
-
-        test_error_de::<Response>(r#"{ "id":123 }"#, "Missing property `result` or `error`");
+        test_error_de::<Response>(
+            r#"{ "id":123, "result":null }"#, 
+            "Property `jsonrpc` is missing.",
+        );
+        test_error_de::<Response>(
+            r#"{ "jsonrpc":"1", "id":123, "result":null }"#, 
+            r#"Property `jsonrpc` is not "2.0". "#
+        );
+        
+        test_error_de::<Response>(
+            r#"{ "jsonrpc":"2.0" }"#, 
+            "Property `id` is missing"
+        );
+        test_error_de::<Response>(
+            r#"{ "jsonrpc":"2.0", "id":123 }"#, 
+            "Missing property `result` or `error`"
+        );
 
         
         let response = Response::new_result(Id::Null, sample_json_obj(100));

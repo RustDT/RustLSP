@@ -19,7 +19,7 @@ extern crate futures;
 
 pub mod json_util;
 pub mod jsonrpc_common;
-pub mod jsonrpc_types;
+pub mod jsonrpc_message;
 pub mod jsonrpc_request;
 pub mod jsonrpc_response;
 pub mod method_types;
@@ -42,7 +42,7 @@ use futures::Complete;
 
 use service_util::MessageReader;
 use jsonrpc_common::*;
-use jsonrpc_types::*;
+use jsonrpc_message::*;
 use jsonrpc_request::*;
 use jsonrpc_response::*;
 use method_types::*;
@@ -123,7 +123,7 @@ impl EndpointHandler {
             Err(error) => {
                 // If we can't parse Request, send an error response with null id
                 let id = Id::Null;
-                submit_write_task(&self.output.output_agent, Response::new_error(id, error).to_message()); 
+                submit_write_task(&self.output.output_agent, Response::new_error(id, error).into()); 
             }
         }
     }
@@ -134,7 +134,7 @@ impl EndpointHandler {
         
         let on_response = new(move |response: Option<Response>| {
             if let Some(response) = response {
-                submit_write_task(&output_agent, response.to_message()); 
+                submit_write_task(&output_agent, response.into()); 
             } else {
                 let method_name = ""; // TODO
                 info!("JSON-RPC notification complete. {:?}", method_name);
