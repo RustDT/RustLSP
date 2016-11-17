@@ -17,16 +17,6 @@ use json_util::*;
 
 
 
-pub struct JsonRequestDeserializerHelper;
-
-impl JsonDeserializerHelper<RequestError> for JsonRequestDeserializerHelper {
-    
-    fn new_error(&self, error_message: &str) -> RequestError {
-        error_JSON_RPC_InvalidRequest(error_message.to_string())
-    }
-    
-}
-
 pub type JsonRpcParseResult<T> = Result<T, RequestError>;
 
 pub fn parse_jsonrpc_id(id: Value) -> JsonRpcParseResult<Option<Id>> {
@@ -80,6 +70,12 @@ impl Visitor for IdDeserializeVisitor {
     fn visit_str<E>(&mut self, value: &str) -> Result<Self::Value, E> where E: Error,
     {
         Ok(Id::String(value.to_string()))
+    }
+}
+
+impl fmt::Display for Id {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", serde_json::to_string(self).unwrap())
     }
 }
 

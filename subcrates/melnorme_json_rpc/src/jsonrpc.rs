@@ -114,37 +114,6 @@ impl EndpointHandler {
         EndpointHandler { output : output, request_handler: request_handler }
     }
     
-    /// Handle an incoming message
-    pub fn handle_message(&mut self, message: &str) {
-        match parse_jsonrpc_request(message) {
-            Ok(rpc_request) => { 
-                self.handle_request(rpc_request);
-            } 
-            Err(error) => {
-                // If we can't parse Request, send an error response with null id
-                let id = Id::Null;
-                submit_write_task(&self.output.output_agent, Response::new_error(id, error).into()); 
-            }
-        }
-    }
-    
-    /// Handle a well formed JsonRpc request object
-    pub fn handle_request(&mut self, request: Request) {
-        let output_agent = self.output.output_agent.clone();
-        
-        let on_response = new(move |response: Option<Response>| {
-            if let Some(response) = response {
-                submit_write_task(&output_agent, response.into()); 
-            } else {
-                let method_name = ""; // TODO
-                info!("JSON-RPC notification complete. {:?}", method_name);
-            } 
-        });
-        let completable = ResponseCompletable::new(request.id, on_response);
-        
-        self.request_handler.handle_request(&request.method, request.params, completable); 
-    }
-
     /// Run a message read loop with given message reader.
     /// Loop will be terminated only when there is an error reading a message.
     ///
@@ -164,8 +133,44 @@ impl EndpointHandler {
                 }
             };
             
-            endpoint.handle_message(&message);
+            endpoint.handle_incoming_message(&message);
         }
+    }
+    
+    /// Handle an incoming message
+    pub fn handle_incoming_message(&mut self, message_json: &str) {
+        
+        let message = serde_json::from_str::<Message>(message_json);
+         
+        match message {
+            Ok(message) => {
+                match message {
+                	Message::Request(request) => self.handle_incoming_request(request),  
+                	Message::Response(response) => self.output.handle_incoming_response(response),
+                }
+            } 
+            Err(error) => {
+                let error = error_JSON_RPC_InvalidRequest(error);
+                submit_error_write_task(&self.output.output_agent, error); 
+            }
+        }
+    }
+
+    /// Handle a well-formed incoming JsonRpc request object
+    pub fn handle_incoming_request(&mut self, request: Request) {
+        let output_agent = self.output.output_agent.clone();
+        
+        let on_response = new(move |response: Option<Response>| {
+            if let Some(response) = response {
+                submit_message_write_task(&output_agent, response.into()); 
+            } else {
+                let method_name = ""; // TODO
+                info!("JSON-RPC notification complete. {:?}", method_name);
+            } 
+        });
+        let completable = ResponseCompletable::new(request.id, on_response);
+        
+        self.request_handler.handle_request(&request.method, request.params, completable); 
     }
 
 }
@@ -335,7 +340,7 @@ impl<
     }
 }
 
-pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, jsonrpc_message: Message) {
+pub fn submit_message_write_task(output_agent: &Arc<Mutex<OutputAgent>>, jsonrpc_message: Message) {
     
     let write_task : OutputAgentTask = Box::new(move |mut response_handler| {
         info!("JSON-RPC message: {:?}", jsonrpc_message);
@@ -358,6 +363,12 @@ pub fn submit_write_task(output_agent: &Arc<Mutex<OutputAgent>>, jsonrpc_message
     res.expect("Output agent is shutdown or thread panicked!");
 }
 
+pub fn submit_error_write_task(output_agent: &Arc<Mutex<OutputAgent>>, error: RequestError) {
+    let id = Id::Null;
+    let response = Response::new_error(id, error);
+    submit_message_write_task(output_agent, response.into()); 
+}
+
 /* -----------------  Request sending  ----------------- */
 
 pub type RequestFuture<RET, RET_ERROR> = BoxFuture<RequestResult<RET, RET_ERROR>, futures::Canceled>;
@@ -365,6 +376,7 @@ pub type RequestFuture<RET, RET_ERROR> = BoxFuture<RequestResult<RET, RET_ERROR>
 
 impl EndpointOutput {
     
+    /// Send a (non-notification) request
     pub fn send_request<
         PARAMS : serde::Serialize, 
         RET: serde::Deserialize, 
@@ -389,6 +401,7 @@ impl EndpointOutput {
     }
     
     
+    /// Send a notification
     pub fn send_notification<
         PARAMS : serde::Serialize, 
     >(&self, method_name: &str, params: PARAMS) 
@@ -408,8 +421,28 @@ impl EndpointOutput {
         
         let rpc_request = Request { id: id.clone(), method : method_name.into(), params : params };
         
-        submit_write_task(&self.output_agent, Message::Request(rpc_request));
+        submit_message_write_task(&self.output_agent, Message::Request(rpc_request));
         Ok(())
+    }
+    
+    
+    /// Handle a well-formed incoming JsonRpc request object
+    pub fn handle_incoming_response(&mut self, response: Response) {
+        let id = response.id;
+        let result_or_error = response.result_or_error;
+        
+        let entry = self.pending_requests.lock().unwrap().remove(&id);
+        
+        match entry {
+        	Some(entry) => { 
+        	    entry.complete(result_or_error) 
+        	} 
+        	None => { 
+                let id = Id::Null;
+                let error = error_JSON_RPC_InvalidResponse(format!("id `{}` not found", id));
+                submit_error_write_task(&self.output_agent, error); 
+        	}
+        }
     }
     
 }
@@ -561,7 +594,7 @@ mod tests_ {
             method : "sample_fn".into(),
             params : request.params.clone(),
         }; 
-        eh.handle_request(request);
+        eh.handle_incoming_request(request);
         
         // Test send_request
         

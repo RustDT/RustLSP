@@ -74,10 +74,6 @@ impl serde::Serialize for Request {
     }
 }
 
-pub fn parse_jsonrpc_request(message: &str) -> JsonRpcParseResult<Request> {
-    serde_json::from_str(message).map_err(error_JSON_RPC_InvalidRequest) 
-}
-
 impl serde::Deserialize for Request {
     fn deserialize<DE>(deserializer: &mut DE) -> Result<Self, DE::Error>
         where DE: serde::Deserializer 
@@ -224,7 +220,10 @@ pub mod request_tests {
         );
         
         // Test invalid JSON
-        check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_InvalidRequest("EOF"));
+        test_error_de::<Request>(
+            "{",
+            "EOF while"
+        );
         
         test_error_de::<Request>(
             "{ }",
@@ -252,8 +251,8 @@ pub mod request_tests {
         
         // Test valid request with params = null
         assert_equal(
-            parse_jsonrpc_request(r#"{ "jsonrpc": "2.0", "method":"xxx", "params":null }"#),
-            Ok(Request { id : None, method : "xxx".into(), params : RequestParams::None, }) 
+            from_json(r#"{ "jsonrpc": "2.0", "method":"xxx", "params":null }"#),
+            Request { id : None, method : "xxx".into(), params : RequestParams::None, } 
         );
         
         // --- Test serialization ---
