@@ -6,9 +6,9 @@
 // except according to those terms.
 
 use std::collections::BTreeMap;
+use std::fmt;
 
 use serde;
-use serde::Error;
 
 use serde_json::Map;
 use serde_json::Value;
@@ -40,17 +40,25 @@ impl<'a, DE : serde::Deserializer>
     JsonDeserializerHelper<DE::Error> for SerdeJsonDeserializerHelper<&'a mut DE> 
 {
     fn new_error(&self, error_message: &str) -> DE::Error {
-        to_de_error::<DE>(error_message.into())
+        new_de_error(error_message.into())
     }
 }
 
-pub fn to_de_error<DE>(message: String) 
-    -> DE::Error  
-    where DE: serde::Deserializer 
+pub fn to_de_error<DISPLAY, DE_ERROR>(display: DISPLAY) 
+    -> DE_ERROR   
+where 
+    DISPLAY: fmt::Display,
+    DE_ERROR: serde::Error, 
 {
-    DE::Error::custom(message)
+    DE_ERROR::custom(format!("{}", display))
 }
 
+pub fn new_de_error<DE_ERROR>(message: String) 
+    -> DE_ERROR
+    where DE_ERROR: serde::Error 
+{
+    DE_ERROR::custom(message)
+}
 
 pub trait JsonDeserializerHelper<ERR> {
     
@@ -155,6 +163,7 @@ pub mod test_util {
     use serde::Serialize;
     use serde::Deserialize;
     use serde_json;
+    use serde_json::Value;
     use std::fmt::Debug;
     
     pub fn to_json<T: Serialize>(value: &T) -> String {
@@ -165,14 +174,32 @@ pub mod test_util {
         serde_json::from_str(json).unwrap()
     }
 
-    pub fn check_serde<T>(obj: T) 
-        -> String
+    pub fn test_serde<T>(obj: &T) 
+        -> (T, String)
         where T : Serialize + Deserialize + PartialEq + Debug
     {
-        let json = serde_json::to_string(&obj).unwrap();
-        let reserialized : T = serde_json::from_str(&json).unwrap();
-        check_equal(reserialized, obj);
-        json
+        let json = to_json(obj);
+        let reserialized : T = from_json(&json);
+        check_equal(&reserialized, obj);
+        (reserialized, json)
+    }
+    
+    pub fn test_error_de<T>(json: &str, expected_err_contains: &str) 
+        where T : Deserialize + PartialEq + Debug
+    {
+        let res = serde_json::from_str::<T>(json).unwrap_err();
+        check_err_contains(res, expected_err_contains);
+    }
+    
+    pub fn test_serde_expecting<T>(obj: &T, expected_value: &Value) 
+        -> Value
+        where T : Serialize + Deserialize + PartialEq + Debug
+    {
+        let json = test_serde(obj).1;
+        
+        let as_value : Value = serde_json::from_str(&json).unwrap();
+        check_equal(&as_value, expected_value);
+        as_value
     }
     
 }

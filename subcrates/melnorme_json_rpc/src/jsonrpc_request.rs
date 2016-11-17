@@ -18,8 +18,7 @@ use util::core::GResult;
 
 use jsonrpc_common::*;
 use jsonrpc_types::Message;
-use json_util::JsonObject;
-use json_util::JsonDeserializerHelper;
+use json_util::*;
 
 
 /* -----------------  Request  ----------------- */
@@ -67,6 +66,36 @@ impl serde::Serialize for Request {
         serializer.serialize_struct_end(state)
     }
 }
+
+pub fn parse_jsonrpc_request(message: &str) -> JsonRpcParseResult<Request> {
+    serde_json::from_str(message).map_err(error_JSON_RPC_InvalidRequest) 
+}
+
+impl serde::Deserialize for Request {
+    fn deserialize<DE>(deserializer: &mut DE) -> Result<Self, DE::Error>
+        where DE: serde::Deserializer 
+    {
+        let mut helper = SerdeJsonDeserializerHelper(deserializer);
+        let value = try!(Value::deserialize(helper.0));
+        let mut json_obj = try!(helper.as_Object(value));
+        
+        let jsonrpc = try!(helper.obtain_String(&mut json_obj, "jsonrpc"));
+        if jsonrpc != "2.0" {
+            return Err(new_de_error(r#"Property `jsonrpc` is not "2.0". "#.into()))
+        }
+        let id = json_obj.remove("id");
+        let id = try!(id.map_or(Ok(None), |value| serde_json::from_value(value).map_err(to_de_error)));
+        let method = try!(helper.obtain_String(&mut json_obj, "method"));
+        let params = try!(helper.obtain_Value(&mut json_obj, "params"));
+        
+        let params = try!(to_jsonrpc_params(params).map_err(to_de_error));
+        
+        Ok(Request { id : id, method : method, params : params })
+    }
+}
+
+
+/* -----------------  ----------------- */
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum RequestParams {
@@ -146,45 +175,6 @@ impl Visitor for RequestParams_DeserializeVisitor {
 
 
 
-pub fn parse_jsonrpc_request(message: &str) -> JsonRpcParseResult<Request> {
-    let json_value : Value = 
-    match serde_json::from_str(message) 
-    {
-        Ok(ok) => { ok } 
-        Err(error) => { 
-            return Err(error_JSON_RPC_ParseError(error));
-        }
-    };
-    
-    let mut helper = JsonRequestDeserializerHelper { };
-    let mut json_request_obj : JsonObject = try!(helper.as_Object(json_value));
-        
-    parse_jsonrpc_request_jsonObject(&mut json_request_obj)
-}
-
-pub fn parse_jsonrpc_request_jsonObject(mut request_map: &mut JsonObject) -> JsonRpcParseResult<Request> {
-    let mut helper = JsonRequestDeserializerHelper { };
-    
-    let jsonrpc = try!(helper.obtain_String(&mut request_map, "jsonrpc"));
-    if jsonrpc != "2.0" {
-        return Err(error_JSON_RPC_InvalidRequest(r#"Property `jsonrpc` is not "2.0". "#))
-    }
-    let id = request_map.remove("id");
-    let id = try!(id.map_or(Ok(None), parse_jsonrpc_id));
-    let method = try!(helper.obtain_String(&mut request_map, "method"));
-    let params = try!(helper.obtain_Value(&mut request_map, "params"));
-    
-    let params : RequestParams = match to_jsonrpc_params(params) {
-        Ok(ok) => ok,
-        Err(error) => return Err(error_JSON_RPC_InvalidRequest(error)),
-    };
-    
-    let jsonrpc_request = Request { id : id, method : method, params : params }; 
-    
-    Ok(jsonrpc_request)
-}
-
-
 #[cfg(test)]
 pub mod request_tests {
 
@@ -195,7 +185,6 @@ pub mod request_tests {
     use json_util::test_util::*;
     use jsonrpc_common::*;
     
-    use serde_json;
     use serde_json::Value;
     use serde_json::builder::ObjectBuilder;
 
@@ -206,16 +195,14 @@ pub mod request_tests {
         let sample_obj = unwrap_object_builder(ObjectBuilder::new().insert("xxx", 123));
         let sample_string = Value::String("blah".into());
         
-        test__jsonrpc_params_serde(RequestParams::Object(sample_obj.clone()));
-        test__jsonrpc_params_serde(RequestParams::Array(vec![sample_string.clone(), sample_string]));
-        test__jsonrpc_params_serde(RequestParams::None);
+        test_serde__RequestParams(RequestParams::Object(sample_obj.clone()));
+        test_serde__RequestParams(RequestParams::Array(vec![sample_string.clone(), sample_string]));
+        test_serde__RequestParams(RequestParams::None);
     }
     
-    fn test__jsonrpc_params_serde(params: RequestParams) {
-        let params_string = to_json(&params);
-        let params2 = to_jsonrpc_params(serde_json::from_str(&params_string).unwrap()).unwrap();
-        
-        assert_equal(params, params2);
+    fn test_serde__RequestParams(params: RequestParams) {
+        let params_reser = test_serde(&params).0;
+        assert_equal(params_reser, params);
     }
     
     pub fn check_error(result: RequestError, expected: RequestError) {
@@ -224,7 +211,7 @@ pub mod request_tests {
     }
     
     #[test]
-    fn test__Request() {
+    fn test_Request() {
         
         let sample_params = unwrap_object_builder(ObjectBuilder::new()
             .insert("param", "2.0")
@@ -232,29 +219,30 @@ pub mod request_tests {
         );
         
         // Test invalid JSON
-        check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_ParseError(""));
+        check_error(parse_jsonrpc_request("{" ).unwrap_err(), error_JSON_RPC_InvalidRequest("EOF"));
         
-        assert_equal(
-            parse_jsonrpc_request("{ }"),
-            Err(error_JSON_RPC_InvalidRequest("Property `jsonrpc` is missing."))
-        );
-        assert_equal(
-            parse_jsonrpc_request(r#"{ "jsonrpc": "1.0" }"#),
-            Err(error_JSON_RPC_InvalidRequest(r#"Property `jsonrpc` is not "2.0". "#))
+        test_error_de::<Request>(
+            "{ }",
+            "Property `jsonrpc` is missing.",
         );
         
-        assert_equal(
-            parse_jsonrpc_request(r#"{ "jsonrpc": "2.0" }"#),
-            Err(error_JSON_RPC_InvalidRequest("Property `method` is missing."))
-        );
-        assert_equal(
-            parse_jsonrpc_request(r#"{ "jsonrpc": "2.0", "method":null }"#),
-            Err(error_JSON_RPC_InvalidRequest("Value `null` is not a String."))
+        test_error_de::<Request>(
+            r#"{ "jsonrpc": "1.0" }"#,
+            r#"Property `jsonrpc` is not "2.0". "#,
         );
         
-        assert_equal(
-            parse_jsonrpc_request(r#"{ "jsonrpc": "2.0", "method":"xxx" }"#),
-            Err(error_JSON_RPC_InvalidRequest("Property `params` is missing."))
+        test_error_de::<Request>(
+            r#"{ "jsonrpc": "2.0" }"#,
+            "Property `method` is missing.",
+        );
+        test_error_de::<Request>(
+            r#"{ "jsonrpc": "2.0", "method":null }"#,
+            "Value `null` is not a String.",
+        );
+        
+        test_error_de::<Request>(
+            r#"{ "jsonrpc": "2.0", "method":"xxx" }"#,
+            "Property `params` is missing.",
         );
         
         // Test valid request with params = null
@@ -266,20 +254,17 @@ pub mod request_tests {
         // --- Test serialization ---
         
         // basic Request
-        let request = Request::new(1, "myMethod".to_string(), sample_params.clone()); 
-        let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
-        assert_eq!(request, result);
+        let request = Request::new(1, "myMethod".to_string(), sample_params.clone());
+        test_serde(&request);
         
         // Test basic Request, no params
         let request = Request { id : None, method : "myMethod".to_string(), params : RequestParams::None, };
-        let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
-        assert_eq!(result, request);
+        test_serde(&request);
         
         // Test Request with no id
         let sample_array_params = RequestParams::Array(vec![]);
         let request = Request { id : None, method : "myMethod".to_string(), params : sample_array_params, };  
-        let result = parse_jsonrpc_request(&to_json(&request)).unwrap();
-        assert_eq!(result, request);
+        test_serde(&request);
     }
     
 }

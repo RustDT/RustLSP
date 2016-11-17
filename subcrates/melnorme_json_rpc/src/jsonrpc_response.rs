@@ -7,11 +7,12 @@
 
 
 use serde;
-
+use serde_json;
 use serde_json::Value;
 
 use jsonrpc_common::*;
 use jsonrpc_types::Message;
+use json_util::*;
 
 
 /* ----------------- Response ----------------- */
@@ -72,57 +73,85 @@ impl serde::Serialize for Response {
     }
 }
 
+impl serde::Deserialize for Response {
+    fn deserialize<DE>(deserializer: &mut DE) -> Result<Self, DE::Error>
+        where DE: serde::Deserializer 
+    {
+        let mut helper = SerdeJsonDeserializerHelper(deserializer);
+        let value = try!(Value::deserialize(helper.0));
+        let mut json_obj = try!(helper.as_Object(value));
+        
+        let id_value = try!(helper.obtain_Value(&mut json_obj, "id"));
+        let id : Id = try!(serde_json::from_value(id_value).map_err(to_de_error));
+        
+        let result_or_error : ResponseResult = {
+            if let Some(result) = json_obj.remove("result") {
+                ResponseResult::Result(result)
+            } else  
+            if let Some(error_obj) = json_obj.remove("error") {
+                let error : RequestError = try!(serde_json::from_value(error_obj).map_err(to_de_error));
+                ResponseResult::Error(error)
+            } else {
+                return Err(new_de_error("Missing property `result` or `error`".to_string()));
+            }
+        };
+        
+        Ok(Response{ id : id, result_or_error : result_or_error }) 
+    }
+}
+
 #[cfg(test)]
 mod response_tests {
 
     use super::*;
     use jsonrpc_common::*;
     
-    use util::tests::*;
     use json_util::*;
     use json_util::test_util::*;
     
-    use serde_json;
     use serde_json::Value;
     use serde_json::builder::ObjectBuilder;
 
+    fn sample_json_obj(foo: u32) -> Value {
+        ObjectBuilder::new().insert("foo", foo).build()
+    }
+    
     #[test]
-    fn test_Response_serialize() {
+    fn test_Response() {
         
-        fn sample_json_obj(foo: u32) -> Value {
-            ObjectBuilder::new().insert("foo", foo).build()
-        }
+        test_error_de::<Response>("{}", "Property `id` is missing");
+
+        test_error_de::<Response>(r#"{ "id":123 }"#, "Missing property `result` or `error`");
+
         
         let response = Response::new_result(Id::Null, sample_json_obj(100));
-        let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-        assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+        test_serde_expecting(&response, &ObjectBuilder::new()
             .insert("jsonrpc", "2.0")
             .insert("id", Id::Null)
             .insert("result", sample_json_obj(100))
-        ));
-        
+            .build()
+        ); 
         
         let response = Response::new_result(Id::Number(123), sample_json_obj(200));
-        let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-        assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+        test_serde_expecting(&response, &ObjectBuilder::new()
             .insert("jsonrpc", "2.0")
             .insert("id", 123)
             .insert("result", sample_json_obj(200))
-        ));
+            .build()
+        );
         
         let response = Response::new_result(Id::Null, sample_json_obj(200));
-        let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-        assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+        test_serde_expecting(&response, &ObjectBuilder::new()
             .insert("jsonrpc", "2.0")
             .insert("id", Value::Null)
             .insert("result", sample_json_obj(200))
-        ));
+            .build()
+        );
         
         let response = Response::new_error(Id::String("321".to_string()), RequestError{
             code: 5, message: "msg".to_string(), data: Some(sample_json_obj(300))
         });
-        let response = unwrap_object(serde_json::from_str(&to_json(&response)).unwrap());
-        assert_equal(response, unwrap_object_builder(ObjectBuilder::new()
+        test_serde_expecting(&response, &ObjectBuilder::new()
             .insert("jsonrpc", "2.0")
             .insert("id", "321")
             .insert("error", unwrap_object_builder(ObjectBuilder::new()
@@ -130,7 +159,8 @@ mod response_tests {
                 .insert("message", "msg")
                 .insert("data", sample_json_obj(300))
             ))
-        ));
+            .build()
+        );
         
     }
 }

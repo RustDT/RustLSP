@@ -87,11 +87,11 @@ impl Visitor for IdDeserializeVisitor {
 fn test_Id() {
     use json_util::test_util::*;
     
-    check_serde(Id::Null);
-    check_serde(Id::Number(123));
-    check_serde(Id::String("123".into()));
-    check_serde(Id::String("".into()));
-    check_serde(Id::String("foo".into()));
+    test_serde(&Id::Null);
+    test_serde(&Id::Number(123));
+    test_serde(&Id::String("123".into()));
+    test_serde(&Id::String("".into()));
+    test_serde(&Id::String("foo".into()));
     
     // FIXME better handling of non-u64 numbers?
 //    assert_eq!(from_json::<Id>("-123"), Id::Number(123)); 
@@ -155,9 +155,7 @@ impl serde::Deserialize for RequestError {
         where DE: serde::Deserializer 
     {
         let mut helper = SerdeJsonDeserializerHelper(deserializer);
-        
         let value : Value = try!(Value::deserialize(helper.0));
-        
         let mut json_obj = try!(helper.as_Object(value));
         
         let code = try!(helper.obtain_i64(&mut json_obj, "code"));
@@ -171,15 +169,13 @@ impl serde::Deserialize for RequestError {
 
 #[test]
 fn test_RequestError() {
-    use util::tests::*;
     use json_util::test_util::*;
     
-    check_serde(RequestError::new(12, "asd".into()));
-    check_serde(RequestError{ code : -123, message : "abc".into(), data : None });
+    test_serde(&RequestError::new(12, "asd".into()));
+    test_serde(&RequestError{ code : -123, message : "abc".into(), data : None });
     
-    check_serde(RequestError{ code : 1, message : "xxx".into(), data : Some(Value::Null) });
-    check_serde(RequestError{ code : 1, message : "xxx".into(), data : Some(Value::String("asdf".into())) });
+    test_serde(&RequestError{ code : 1, message : "xxx".into(), data : Some(Value::Null) });
+    test_serde(&RequestError{ code : 1, message : "xxx".into(), data : Some(Value::String("asdf".into())) });
     
-    let res = serde_json::from_str::<RequestError>("{}").unwrap_err();
-    check_err_contains(res, &"Property `code` is missing");
+    test_error_de::<RequestError>("{}", "Property `code` is missing");
 }

@@ -9,13 +9,11 @@
 extern crate serde_json;
 extern crate serde;
 
+use serde_json::Value;
 
 use jsonrpc_request::*;
 use jsonrpc_response::*;
-
-/* -----------------  Deserialize helper  ----------------- */
-
-
+use json_util::*;
 
 /* -----------------  Message  ----------------- */
 
@@ -42,13 +40,16 @@ impl serde::Serialize for Message {
 //    {
 //        use serde::Error;
 //        
-//        let value : Value = try!(Value::deserialize(deserializer));
-//        if value.find("method").is_some() {
-//            let request = serde_json::from_value::<Request>(value));
-//            Message::Request(request.map_err(|_err| DE::Error::custom("Could not parse either Request or Response"))
+//        let mut helper = SerdeJsonDeserializerHelper(deserializer);
+//        let value = try!(Value::deserialize(helper.0));
+//        let mut json_obj = try!(helper.as_Object(value));
+//        
+//        if json_obj.contains_key("method") {
+//            let request = serde_json::from_value::<Request>(value);
+//            Message::Request(request.map_err(to_de_error))
 //        } else {
-//            let response = serde_json::from_value::<Response>(value));
-//            Message::Response(response.map_err(|_err| DE::Error::custom("Could not parse either Request or Response"))
+//            let response = serde_json::from_value::<Response>(value);
+//            Message::Response(response.map_err(|_err| DE::Error::custom("Could not parse either Request or Response")))
 //        }
 //    }
 //}
@@ -59,4 +60,64 @@ impl serde::Serialize for Message {
 #[cfg(test)]
 pub mod message_tests {
     
+    use super::*;
+    use jsonrpc_common::*;
+    
+    use json_util::*;
+    use json_util::test_util::*;
+    
+    use serde_json::Value;
+    use serde_json::builder::ObjectBuilder;
+
+    fn sample_json_obj(foo: u32) -> Value {
+        ObjectBuilder::new().insert("foo", foo).build()
+    }
+    
+    #[test]
+    fn test_Message() {
+        
+//        test_error_de::<Response>("{}", "Property `id` is missing");
+//
+//        test_error_de::<Response>(r#"{ "id":123 }"#, "Missing property `result` or `error`");
+//
+//        
+//        let response = Response::new_result(Id::Null, sample_json_obj(100));
+//        test_serde_expecting(&response, &ObjectBuilder::new()
+//            .insert("jsonrpc", "2.0")
+//            .insert("id", Id::Null)
+//            .insert("result", sample_json_obj(100))
+//            .build()
+//        ); 
+//        
+//        let response = Response::new_result(Id::Number(123), sample_json_obj(200));
+//        test_serde_expecting(&response, &ObjectBuilder::new()
+//            .insert("jsonrpc", "2.0")
+//            .insert("id", 123)
+//            .insert("result", sample_json_obj(200))
+//            .build()
+//        );
+//        
+//        let response = Response::new_result(Id::Null, sample_json_obj(200));
+//        test_serde_expecting(&response, &ObjectBuilder::new()
+//            .insert("jsonrpc", "2.0")
+//            .insert("id", Value::Null)
+//            .insert("result", sample_json_obj(200))
+//            .build()
+//        );
+//        
+//        let response = Response::new_error(Id::String("321".to_string()), RequestError{
+//            code: 5, message: "msg".to_string(), data: Some(sample_json_obj(300))
+//        });
+//        test_serde_expecting(&response, &ObjectBuilder::new()
+//            .insert("jsonrpc", "2.0")
+//            .insert("id", "321")
+//            .insert("error", unwrap_object_builder(ObjectBuilder::new()
+//                .insert("code", 5)
+//                .insert("message", "msg")
+//                .insert("data", sample_json_obj(300))
+//            ))
+//            .build()
+//        );
+        
+    }
 }

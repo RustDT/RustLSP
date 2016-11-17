@@ -36,9 +36,10 @@ pub fn check_equal<T>(obtained: T, expected: T)
 pub fn assert_starts_with(string: &str, prefix: &str)
 {
     if !string.starts_with(prefix) {
-        println!("\n========= String doesn't start with:");
-        println!("{:?}", prefix);
-        println!("{:?}", string);
+        println!("\n========= String:");
+        println!("{}", string);
+        println!("  doesn't start with:");
+        println!("{}", prefix);
         println!("====");
         assert!(false);
     }
