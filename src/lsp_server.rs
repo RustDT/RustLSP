@@ -18,6 +18,7 @@ use jsonrpc::output_agent::OutputAgent;
 
 use jsonrpc::method_types::MethodError;
 use jsonrpc::jsonrpc_request::RequestParams;
+use jsonrpc::futures::BoxFuture;
 
 use lsp_transport;
 use ls_types::*;
@@ -155,12 +156,17 @@ pub trait LanguageServer {
 
 pub trait LanguageClientEndpoint {
     
-    fn show_message(&mut self, params: ShowMessageParams) -> GResult<()>;
-    fn show_message_request(&mut self, params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>>;
-    fn log_message(&mut self, params: LogMessageParams) -> GResult<()>;
-    fn telemetry_event(&mut self, params: Value) -> GResult<()>;
+    fn show_message(&mut self, params: ShowMessageParams) 
+        -> GResult<()>;
+    fn show_message_request(&mut self, params: ShowMessageRequestParams) 
+        -> GResult<RequestFuture<MessageActionItem, ()>>;
+    fn log_message(&mut self, params: LogMessageParams) 
+        -> GResult<()>;
+    fn telemetry_event(&mut self, params: Value) 
+        -> GResult<()>;
     
-    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) -> GResult<()>;
+    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) 
+        -> GResult<()>;
 
 }
 
@@ -306,35 +312,43 @@ impl<LS : LanguageServer + ?Sized> RequestHandler for LSRequestHandler<LS> {
 
 impl LanguageClientEndpoint for EndpointOutput {
     
-    fn show_message(&mut self, params: ShowMessageParams) -> GResult<()> {
+    fn show_message(&mut self, params: ShowMessageParams) 
+        -> GResult<()> 
+    {
         let endpoint = self;
         try!(endpoint.send_notification(NOTIFICATION__ShowMessage, params));
         Ok(())
     }
     
-    fn show_message_request(&mut self, _params: ShowMessageRequestParams) -> GResult<LSResult<MessageActionItem, ()>> {
+    fn show_message_request(&mut self, params: ShowMessageRequestParams) 
+        -> GResult<RequestFuture<MessageActionItem, ()>> 
+    {
         let endpoint = self;
-//        endpoint.send_request(NOTIFICATION__ShowMessageRequest, params);
-        panic!("not implemented")
+        endpoint.send_request(REQUEST__ShowMessageRequest, params)
     }
     
-    fn log_message(&mut self, params: LogMessageParams) -> GResult<()> {
+    fn log_message(&mut self, params: LogMessageParams) 
+        -> GResult<()> 
+    {
         let endpoint = self;
         try!(endpoint.send_notification(NOTIFICATION__LogMessage, params));
         Ok(())
     }
     
-    fn telemetry_event(&mut self, params: Value) -> GResult<()> {
+    fn telemetry_event(&mut self, params: Value) 
+        -> GResult<()> 
+    {
         let endpoint = self;
         try!(endpoint.send_notification(NOTIFICATION__TelemetryEvent, params));
         Ok(())
     }
     
-    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) -> GResult<()> {
+    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) 
+        -> GResult<()> 
+    {
         let endpoint = self;
         try!(endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params));
         Ok(())
     }
     
 }
-

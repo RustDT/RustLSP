@@ -15,7 +15,7 @@ extern crate serde_json;
 extern crate serde;
 
 extern crate melnorme_util as util;
-extern crate futures;
+pub extern crate futures;
 
 pub mod json_util;
 pub mod jsonrpc_common;
@@ -479,10 +479,8 @@ mod tests_ {
     use output_agent::IoWriteHandler;
     use output_agent::OutputAgent;
     
-    use futures;
     use futures::task::Unpark;
     use futures::Async;
-    use futures::BoxFuture;
     use std::sync::Arc;
     
     
