@@ -77,7 +77,7 @@ pub mod message_tests {
     use jsonrpc_response::*;
     use jsonrpc_response::response_tests::sample_json_obj;
     use jsonrpc_request::*;
-
+    
     #[test]
     fn test_Message() {
         

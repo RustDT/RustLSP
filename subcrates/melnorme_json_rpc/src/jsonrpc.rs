@@ -475,8 +475,16 @@ mod tests_ {
     use method_types::*;
     
     use json_util::JsonObject;
+    use json_util::test_util::to_json;
     use output_agent::IoWriteHandler;
     use output_agent::OutputAgent;
+    
+    use futures;
+    use futures::task::Unpark;
+    use futures::Async;
+    use futures::BoxFuture;
+    use std::sync::Arc;
+    
     
     pub fn sample_fn(params: Point) -> MethodResult<String, ()> {
         let x_str : String = params.x.to_string();
@@ -610,20 +618,32 @@ mod tests_ {
         
         assert_eq!(*eh.output.id_counter.lock().unwrap(), 1);
         
-        // TODO: test future is not completed
-       
-//        let request = RequestResponse {     
-//            id : id,
-//            method : my_method,
-//            params : request.params.clone(),
-//        }; 
-//        eh.output.send_request("sample_fn", params.clone()).unwrap();
+        // Test future is not completed
+        let mut spawn = futures::task::spawn(future);
+        let poll = spawn.poll_future(noop_unpark());
+        assert_eq!(poll, Ok(Async::NotReady));
+        
+        // Complete the request
+        let expected_result = "sample_fn result".to_string();
+        let id = Id::Number(1);
+        let response = Response::new_result(id, Value::String(expected_result.clone())); 
+        eh.handle_incoming_message(&to_json(&response));
 
-        if false {
-            let result = super::wait_future(future);
-        }
+        // ...check future was completed.
+        let result : Result<RequestResult<String, ()>, _> = spawn.wait_future();
+        assert_eq!(result.unwrap(), RequestResult::MethodResult(Ok(expected_result)));
         
         eh.output.shutdown();
+    }
+    
+    pub fn noop_unpark() -> Arc<Unpark> {
+        struct Foo;
+        
+        impl Unpark for Foo {
+            fn unpark(&self) {}
+        }
+        
+        Arc::new(Foo)
     }
     
 }
