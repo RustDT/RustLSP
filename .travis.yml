@@ -12,5 +12,5 @@ matrix:
     
 script:
   - cargo build --verbose
-  - cargo test --verbose -p rust_lsp -p melnorme_util -p melnorme_jsonrpc
+  - cargo test --verbose
   - cd subcrates/DummyLSP && cargo test --verbose

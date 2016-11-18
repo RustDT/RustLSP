@@ -7,8 +7,8 @@ authors = ["Bruno Medeiros <bruno.do.medeiros@gmail.com>"]
 serde_codegen = { version = "0.8", optional = true }
 
 [dependencies]
-melnorme_util = { version = "0.1.1", path = "subcrates/melnorme_util" }
-melnorme_jsonrpc = { path = "subcrates/melnorme_json_rpc" }
+rustdt_util = "0.2.3"
+rustdt-json_rpc = { version = "0.2.0", git = "https://github.com/RustDT/rustdt-json_rpc" }
 log = "0.3.6"
 serde = "0.8"
 serde_json = "0.8"
