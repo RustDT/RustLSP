@@ -10,6 +10,26 @@ use std::io::{self, Read};
 
 use util::core::*;
 
+use jsonrpc::service_util::MessageReader;
+use jsonrpc::service_util::MessageWriter;
+
+/* -----------------  ----------------- */
+
+pub struct LSPMessageReader<T : io::BufRead>(pub T);
+
+impl<T : io::BufRead> MessageReader for LSPMessageReader<T> {
+    fn read_next(&mut self) -> GResult<String> {
+        parse_transport_message(&mut self.0)
+    }
+}
+
+pub struct LSPMessageWriter<T: io::Write>(pub T);
+
+impl<T: io::Write> MessageWriter for LSPMessageWriter<T> {
+    fn write_message(&mut self, msg: &str) -> Result<(), GError> {
+        write_transport_message(msg, &mut self.0)
+    }
+}
 
 /* ----------------- Parse content-length ----------------- */
 

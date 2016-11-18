@@ -19,27 +19,10 @@ use jsonrpc::output_agent::OutputAgent;
 use jsonrpc::method_types::MethodError;
 use jsonrpc::jsonrpc_request::RequestParams;
 
-use lsp_transport;
+use lsp_transport::LSPMessageWriter;
+use lsp_transport::LSPMessageReader;
 use ls_types::*;
 use serde_json::Value;
-
-/* -----------------  ----------------- */
-
-pub struct LSPMessageReader<T : io::BufRead>(pub T);
-
-impl<T : io::BufRead> MessageReader for LSPMessageReader<T> {
-    fn read_next(&mut self) -> GResult<String> {
-        lsp_transport::parse_transport_message(&mut self.0)
-    }
-}
-
-pub struct LSPMessageWriter<T: io::Write>(pub T);
-
-impl<T: io::Write> MessageWriter for LSPMessageWriter<T> {
-    fn write_message(&mut self, msg: &str) -> Result<(), GError> {
-        lsp_transport::write_transport_message(msg, &mut self.0)
-    }
-}
 
 /* -----------------  ----------------- */
 
