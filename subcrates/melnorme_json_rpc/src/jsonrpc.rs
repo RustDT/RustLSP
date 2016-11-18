@@ -645,11 +645,3 @@ mod tests_ {
     }
     
 }
-
-// TODO: investigate: only necessary because of compiler bug?
-#[cfg(test)]
-fn wait_future<ITEM, ERROR>(future : BoxFuture<ITEM, ERROR>)
-    -> Result<ITEM, ERROR> 
-{
-    future.wait()
-}

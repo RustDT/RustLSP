@@ -18,7 +18,6 @@ use jsonrpc::output_agent::OutputAgent;
 
 use jsonrpc::method_types::MethodError;
 use jsonrpc::jsonrpc_request::RequestParams;
-use jsonrpc::futures::BoxFuture;
 
 use lsp_transport;
 use ls_types::*;
