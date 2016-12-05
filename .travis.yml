@@ -13,4 +13,4 @@ matrix:
 script:
   - cargo build --verbose
   - cargo test --verbose
-  - cd subcrates/DummyLSP && cargo test --verbose
+  

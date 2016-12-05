@@ -10,4 +10,5 @@ Work in progress. Not quite usable yet.
 Serde code_gen is not run by default. To run it, invoke `cargo build --features "gen_sources"`.
 
 #### Projects using RustLSP:
-[DummyLSP](subcrates/DummyLSP)
+[MockLS](https://github.com/RustDT/MockLS)
+[RLS](https://github.com/jonathandturner/rls/pull/96) (in PR only)
