@@ -6,13 +6,86 @@ use jsonrpc::method_types::MethodError;
 use jsonrpc::*;
 use ls_types::*;
 
+use jsonrpc::json_util::JsonObject;
+use serde_json::Value;
+
 use std::io;
 use std::thread;
 use std::net::TcpListener;
 use std::net::TcpStream;
 
+
+#[test]
+pub fn test_run_lsp_server() {
+    
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let local_addr = listener.local_addr().unwrap();
+    
+    let server_listener = thread::spawn(|| {
+        tcp_server(listener)
+    });
+    
+    let stream = TcpStream::connect(local_addr).unwrap();
+    let out_stream = stream.try_clone().expect("Failed to clone stream");
+    let mut endpoint = LSPEndpoint::create_lsp_output_with_output_stream(|| { out_stream });
+    
+    let ls_client = TestsLanguageClient { counter: 0, endpoint : endpoint.clone() };
+    
+    let client_handler = thread::spawn(|| {
+        let mut input = io::BufReader::new(stream);
+        let endpoint = ls_client.endpoint.clone();
+        LSPEndpoint::run_client_from_input(&mut input, endpoint, ls_client);
+    });
+    
+    let init_params = InitializeParams { 
+        process_id: None, 
+        root_path: None,
+        initialization_options: None,
+        capabilities: Value::Object(JsonObject::new()),
+    };
+    
+    // Create the LSP client endpoint, so we can talk to the s
+    let mut client_endpoint = LSPClientEndpoint { endpoint: &mut endpoint };
+    
+    client_endpoint.initialize(init_params).unwrap();
+    
+    client_endpoint.shutdown().unwrap();
+    
+    client_endpoint.exit().unwrap();
+    
+    client_handler.join().unwrap();
+    server_listener.join().unwrap();
+}
+
+fn tcp_server(listener: TcpListener) {
+    
+    for stream in listener.incoming() {
+        let stream = stream.expect("Failed to open incoming stream");
+        let conn_handler = thread::spawn(move|| {
+            handle_connection(stream)
+        });
+        
+        // Only listen to first connection, so that this example can be run as a test
+        conn_handler.join().unwrap();
+        break; 
+    }
+    
+    drop(listener);
+}
+
+fn handle_connection(stream: TcpStream) {
+    let out_stream = stream.try_clone().expect("Failed to clone stream");
+    let endpoint = LSPEndpoint::create_lsp_output_with_output_stream(|| { out_stream });
+    
+    let ls = TestsLanguageServer { counter : 0, endpoint : endpoint.clone() };
+    
+    let mut input = io::BufReader::new(stream);
+    LSPEndpoint::run_server_from_input(&mut input, endpoint, ls);
+}
+
 pub struct TestsLanguageServer {
-    dummy: u32,
+    counter: u32,
+    endpoint: Endpoint,
 }
 
 impl TestsLanguageServer {
@@ -24,17 +97,23 @@ impl TestsLanguageServer {
     
 }
 
-impl LanguageServer for TestsLanguageServer {
+pub fn client_rpc(endpoint : &mut Endpoint) -> LSPServerEndpoint {
+    LSPServerEndpoint { endpoint: endpoint }
+}
+
+impl LanguageServerHandling for TestsLanguageServer {
     
     fn initialize(&mut self, _: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>) {
         let capabilities = ServerCapabilities::default();
-        self.dummy += 1;
+        assert_eq!(self.counter, 0);
+        self.counter = 1;
         completable.complete(Ok(InitializeResult { capabilities : capabilities }))
     }
     fn shutdown(&mut self, _: (), completable: LSCompletable<()>) {
-        completable.complete(Ok(()))
+        completable.complete(Ok(()));
     }
     fn exit(&mut self, _: ()) {
+        self.endpoint.request_shutdown();
     }
     
     fn workspace_change_configuration(&mut self, _: DidChangeConfigurationParams) {}
@@ -48,12 +127,18 @@ impl LanguageServer for TestsLanguageServer {
         completable.complete(Err(Self::error_not_available(())))
     }
     fn resolve_completion_item(&mut self, _: CompletionItem, completable: LSCompletable<CompletionItem>) {
-        
         completable.complete(Err(Self::error_not_available(())))
     }
     fn hover(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<Hover>) {
-        thread::spawn(|| {
-            completable.complete(Err(Self::error_not_available(())))
+        let mut endpoint = self.endpoint.clone();
+        thread::spawn(move || {
+            client_rpc(&mut endpoint).telemetry_event(Value::Null)
+                .unwrap();
+            
+            let hover_str = "hover_text".to_string();
+            let hover = Hover { contents: vec![MarkedString::String(hover_str)], range: None };
+            
+            completable.complete(Ok(hover));
         });
     }
     fn signature_help(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>) {
@@ -97,45 +182,36 @@ impl LanguageServer for TestsLanguageServer {
     }
 }
 
-fn tcp_server(listener: TcpListener) {
+/* -----------------  ----------------- */
+
+pub struct TestsLanguageClient {
+    counter: u32,
+    endpoint: Endpoint,
+}
+
+#[allow(unused_variables)]
+impl LanguageClientHandling for TestsLanguageClient {
     
-    for stream in listener.incoming() {
-        let stream = stream.expect("Failed to open incoming stream");
-        thread::spawn(move|| {
-            handle_client(stream)
-        });
+    fn show_message(&mut self, params: ShowMessageParams) {
+        
     }
     
-    drop(listener);
-}
-
-fn handle_client(stream: TcpStream) {
-    let ls = TestsLanguageServer{ dummy : 0 };
+    fn show_message_request(
+        &mut self, params: ShowMessageRequestParams, completable: LSCompletable<MessageActionItem>
+    ) {
+        unimplemented!();
+    }
     
-    let out_stream = stream.try_clone().expect("Failed to clone stream");
-    let endpoint = LSPEndpoint::create_lsp_output_with_output_stream(|| { out_stream });
+    fn log_message(&mut self, params: LogMessageParams) {
+        
+    }
     
-    let mut input = io::BufReader::new(stream);
-    LSPEndpoint::run_server_from_input(ls, &mut input, endpoint);
-}
-
-#[test]
-pub fn test_run_lsp_server() {
-    // TODO
-    if true { return };
+    fn telemetry_event(&mut self, params: Value) {
+        self.counter += 1;
+    }
     
-    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
-    let local_addr = listener.local_addr().unwrap();
+    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) {
+        
+    }
     
-    let handle = thread::spawn(|| {
-        tcp_server(listener)
-    });
-    
-    let stream = TcpStream::connect(local_addr).unwrap();
-    let out_stream = stream.try_clone().expect("Failed to clone stream");
-    let endpoint = LSPEndpoint::create_lsp_output_with_output_stream(|| { out_stream });
-    
-    // TODO LSP client
-    
-    handle.join().unwrap();
 }

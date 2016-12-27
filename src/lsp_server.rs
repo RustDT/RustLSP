@@ -26,16 +26,17 @@ use serde_json::Value;
 
 /* -----------------  ----------------- */
 
+/// Helper empty type to help create a JSON-RPC endpoint for LSP communication
 pub struct LSPEndpoint {
     
 }
 
 impl LSPEndpoint {
     
-    /// Create an EndpointOutput output for use in the Language Server Protocol,
+    /// Create an Endpoint for use in the Language Server Protocol,
     /// with given output stream provider.
     pub fn create_lsp_output_with_output_stream<OUT, OUT_PROV>(output_stream_provider: OUT_PROV) 
-        -> EndpointOutput
+        -> Endpoint
     where 
         OUT : io::Write + 'static, 
         OUT_PROV : FnOnce() -> OUT + Send + 'static
@@ -45,48 +46,60 @@ impl LSPEndpoint {
         })
     }
     
-    /// Create an EndpointOutput output for use in the Language Server Protocol
-    /// with given message write provider.
+    /// Create an Endpoint for use in the Language Server Protocol
+    /// with given message writer provider.
     pub fn create_lsp_output<MW, MW_PROV>(msg_writer_provider: MW_PROV) 
-        -> EndpointOutput
+        -> Endpoint
     where 
         MW : MessageWriter + 'static, 
         MW_PROV : FnOnce() -> MW + Send + 'static 
     {
         let output_agent = OutputAgent::start_with_provider(msg_writer_provider);
-        EndpointOutput::start_with(output_agent)
+        Endpoint::start_with(output_agent)
     }
     
     /* -----------------  ----------------- */
     
-    pub fn run_server_from_input<LS>(ls: LS, input: &mut io::BufRead, endpoint_out: EndpointOutput) 
+    pub fn run_server_from_input<SERVER>(
+        input: &mut io::BufRead, endpoint: Endpoint, lsp_server_handler: SERVER, 
+    ) 
     where 
-        LS : LanguageServer + 'static,
+        SERVER : LanguageServerHandling + 'static,
     {
-        Self::run_server(&mut LSPMessageReader(input), endpoint_out, ls)
+        Self::run_server(&mut LSPMessageReader(input), endpoint, lsp_server_handler)
     }
     
     /// Run the message read loop on the server, for given msg_reader.
     /// msg_reader must be a LSPMessageReader or compatible.
-    pub fn run_server<LS, MR>(
-        mut msg_reader: &mut MR, endpoint_out: EndpointOutput, ls: LS
+    pub fn run_server<SERVER, MR>(
+        mut msg_reader: &mut MR, endpoint: Endpoint, lsp_server_handler: SERVER
     ) 
     where 
-        LS : LanguageServer + 'static,
+        SERVER : LanguageServerHandling + 'static,
         MR : MessageReader,
     {
-        Self::run_endpoint_loop(msg_reader, endpoint_out, new(LSRequestHandler(ls)))
+        Self::run_endpoint_loop(msg_reader, endpoint, new(ServerRequestHandler(lsp_server_handler)))
+    }
+    
+    pub fn run_client_from_input<CLIENT>(
+        input: &mut io::BufRead, endpoint: Endpoint, lsp_client_handler: CLIENT,
+    ) 
+    where 
+        CLIENT : LanguageClientHandling + 'static,
+    {
+        let cl_handler = new(ClientRequestHandler(lsp_client_handler));
+        Self::run_endpoint_loop(&mut LSPMessageReader(input), endpoint, cl_handler)
     }
     
     pub fn run_endpoint_loop<MR>(
-        mut msg_reader: &mut MR, endpoint_out: EndpointOutput, request_handler: Box<RequestHandler>
+        mut msg_reader: &mut MR, endpoint: Endpoint, request_handler: Box<RequestHandler>
     ) 
     where 
         MR : MessageReader,
     {
-        info!("Starting LSP server");
+        info!("Starting LSP Endpoint");
         
-        let endpoint = EndpointHandler::create(endpoint_out, request_handler);
+        let endpoint = EndpointHandler::create(endpoint, request_handler);
         
         let result = endpoint.run_message_read_loop(msg_reader);
         
@@ -100,7 +113,8 @@ impl LSPEndpoint {
 pub type LSResult<RET, ERR_DATA> = Result<RET, MethodError<ERR_DATA>>;
 pub type LSCompletable<RET> = MethodCompletable<RET, ()>;
 
-pub trait LanguageServer {
+/// Trait for the handling of LSP server requests
+pub trait LanguageServerHandling {
     
     fn initialize(&mut self, params: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>);
     fn shutdown(&mut self, params: (), completable: LSCompletable<()>);
@@ -136,29 +150,13 @@ pub trait LanguageServer {
 }
 
 
-pub trait LanguageClientEndpoint {
-    
-    fn show_message(&mut self, params: ShowMessageParams) 
-        -> GResult<()>;
-    fn show_message_request(&mut self, params: ShowMessageRequestParams) 
-        -> GResult<RequestFuture<MessageActionItem, ()>>;
-    fn log_message(&mut self, params: LogMessageParams) 
-        -> GResult<()>;
-    fn telemetry_event(&mut self, params: Value) 
-        -> GResult<()>;
-    
-    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) 
-        -> GResult<()>;
+pub struct ServerRequestHandler<LS : ?Sized>(pub LS);
 
-}
-
-pub struct LSRequestHandler<LS : ?Sized>(pub LS);
-
-impl<LS : LanguageServer + ?Sized> RequestHandler for LSRequestHandler<LS> {
+impl<LS : LanguageServerHandling + ?Sized> RequestHandler for ServerRequestHandler<LS> {
     
-    fn handle_request(&mut self, method_name: &str, params: RequestParams, 
-        completable: ResponseCompletable) 
-    {
+    fn handle_request(
+        &mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable
+    ) {
         match method_name {
             REQUEST__Initialize => {
                 completable.handle_request_with(params, 
@@ -292,45 +290,363 @@ impl<LS : LanguageServer + ?Sized> RequestHandler for LSRequestHandler<LS> {
     
 }
 
-impl LanguageClientEndpoint for EndpointOutput {
+
+pub trait LspClientRpc {
+    
+    fn show_message(&mut self, params: ShowMessageParams) 
+        -> GResult<()>;
+    
+    fn show_message_request(&mut self, params: ShowMessageRequestParams) 
+        -> GResult<RequestFuture<MessageActionItem, ()>>;
+    
+    fn log_message(&mut self, params: LogMessageParams) 
+        -> GResult<()>;
+    
+    fn telemetry_event(&mut self, params: Value) 
+        -> GResult<()>;
+    
+    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) 
+        -> GResult<()>;
+
+}
+
+pub struct LSPServerEndpoint<'a> {
+    pub endpoint: &'a mut Endpoint,    
+}
+
+
+impl<'a> LspClientRpc for LSPServerEndpoint<'a> {
     
     fn show_message(&mut self, params: ShowMessageParams) 
         -> GResult<()> 
     {
-        let endpoint = self;
-        try!(endpoint.send_notification(NOTIFICATION__ShowMessage, params));
-        Ok(())
+        self.endpoint.send_notification(NOTIFICATION__ShowMessage, params)
     }
     
     fn show_message_request(&mut self, params: ShowMessageRequestParams) 
         -> GResult<RequestFuture<MessageActionItem, ()>> 
     {
-        let endpoint = self;
-        endpoint.send_request(REQUEST__ShowMessageRequest, params)
+        self.endpoint.send_request(REQUEST__ShowMessageRequest, params)
     }
     
     fn log_message(&mut self, params: LogMessageParams) 
         -> GResult<()> 
     {
-        let endpoint = self;
-        try!(endpoint.send_notification(NOTIFICATION__LogMessage, params));
-        Ok(())
+        self.endpoint.send_notification(NOTIFICATION__LogMessage, params)
     }
     
     fn telemetry_event(&mut self, params: Value) 
         -> GResult<()> 
     {
-        let endpoint = self;
-        try!(endpoint.send_notification(NOTIFICATION__TelemetryEvent, params));
-        Ok(())
+        self.endpoint.send_notification(NOTIFICATION__TelemetryEvent, params)
     }
     
     fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) 
         -> GResult<()> 
     {
-        let endpoint = self;
-        try!(endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params));
-        Ok(())
+        self.endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params)
+    }
+    
+}
+
+/* ----------------- LSP Client: ----------------- */
+
+pub trait LSPServerRpc {
+    
+    fn initialize(&mut self, params: InitializeParams)
+        -> GResult<RequestFuture<InitializeResult, InitializeError>>;
+        
+    fn shutdown(&mut self)
+        -> GResult<RequestFuture<(), ()>>;
+        
+    fn exit(&mut self)
+        -> GResult<()>;
+        
+    fn workspace_change_configuration(&mut self, params: DidChangeConfigurationParams)
+        -> GResult<()>;
+        
+    fn did_open_text_document(&mut self, params: DidOpenTextDocumentParams)
+        -> GResult<()>;
+        
+    fn did_change_text_document(&mut self, params: DidChangeTextDocumentParams)
+        -> GResult<()>;
+        
+    fn did_close_text_document(&mut self, params: DidCloseTextDocumentParams)
+        -> GResult<()>;
+        
+    fn did_save_text_document(&mut self, params: DidSaveTextDocumentParams)
+        -> GResult<()>;
+        
+    fn did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams)
+        -> GResult<()>;
+        
+    fn completion(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<CompletionList, ()>>;
+        
+    fn resolve_completion_item(&mut self, params: CompletionItem)
+        -> GResult<RequestFuture<CompletionItem, ()>>;
+        
+    fn hover(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<Hover, ()>>;
+        
+    fn signature_help(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<SignatureHelp, ()>>;
+        
+    fn goto_definition(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<Vec<Location>, ()>>;
+        
+    fn references(&mut self, params: ReferenceParams)
+        -> GResult<RequestFuture<Vec<Location>, ()>>;
+        
+    fn document_highlight(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<Vec<DocumentHighlight>, ()>>;
+        
+    fn document_symbols(&mut self, params: DocumentSymbolParams)
+        -> GResult<RequestFuture<Vec<SymbolInformation>, ()>>;
+        
+    fn workspace_symbols(&mut self, params: WorkspaceSymbolParams)
+        -> GResult<RequestFuture<Vec<SymbolInformation>, ()>>;
+        
+    fn code_action(&mut self, params: CodeActionParams)
+        -> GResult<RequestFuture<Vec<Command>, ()>>;
+        
+    fn code_lens(&mut self, params: CodeLensParams)
+        -> GResult<RequestFuture<Vec<CodeLens>, ()>>;
+        
+    fn code_lens_resolve(&mut self, params: CodeLens)
+        -> GResult<RequestFuture<CodeLens, ()>>;
+        
+    fn formatting(&mut self, params: DocumentFormattingParams)
+        -> GResult<RequestFuture<Vec<TextEdit>, ()>>;
+        
+    fn range_formatting(&mut self, params: DocumentRangeFormattingParams)
+        -> GResult<RequestFuture<Vec<TextEdit>, ()>>;
+        
+    fn on_type_formatting(&mut self, params: DocumentOnTypeFormattingParams)
+        -> GResult<RequestFuture<Vec<TextEdit>, ()>>;
+        
+    fn rename(&mut self, params: RenameParams)
+        -> GResult<RequestFuture<WorkspaceEdit, ()>>;
+    
+}
+
+
+pub struct LSPClientEndpoint<'a> {
+    pub endpoint: &'a mut Endpoint,    
+}
+
+impl<'a> LSPServerRpc for LSPClientEndpoint<'a> {
+    
+    fn initialize(&mut self, params: InitializeParams)
+        -> GResult<RequestFuture<InitializeResult, InitializeError>> 
+    {
+        self.endpoint.send_request(REQUEST__Initialize, params)
+    }
+    
+    fn shutdown(&mut self)
+        -> GResult<RequestFuture<(), ()>>
+    {
+        self.endpoint.send_request(REQUEST__Shutdown, ())
+    }
+    
+    fn exit(&mut self)
+        -> GResult<()>
+    {
+        self.endpoint.send_notification(NOTIFICATION__Exit, ())
+    }
+    
+    fn workspace_change_configuration(&mut self, params: DidChangeConfigurationParams)
+        -> GResult<()>
+    {
+         self.endpoint.send_notification(NOTIFICATION__WorkspaceChangeConfiguration, params)
+    }
+    
+    fn did_open_text_document(&mut self, params: DidOpenTextDocumentParams)
+        -> GResult<()>
+    {
+        self.endpoint.send_notification(NOTIFICATION__DidOpenTextDocument, params)
+    }
+    
+    fn did_change_text_document(&mut self, params: DidChangeTextDocumentParams)
+        -> GResult<()>
+    {
+        self.endpoint.send_notification(NOTIFICATION__DidChangeTextDocument, params)
+    }
+    
+    fn did_close_text_document(&mut self, params: DidCloseTextDocumentParams)
+        -> GResult<()>
+    {
+        self.endpoint.send_notification(NOTIFICATION__DidCloseTextDocument, params)
+    }
+    
+    fn did_save_text_document(&mut self, params: DidSaveTextDocumentParams)
+        -> GResult<()>
+    {
+        self.endpoint.send_notification(NOTIFICATION__DidSaveTextDocument, params)
+    }
+    
+    fn did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams)
+        -> GResult<()>
+    {
+        self.endpoint.send_notification(NOTIFICATION__DidChangeWatchedFiles, params)
+    }
+    
+    fn completion(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<CompletionList, ()>>
+    {
+        self.endpoint.send_request(REQUEST__Completion, params)
+    }
+    
+    fn resolve_completion_item(&mut self, params: CompletionItem)
+        -> GResult<RequestFuture<CompletionItem, ()>>
+    {
+        self.endpoint.send_request(REQUEST__ResolveCompletionItem, params)
+    }
+    
+    fn hover(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<Hover, ()>>
+    {
+        self.endpoint.send_request(REQUEST__Hover, params)
+    }
+    
+    fn signature_help(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<SignatureHelp, ()>>
+    {
+        self.endpoint.send_request(REQUEST__SignatureHelp, params)
+    }
+    
+    fn goto_definition(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<Vec<Location>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__GotoDefinition, params)
+    }
+    
+    fn references(&mut self, params: ReferenceParams)
+        -> GResult<RequestFuture<Vec<Location>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__References, params)
+    }
+    
+    fn document_highlight(&mut self, params: TextDocumentPositionParams)
+        -> GResult<RequestFuture<Vec<DocumentHighlight>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__DocumentHighlight, params)
+    }
+    
+    fn document_symbols(&mut self, params: DocumentSymbolParams)
+        -> GResult<RequestFuture<Vec<SymbolInformation>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__DocumentSymbols, params)
+    }
+    
+    fn workspace_symbols(&mut self, params: WorkspaceSymbolParams)
+        -> GResult<RequestFuture<Vec<SymbolInformation>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__WorkspaceSymbols, params)
+    }
+    
+    fn code_action(&mut self, params: CodeActionParams)
+        -> GResult<RequestFuture<Vec<Command>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__CodeAction, params)
+    }
+    
+    fn code_lens(&mut self, params: CodeLensParams)
+        -> GResult<RequestFuture<Vec<CodeLens>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__CodeLens, params)
+    }
+    
+    fn code_lens_resolve(&mut self, params: CodeLens)
+        -> GResult<RequestFuture<CodeLens, ()>>
+    {
+        self.endpoint.send_request(REQUEST__CodeLensResolve, params)
+    }
+    
+    fn formatting(&mut self, params: DocumentFormattingParams)
+        -> GResult<RequestFuture<Vec<TextEdit>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__Formatting, params)
+    }
+    
+    fn range_formatting(&mut self, params: DocumentRangeFormattingParams)
+        -> GResult<RequestFuture<Vec<TextEdit>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__RangeFormatting, params)
+    }
+    
+    fn on_type_formatting(&mut self, params: DocumentOnTypeFormattingParams)
+        -> GResult<RequestFuture<Vec<TextEdit>, ()>>
+    {
+        self.endpoint.send_request(REQUEST__OnTypeFormatting, params)
+    }
+    
+    fn rename(&mut self, params: RenameParams)
+        -> GResult<RequestFuture<WorkspaceEdit, ()>>
+    {
+        self.endpoint.send_request(REQUEST__Rename, params)
+    }
+    
+}
+
+
+/// Trait for the handling of LSP client requests.
+/// (An LSP server can act as a JSON-RPC Client and request to the LSP client)
+pub trait LanguageClientHandling {
+    
+    fn show_message(&mut self, params: ShowMessageParams);
+    
+    fn show_message_request(&mut self, params: ShowMessageRequestParams, 
+        completable: LSCompletable<MessageActionItem>);
+    
+    fn log_message(&mut self, params: LogMessageParams);
+    
+    fn telemetry_event(&mut self, params: Value);
+    
+    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams);
+	
+    #[allow(unused_variables)]
+    fn handle_other_method(&mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable) {
+        completable.complete_with_error(jsonrpc_common::error_JSON_RPC_MethodNotFound()); 
+    }
+    
+}
+
+pub struct ClientRequestHandler<LS : ?Sized>(pub LS);
+
+impl<LS : LanguageClientHandling + ?Sized> RequestHandler for ClientRequestHandler<LS> {
+
+    fn handle_request(
+        &mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable
+    ) {
+        match method_name {
+            NOTIFICATION__ShowMessage => {
+                completable.handle_notification_with(params, 
+                    |params| self.0.show_message(params)) 
+            }
+            REQUEST__ShowMessageRequest => {
+                completable.handle_request_with(params, 
+                    |params, completable| self.0.show_message_request(params, completable)
+                )
+            }
+            NOTIFICATION__LogMessage => { 
+                completable.handle_notification_with(params, 
+                    |params| self.0.log_message(params)) 
+            }
+            NOTIFICATION__TelemetryEvent => {
+                completable.handle_notification_with(params, 
+                    |params| self.0.telemetry_event(params)
+                ) 
+            }
+            NOTIFICATION__PublishDiagnostics => {
+                completable.handle_notification_with(params, 
+                    |params| self.0.publish_diagnostics(params)
+                ) 
+            }
+            _ => {
+                self.0.handle_other_method(method_name, params, completable);
+            }
+        }
     }
     
 }

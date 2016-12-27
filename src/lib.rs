@@ -1,3 +1,16 @@
+
+/*!
+
+### RustLSP
+
+# Examples:
+
+See full server/client example here:
+https://github.com/RustDT/RustLSP/blob/master/src/server_tests.rs
+
+*/
+
+
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
