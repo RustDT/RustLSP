@@ -44,14 +44,14 @@ pub fn test_run_lsp_server() {
         capabilities: Value::Object(JsonObject::new()),
     };
     
-    // Create the LSP client endpoint, so we can talk to the s
-    let mut client_endpoint = LSPClientEndpoint { endpoint: &mut endpoint };
+    // Create an rpc handle to the server methods
+    let mut server_handle = server_rpc_handle(&mut endpoint);
     
-    client_endpoint.initialize(init_params).unwrap();
+    server_handle.initialize(init_params).unwrap();
     
-    client_endpoint.shutdown().unwrap();
+    server_handle.shutdown().unwrap();
     
-    client_endpoint.exit().unwrap();
+    server_handle.exit().unwrap();
     
     client_handler.join().unwrap();
     server_listener.join().unwrap();
@@ -97,10 +97,6 @@ impl TestsLanguageServer {
     
 }
 
-pub fn client_rpc(endpoint : &mut Endpoint) -> LSPServerEndpoint {
-    LSPServerEndpoint { endpoint: endpoint }
-}
-
 impl LanguageServerHandling for TestsLanguageServer {
     
     fn initialize(&mut self, _: InitializeParams, completable: MethodCompletable<InitializeResult, InitializeError>) {
@@ -132,7 +128,7 @@ impl LanguageServerHandling for TestsLanguageServer {
     fn hover(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<Hover>) {
         let mut endpoint = self.endpoint.clone();
         thread::spawn(move || {
-            client_rpc(&mut endpoint).telemetry_event(Value::Null)
+            client_rpc_handle(&mut endpoint).telemetry_event(Value::Null)
                 .unwrap();
             
             let hover_str = "hover_text".to_string();

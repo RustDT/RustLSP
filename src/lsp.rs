@@ -11,8 +11,8 @@ use std::io;
 use util::core::*;
 
 use jsonrpc::*;
-use jsonrpc::service_util::MessageReader;
-use jsonrpc::service_util::MessageWriter;
+pub use jsonrpc::service_util::MessageReader;
+pub use jsonrpc::service_util::MessageWriter;
 
 use jsonrpc::output_agent::OutputAgent;
 
@@ -322,12 +322,15 @@ pub trait LspClientRpc {
 
 }
 
-pub struct LSPServerEndpoint<'a> {
+pub struct LspClientRpc_<'a> {
     pub endpoint: &'a mut Endpoint,    
 }
 
+pub fn client_rpc_handle(endpoint : &mut Endpoint) -> LspClientRpc_ {
+    LspClientRpc_ { endpoint: endpoint }
+}
 
-impl<'a> LspClientRpc for LSPServerEndpoint<'a> {
+impl<'a> LspClientRpc for LspClientRpc_<'a> {
     
     fn show_message(&mut self, params: ShowMessageParams) 
         -> GResult<()> 
@@ -443,11 +446,15 @@ pub trait LSPServerRpc {
 }
 
 
-pub struct LSPClientEndpoint<'a> {
+pub struct LspServerRpc_<'a> {
     pub endpoint: &'a mut Endpoint,    
 }
 
-impl<'a> LSPServerRpc for LSPClientEndpoint<'a> {
+pub fn server_rpc_handle(endpoint : &mut Endpoint) -> LspServerRpc_ {
+    LspServerRpc_ { endpoint: endpoint }
+}
+
+impl<'a> LSPServerRpc for LspServerRpc_<'a> {
     
     fn initialize(&mut self, params: InitializeParams)
         -> GResult<RequestFuture<InitializeResult, InitializeError>> 
