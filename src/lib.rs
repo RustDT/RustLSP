@@ -25,7 +25,7 @@ pub extern crate languageserver_types as ls_types;
 #[macro_use] extern crate log;
 
 pub mod lsp_transport;
-pub mod lsp_server;
+pub mod lsp;
 
 #[cfg(test)]
 mod server_tests;

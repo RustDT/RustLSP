@@ -1,7 +1,7 @@
 /* ----------------- Tests ----------------- */
 
 
-use lsp_server::*;
+use lsp::*;
 use jsonrpc::method_types::MethodError;
 use jsonrpc::*;
 use ls_types::*;
