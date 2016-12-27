@@ -138,6 +138,8 @@ pub trait LanguageServerHandling {
     fn code_action(&mut self, params: CodeActionParams, completable: LSCompletable<Vec<Command>>);
     fn code_lens(&mut self, params: CodeLensParams, completable: LSCompletable<Vec<CodeLens>>);
     fn code_lens_resolve(&mut self, params: CodeLens, completable: LSCompletable<CodeLens>);
+    fn document_link(&mut self, params: DocumentLinkParams, completable: LSCompletable<Vec<DocumentLink>>);
+    fn document_link_resolve(&mut self, params: DocumentLink, completable: LSCompletable<DocumentLink>);
     fn formatting(&mut self, params: DocumentFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
     fn range_formatting(&mut self, params: DocumentRangeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
     fn on_type_formatting(&mut self, params: DocumentOnTypeFormattingParams, completable: LSCompletable<Vec<TextEdit>>);
@@ -261,6 +263,16 @@ impl<LS : LanguageServerHandling + ?Sized> RequestHandler for ServerRequestHandl
                     |params, completable| self.0.code_lens_resolve(params, completable)
                 ) 
             }
+            REQUEST__DocumentLink => {
+                completable.handle_request_with(params, 
+                    |params, completable| self.0.document_link(params, completable)
+                ) 
+            }            
+            REQUEST__DocumentLinkResolve => {
+                completable.handle_request_with(params, 
+                    |params, completable| self.0.document_link_resolve(params, completable)
+                ) 
+            }            
             REQUEST__Formatting => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.formatting(params, completable)

@@ -124,10 +124,10 @@ impl LanguageServerHandling for TestsLanguageServer {
     fn did_change_watched_files(&mut self, _: DidChangeWatchedFilesParams) {}
     
     fn completion(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<CompletionList>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn resolve_completion_item(&mut self, _: CompletionItem, completable: LSCompletable<CompletionItem>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn hover(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<Hover>) {
         let mut endpoint = self.endpoint.clone();
@@ -142,43 +142,49 @@ impl LanguageServerHandling for TestsLanguageServer {
         });
     }
     fn signature_help(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<SignatureHelp>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn goto_definition(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<Vec<Location>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn references(&mut self, _: ReferenceParams, completable: LSCompletable<Vec<Location>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn document_highlight(&mut self, _: TextDocumentPositionParams, completable: LSCompletable<Vec<DocumentHighlight>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn document_symbols(&mut self, _: DocumentSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn workspace_symbols(&mut self, _: WorkspaceSymbolParams, completable: LSCompletable<Vec<SymbolInformation>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn code_action(&mut self, _: CodeActionParams, completable: LSCompletable<Vec<Command>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn code_lens(&mut self, _: CodeLensParams, completable: LSCompletable<Vec<CodeLens>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn code_lens_resolve(&mut self, _: CodeLens, completable: LSCompletable<CodeLens>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
+    }
+    fn document_link(&mut self, _params: DocumentLinkParams, completable: LSCompletable<Vec<DocumentLink>>) {
+        completable.complete(Err(Self::error_not_available(())));
+    }
+    fn document_link_resolve(&mut self, _params: DocumentLink, completable: LSCompletable<DocumentLink>) {
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn formatting(&mut self, _: DocumentFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn range_formatting(&mut self, _: DocumentRangeFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn on_type_formatting(&mut self, _: DocumentOnTypeFormattingParams, completable: LSCompletable<Vec<TextEdit>>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
     fn rename(&mut self, _: RenameParams, completable: LSCompletable<WorkspaceEdit>) {
-        completable.complete(Err(Self::error_not_available(())))
+        completable.complete(Err(Self::error_not_available(())));
     }
 }
 
