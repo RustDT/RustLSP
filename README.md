@@ -4,6 +4,10 @@
 A library for working with the Language Server Protocol, as either client or server.
 (LSP protocol only, not tied to any particular language engine)
 
+## Crates.io
+
+https://crates.io/crates/rust_lsp
+
 ## Examples:
 
 See full server/client example here:
