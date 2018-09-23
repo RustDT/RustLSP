@@ -240,7 +240,7 @@ impl<LS : LanguageServerHandling + ?Sized> RequestHandler for ServerRequestHandl
                     |params, completable| self.0.document_highlight(params, completable)
                 ) 
             }
-            request::DocumentSymbol::METHOD => {
+            request::DocumentSymbolRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.document_symbols(params, completable)
                 ) 
@@ -557,7 +557,7 @@ impl<'a> LSPServerRpc for LspServerRpc_<'a> {
     fn document_symbols(&mut self, params: DocumentSymbolParams)
         -> GResult<RequestFuture<Vec<SymbolInformation>, ()>>
     {
-        self.endpoint.send_request(request::DocumentSymbol::METHOD, params)
+        self.endpoint.send_request(request::DocumentSymbolRequest::METHOD, params)
     }
     
     fn workspace_symbols(&mut self, params: WorkspaceSymbolParams)
