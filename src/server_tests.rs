@@ -6,7 +6,6 @@ use jsonrpc::method_types::MethodError;
 use jsonrpc::*;
 use ls_types::*;
 
-use jsonrpc::json_util::JsonObject;
 use serde_json::Value;
 
 use std::io;
@@ -40,8 +39,14 @@ pub fn test_run_lsp_server() {
     let init_params = InitializeParams { 
         process_id: None, 
         root_path: None,
+        root_uri: None,
         initialization_options: None,
-        capabilities: Value::Object(JsonObject::new()),
+        capabilities: ClientCapabilities {
+            workspace: None,
+            text_document: None,
+            experimental: None,
+        },
+        trace: TraceOption::Off,
     };
     
     // Create an rpc handle to the server methods
