@@ -137,7 +137,7 @@ impl LanguageServerHandling for TestsLanguageServer {
                 .unwrap();
             
             let hover_str = "hover_text".to_string();
-            let hover = Hover { contents: vec![MarkedString::String(hover_str)], range: None };
+            let hover = Hover { contents: HoverContents::Scalar(MarkedString::String(hover_str)), range: None };
             
             completable.complete(Ok(hover));
         });
