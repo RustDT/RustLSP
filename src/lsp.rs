@@ -22,6 +22,8 @@ use jsonrpc::jsonrpc_request::RequestParams;
 use lsp_transport::LSPMessageWriter;
 use lsp_transport::LSPMessageReader;
 use ls_types::*;
+use ls_types::notification::Notification;
+use ls_types::request::Request;
 use serde_json::Value;
 
 /* -----------------  ----------------- */
@@ -160,135 +162,135 @@ impl<LS : LanguageServerHandling + ?Sized> RequestHandler for ServerRequestHandl
         &mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable
     ) {
         match method_name {
-            REQUEST__Initialize => {
+            request::Initialize::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.initialize(params, completable)
                 ) 
             }
-            REQUEST__Shutdown => {
+            request::Shutdown::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.shutdown(params, completable)
                 ) 
             }
-            NOTIFICATION__Exit => { 
+            notification::Exit::METHOD => { 
                 completable.handle_notification_with(params, 
                     |params| self.0.exit(params)) 
             }
-            NOTIFICATION__WorkspaceChangeConfiguration => {
+            notification::DidChangeConfiguration::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.workspace_change_configuration(params)
                 ) 
             }
-            NOTIFICATION__DidOpenTextDocument => {
+            notification::DidOpenTextDocument::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.did_open_text_document(params)
                 ) 
             }
-            NOTIFICATION__DidChangeTextDocument => {
+            notification::DidChangeTextDocument::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.did_change_text_document(params)
                 ) 
             }
-            NOTIFICATION__DidCloseTextDocument => {
+            notification::DidCloseTextDocument::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.did_close_text_document(params)
                 ) 
             }
-            NOTIFICATION__DidSaveTextDocument => {
+            notification::DidSaveTextDocument::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.did_save_text_document(params)
                 ) 
             }
-            NOTIFICATION__DidChangeWatchedFiles => {
+            notification::DidChangeWatchedFiles::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.did_change_watched_files(params)) 
             }
-            REQUEST__Completion => {
+            request::Completion::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.completion(params, completable)
                 ) 
             }
-            REQUEST__ResolveCompletionItem => {
+            request::ResolveCompletionItem::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.resolve_completion_item(params, completable)
                 ) 
             }
-            REQUEST__Hover => {
+            request::HoverRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.hover(params, completable)
                 ) 
             }
-            REQUEST__SignatureHelp => {
+            request::SignatureHelpRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.signature_help(params, completable)
                 ) 
             }
-            REQUEST__GotoDefinition => {
+            request::GotoDefinition::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.goto_definition(params, completable)
                 ) 
             }
-            REQUEST__References => {
+            request::References::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.references(params, completable)
                 ) 
             }
-            REQUEST__DocumentHighlight => {
+            request::DocumentHighlightRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.document_highlight(params, completable)
                 ) 
             }
-            REQUEST__DocumentSymbols => {
+            request::DocumentSymbol::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.document_symbols(params, completable)
                 ) 
             }
-            REQUEST__WorkspaceSymbols => {
+            request::WorkspaceSymbol::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.workspace_symbols(params, completable)
                 ) 
             }
-            REQUEST__CodeAction => {
+            request::CodeActionRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.code_action(params, completable)
                 ) 
             }
-            REQUEST__CodeLens => {
+            request::CodeLensRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.code_lens(params, completable)
                 ) 
             }
-            REQUEST__CodeLensResolve => {
+            request::CodeLensResolve::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.code_lens_resolve(params, completable)
                 ) 
             }
-            REQUEST__DocumentLink => {
+            request::DocumentLinkRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.document_link(params, completable)
                 ) 
             }            
-            REQUEST__DocumentLinkResolve => {
+            request::DocumentLinkResolve::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.document_link_resolve(params, completable)
                 ) 
             }            
-            REQUEST__Formatting => {
+            request::Formatting::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.formatting(params, completable)
                 ) 
             }
-            REQUEST__RangeFormatting => {
+            request::RangeFormatting::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.range_formatting(params, completable)
                 ) 
             }
-            REQUEST__OnTypeFormatting => {
+            request::OnTypeFormatting::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.on_type_formatting(params, completable)
                 ) 
             }
-            REQUEST__Rename => {
+            request::Rename::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.rename(params, completable)
                 ) 
@@ -335,31 +337,31 @@ impl<'a> LspClientRpc for LspClientRpc_<'a> {
     fn show_message(&mut self, params: ShowMessageParams) 
         -> GResult<()> 
     {
-        self.endpoint.send_notification(NOTIFICATION__ShowMessage, params)
+        self.endpoint.send_notification(notification::ShowMessage::METHOD, params)
     }
     
     fn show_message_request(&mut self, params: ShowMessageRequestParams) 
         -> GResult<RequestFuture<MessageActionItem, ()>> 
     {
-        self.endpoint.send_request(REQUEST__ShowMessageRequest, params)
+        self.endpoint.send_request(request::ShowMessageRequest::METHOD, params)
     }
     
     fn log_message(&mut self, params: LogMessageParams) 
         -> GResult<()> 
     {
-        self.endpoint.send_notification(NOTIFICATION__LogMessage, params)
+        self.endpoint.send_notification(notification::LogMessage::METHOD, params)
     }
     
     fn telemetry_event(&mut self, params: Value) 
         -> GResult<()> 
     {
-        self.endpoint.send_notification(NOTIFICATION__TelemetryEvent, params)
+        self.endpoint.send_notification(notification::TelemetryEvent::METHOD, params)
     }
     
     fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) 
         -> GResult<()> 
     {
-        self.endpoint.send_notification(NOTIFICATION__PublishDiagnostics, params)
+        self.endpoint.send_notification(notification::PublishDiagnostics::METHOD, params)
     }
     
 }
@@ -459,151 +461,151 @@ impl<'a> LSPServerRpc for LspServerRpc_<'a> {
     fn initialize(&mut self, params: InitializeParams)
         -> GResult<RequestFuture<InitializeResult, InitializeError>> 
     {
-        self.endpoint.send_request(REQUEST__Initialize, params)
+        self.endpoint.send_request(request::Initialize::METHOD, params)
     }
     
     fn shutdown(&mut self)
         -> GResult<RequestFuture<(), ()>>
     {
-        self.endpoint.send_request(REQUEST__Shutdown, ())
+        self.endpoint.send_request(request::Shutdown::METHOD, ())
     }
     
     fn exit(&mut self)
         -> GResult<()>
     {
-        self.endpoint.send_notification(NOTIFICATION__Exit, ())
+        self.endpoint.send_notification(notification::Exit::METHOD, ())
     }
     
     fn workspace_change_configuration(&mut self, params: DidChangeConfigurationParams)
         -> GResult<()>
     {
-         self.endpoint.send_notification(NOTIFICATION__WorkspaceChangeConfiguration, params)
+         self.endpoint.send_notification(notification::DidChangeConfiguration::METHOD, params)
     }
     
     fn did_open_text_document(&mut self, params: DidOpenTextDocumentParams)
         -> GResult<()>
     {
-        self.endpoint.send_notification(NOTIFICATION__DidOpenTextDocument, params)
+        self.endpoint.send_notification(notification::DidOpenTextDocument::METHOD, params)
     }
     
     fn did_change_text_document(&mut self, params: DidChangeTextDocumentParams)
         -> GResult<()>
     {
-        self.endpoint.send_notification(NOTIFICATION__DidChangeTextDocument, params)
+        self.endpoint.send_notification(notification::DidChangeTextDocument::METHOD, params)
     }
     
     fn did_close_text_document(&mut self, params: DidCloseTextDocumentParams)
         -> GResult<()>
     {
-        self.endpoint.send_notification(NOTIFICATION__DidCloseTextDocument, params)
+        self.endpoint.send_notification(notification::DidCloseTextDocument::METHOD, params)
     }
     
     fn did_save_text_document(&mut self, params: DidSaveTextDocumentParams)
         -> GResult<()>
     {
-        self.endpoint.send_notification(NOTIFICATION__DidSaveTextDocument, params)
+        self.endpoint.send_notification(notification::DidSaveTextDocument::METHOD, params)
     }
     
     fn did_change_watched_files(&mut self, params: DidChangeWatchedFilesParams)
         -> GResult<()>
     {
-        self.endpoint.send_notification(NOTIFICATION__DidChangeWatchedFiles, params)
+        self.endpoint.send_notification(notification::DidChangeWatchedFiles::METHOD, params)
     }
     
     fn completion(&mut self, params: TextDocumentPositionParams)
         -> GResult<RequestFuture<CompletionList, ()>>
     {
-        self.endpoint.send_request(REQUEST__Completion, params)
+        self.endpoint.send_request(request::Completion::METHOD, params)
     }
     
     fn resolve_completion_item(&mut self, params: CompletionItem)
         -> GResult<RequestFuture<CompletionItem, ()>>
     {
-        self.endpoint.send_request(REQUEST__ResolveCompletionItem, params)
+        self.endpoint.send_request(request::ResolveCompletionItem::METHOD, params)
     }
     
     fn hover(&mut self, params: TextDocumentPositionParams)
         -> GResult<RequestFuture<Hover, ()>>
     {
-        self.endpoint.send_request(REQUEST__Hover, params)
+        self.endpoint.send_request(request::HoverRequest::METHOD, params)
     }
     
     fn signature_help(&mut self, params: TextDocumentPositionParams)
         -> GResult<RequestFuture<SignatureHelp, ()>>
     {
-        self.endpoint.send_request(REQUEST__SignatureHelp, params)
+        self.endpoint.send_request(request::SignatureHelpRequest::METHOD, params)
     }
     
     fn goto_definition(&mut self, params: TextDocumentPositionParams)
         -> GResult<RequestFuture<Vec<Location>, ()>>
     {
-        self.endpoint.send_request(REQUEST__GotoDefinition, params)
+        self.endpoint.send_request(request::GotoDefinition::METHOD, params)
     }
     
     fn references(&mut self, params: ReferenceParams)
         -> GResult<RequestFuture<Vec<Location>, ()>>
     {
-        self.endpoint.send_request(REQUEST__References, params)
+        self.endpoint.send_request(request::References::METHOD, params)
     }
     
     fn document_highlight(&mut self, params: TextDocumentPositionParams)
         -> GResult<RequestFuture<Vec<DocumentHighlight>, ()>>
     {
-        self.endpoint.send_request(REQUEST__DocumentHighlight, params)
+        self.endpoint.send_request(request::DocumentHighlightRequest::METHOD, params)
     }
     
     fn document_symbols(&mut self, params: DocumentSymbolParams)
         -> GResult<RequestFuture<Vec<SymbolInformation>, ()>>
     {
-        self.endpoint.send_request(REQUEST__DocumentSymbols, params)
+        self.endpoint.send_request(request::DocumentSymbol::METHOD, params)
     }
     
     fn workspace_symbols(&mut self, params: WorkspaceSymbolParams)
         -> GResult<RequestFuture<Vec<SymbolInformation>, ()>>
     {
-        self.endpoint.send_request(REQUEST__WorkspaceSymbols, params)
+        self.endpoint.send_request(request::WorkspaceSymbol::METHOD, params)
     }
     
     fn code_action(&mut self, params: CodeActionParams)
         -> GResult<RequestFuture<Vec<Command>, ()>>
     {
-        self.endpoint.send_request(REQUEST__CodeAction, params)
+        self.endpoint.send_request(request::CodeActionRequest::METHOD, params)
     }
     
     fn code_lens(&mut self, params: CodeLensParams)
         -> GResult<RequestFuture<Vec<CodeLens>, ()>>
     {
-        self.endpoint.send_request(REQUEST__CodeLens, params)
+        self.endpoint.send_request(request::CodeLensRequest::METHOD, params)
     }
     
     fn code_lens_resolve(&mut self, params: CodeLens)
         -> GResult<RequestFuture<CodeLens, ()>>
     {
-        self.endpoint.send_request(REQUEST__CodeLensResolve, params)
+        self.endpoint.send_request(request::CodeLensResolve::METHOD, params)
     }
     
     fn formatting(&mut self, params: DocumentFormattingParams)
         -> GResult<RequestFuture<Vec<TextEdit>, ()>>
     {
-        self.endpoint.send_request(REQUEST__Formatting, params)
+        self.endpoint.send_request(request::Formatting::METHOD, params)
     }
     
     fn range_formatting(&mut self, params: DocumentRangeFormattingParams)
         -> GResult<RequestFuture<Vec<TextEdit>, ()>>
     {
-        self.endpoint.send_request(REQUEST__RangeFormatting, params)
+        self.endpoint.send_request(request::RangeFormatting::METHOD, params)
     }
     
     fn on_type_formatting(&mut self, params: DocumentOnTypeFormattingParams)
         -> GResult<RequestFuture<Vec<TextEdit>, ()>>
     {
-        self.endpoint.send_request(REQUEST__OnTypeFormatting, params)
+        self.endpoint.send_request(request::OnTypeFormatting::METHOD, params)
     }
     
     fn rename(&mut self, params: RenameParams)
         -> GResult<RequestFuture<WorkspaceEdit, ()>>
     {
-        self.endpoint.send_request(REQUEST__Rename, params)
+        self.endpoint.send_request(request::Rename::METHOD, params)
     }
     
 }
@@ -639,25 +641,25 @@ impl<LS : LanguageClientHandling + ?Sized> RequestHandler for ClientRequestHandl
         &mut self, method_name: &str, params: RequestParams, completable: ResponseCompletable
     ) {
         match method_name {
-            NOTIFICATION__ShowMessage => {
+            notification::ShowMessage::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.show_message(params)) 
             }
-            REQUEST__ShowMessageRequest => {
+            request::ShowMessageRequest::METHOD => {
                 completable.handle_request_with(params, 
                     |params, completable| self.0.show_message_request(params, completable)
                 )
             }
-            NOTIFICATION__LogMessage => { 
+            notification::LogMessage::METHOD => { 
                 completable.handle_notification_with(params, 
                     |params| self.0.log_message(params)) 
             }
-            NOTIFICATION__TelemetryEvent => {
+            notification::TelemetryEvent::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.telemetry_event(params)
                 ) 
             }
-            NOTIFICATION__PublishDiagnostics => {
+            notification::PublishDiagnostics::METHOD => {
                 completable.handle_notification_with(params, 
                     |params| self.0.publish_diagnostics(params)
                 ) 
