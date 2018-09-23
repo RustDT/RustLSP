@@ -46,7 +46,7 @@ pub fn test_run_lsp_server() {
             text_document: None,
             experimental: None,
         },
-        trace: TraceOption::Off,
+        trace: None,
     };
     
     // Create an rpc handle to the server methods
